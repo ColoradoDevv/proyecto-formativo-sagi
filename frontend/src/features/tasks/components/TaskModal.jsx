@@ -148,7 +148,7 @@ export default function TaskModal({ isOpen, onClose, onSaved, users = [], task =
                     required
                 />
                 {isEdit && (
-                    <p className="text-caption text-text-muted mb-1">
+                    <p className="text-small text-text-muted mb-1">
                         El usuario asignado no se puede cambiar.
                     </p>
                 )}

@@ -39,6 +39,8 @@
     /* =============== STATE =============== */
     --color-success: var(--semantic-success);
     --color-success-soft: var(--semantic-success-soft);
+    --color-warning: var(--semantic-warning);
+    --color-warning-soft: var(--semantic-warning-soft);
     --color-error: var(--semantic-error);
     --color-error-soft: var(--semantic-error-soft);
 

@@ -16,7 +16,7 @@
     /* ============= TEXT =============== */
     --semantic-text-primary: var(--color-secondary-950);      /* #0C2D48 */
     --semantic-text-secondary: var(--color-secondary-700);    /* #526B7B */
-    --semantic-text-muted: var(--color-secondary-500);        /* #90A1A9 */
+    --semantic-text-muted: var(--color-secondary-700);        /* #526B7B — antes secondary-500, fallaba contraste (2.7:1) */
     --semantic-text-inverse: var(--color-white);              /* #FFFFFF */
 
     /* ============= BORDER ============ */
@@ -28,9 +28,10 @@
     --semantic-focus-border: var(--color-secondary-500);      /* #90A1A9 */
 
     /* ============= STATE ================ */
-    --semantic-success: var(--color-primary-950);              /* #39A900 */
+    --semantic-success: var(--color-tertiary-950);             /* #007832 — antes primary-950, fallaba contraste (3.1:1) */
     --semantic-success-soft: var(--color-primary-100);         /* #E1F2D8 — fondo suave estado activo */
-    --semantic-warning: var(--color-tertiary-950);             /* #007832 */
+    --semantic-warning: var(--color-warning);                  /* #B45309 */
+    --semantic-warning-soft: var(--color-warning-soft);        /* #FEF3C7 — fondo suave estado pendiente */
     --semantic-error: var(--color-error);                      /* #E53935 */
     --semantic-error-soft: var(--color-error-soft);            /* #FDE7E7 — fondo suave estado inactivo */
 

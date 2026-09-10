@@ -16,24 +16,32 @@ function useRecentLoans(limit = 5) {
             return;
         }
 
+        // AbortController cancela el fetch si el componente se desmonta o
+        // cambia limit, evitando que setState se llame sobre un componente
+        // ya desmontado.
+        const controller = new AbortController();
+
         const fetchLoans = async () => {
             try {
                 setLoading(true);
-                const data = await getLoans();
+                const data = await getLoans(controller.signal);
                 // Ordenar por fecha de prestamo (mas reciente primero) y recortar.
                 const recent = [...data]
                     .sort((a, b) => new Date(b.loan_date) - new Date(a.loan_date))
                     .slice(0, limit);
                 setLoans(recent);
             } catch (err) {
-                // Ignorar errores de sesión expirada: el modal global ya los gestiona.
-                if (!err?.silent) setError(err);
+                // AbortError es cancelación intencional — no es un error real.
+                // Ignorar tambien errores de sesión expirada: el modal global ya los gestiona.
+                if (err.name !== "AbortError" && !err?.silent) setError(err);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchLoans();
+
+        return () => controller.abort();
     }, [limit]);
 
     return { loans, loading, error };

@@ -10,8 +10,8 @@ const FIELD_MAP = {
     return_date: "loanReturnDate",
 };
 
-export async function getLoans() {
-    const response = await apiFetch("/api/loans/");
+export async function getLoans(signal) {
+    const response = await apiFetch("/api/loans/", { signal });
     if (!response.ok) await throwApiError(response, FIELD_MAP);
     return response.json();
 }

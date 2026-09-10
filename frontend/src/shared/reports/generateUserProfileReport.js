@@ -1,17 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { getStoredUser } from "@/shared/services/api";
-
-// ── Colores corporativos ───────────────────────────────────────────────────
-const C = {
-    navy:      [12,  45,  72],   // #0C2D48 — encabezados
-    steel:     [32,  63,  87],   // #203F57 — fondo de sección
-    muted:     [82, 107, 123],   // #526B7B — texto secundario
-    label:     [90, 105, 120],   // etiqueta de campo
-    stripe:    [245, 248, 250],  // fila alterna
-    white:     [255, 255, 255],
-    lightGray: [230, 235, 240],  // línea separadora
-};
+import { PDF_COLORS as C } from "./pdfColors";
 
 // ── Contraseña de propietario aleatoria (RC4-128) ──────────────────────────
 function _ownerPassword() {
@@ -73,7 +63,7 @@ function _drawFields(doc, fields, startY, cols = 2) {
 
         // Etiqueta
         doc.setFontSize(7.5);
-        doc.setTextColor(...C.label);
+        doc.setTextColor(...C.muted);
         doc.setFont(undefined, "bold");
         doc.text(label, x + padX, y + 3.5);
 

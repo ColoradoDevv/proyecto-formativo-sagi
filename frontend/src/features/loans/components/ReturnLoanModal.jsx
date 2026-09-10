@@ -212,7 +212,7 @@ export default function ReturnLoanModal({ isOpen, onClose, loan, onReturned }) {
                         {formData.returnedQuantity !== "" &&
                             /^\d+$/.test(formData.returnedQuantity) &&
                             Number(formData.returnedQuantity) < loan.amount_lent && (
-                                <p className="text-caption text-error">
+                                <p className="text-small text-error">
                                     Devolución incompleta: faltarían{" "}
                                     {loan.amount_lent - Number(formData.returnedQuantity)} unidad(es).
                                 </p>
@@ -269,7 +269,7 @@ export default function ReturnLoanModal({ isOpen, onClose, loan, onReturned }) {
                         </div>
                     )}
                     {errors.materialCondition && (
-                        <p className="text-caption text-error">{errors.materialCondition}</p>
+                        <p className="text-small text-error">{errors.materialCondition}</p>
                     )}
                 </div>
             </form>

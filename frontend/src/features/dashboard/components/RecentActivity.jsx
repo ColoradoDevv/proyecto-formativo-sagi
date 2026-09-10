@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { TailChase } from "ldrs/react";
 import { ArrowRight, CloudAlert, ClipboardList, Lock, Package } from "lucide-react";
-import { StatusBadge } from "@/shared";
+import LoanStateBadge from "@/features/loans/components/LoanStateBadge";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import useRecentLoans from "../hooks/useRecentLoans";
 
@@ -22,7 +22,7 @@ export default function RecentActivity() {
                     <p className="text-medium text-text-primary uppercase tracking-widest font-medium">
                         Registro
                     </p>
-                    <h3 className="text-h2 text-text-primary font-heading">
+                    <h3 className="text-h3 text-text-primary font-heading">
                         Actividad reciente
                     </h3>
                 </div>
@@ -88,11 +88,7 @@ export default function RecentActivity() {
                                 <span className="text-small text-text-muted hidden sm:inline">
                                     {loan.loan_date}
                                 </span>
-                                <StatusBadge
-                                    active={loan.is_active}
-                                    activeLabel="Prestado"
-                                    inactiveLabel="Devuelto"
-                                />
+                                <LoanStateBadge state={loan.state} />
                             </div>
                         </li>
                     ))}

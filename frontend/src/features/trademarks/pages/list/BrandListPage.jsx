@@ -92,7 +92,7 @@ export default function BrandListPage() {
                 <p className="text-medium text-text-primary uppercase tracking-widest font-medium">
                     Catálogo
                 </p>
-                <h2 className="text-h1 text-text-primary font-heading">
+                <h2 className="text-h2 text-text-primary font-heading">
                     Marcas
                 </h2>
                 <p className="text-small text-text-secondary">

@@ -11,7 +11,7 @@ export default function LoanStateBadge({ state }) {
     const label = state ?? "Pendiente";
     const style = STATE_STYLES[label] ?? "bg-surface-muted/70 text-text-secondary";
     return (
-        <span className={`inline-block text-caption font-medium px-3 py-0.5 rounded-[var(--radius-full)] ${style}`}>
+        <span className={`inline-block text-small font-medium px-3 py-0.5 rounded-[var(--radius-full)] ${style}`}>
             {label}
         </span>
     );

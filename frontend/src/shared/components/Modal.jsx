@@ -7,8 +7,8 @@ import { IconButton } from "./IconButton";
 // y "solid" (tarjeta opaca, mejor legibilidad y tema oscuro).
 const VARIANTS = {
     glass: {
-        backdrop: "bg-slate-500/20 backdrop-blur-xs",
-        card: "bg-white/30 backdrop-blur-2xl border border-white/50",
+        backdrop: "bg-background-inverse/20 backdrop-blur-xs",
+        card: "bg-surface-hover/30 backdrop-blur-2xl border border-surface-hover/50",
     },
     solid: {
         backdrop: "bg-background-inverse/30",

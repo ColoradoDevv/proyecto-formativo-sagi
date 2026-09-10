@@ -226,7 +226,7 @@ function RmEditForm({ RM, categories, brands, states, onCreateBrand }) {
 
                             {/* Fichas existentes */}
                             <div className="flex flex-col gap-1.5 w-full">
-                                <p className="text-caption text-text-muted font-medium">Fichas técnicas</p>
+                                <p className="text-small text-text-muted font-medium">Fichas técnicas</p>
                                 {existingSheets.map((sheet, i) => (
                                     <div key={sheet.id} className="flex items-center gap-1">
                                         <a
@@ -287,7 +287,7 @@ function RmEditForm({ RM, categories, brands, states, onCreateBrand }) {
                                     />
                                 )}
                                 {!canAddMore && (
-                                    <p className="text-caption text-text-muted italic">Máximo 3 fichas</p>
+                                    <p className="text-small text-text-muted italic">Máximo 3 fichas</p>
                                 )}
                             </div>
                         </div>
