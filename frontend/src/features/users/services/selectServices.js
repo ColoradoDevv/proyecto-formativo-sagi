@@ -14,8 +14,8 @@ export async function getUserRoles() {
     return data.map((item) => ({ id: item.id, label: item.name }));
 }
 
-export async function getUserGroups() {
-    const response = await apiFetch("/api/permissions/groups/");
+export async function getUserGroups(signal) {
+    const response = await apiFetch("/api/permissions/groups/", { signal });
     if (!response.ok) await throwApiError(response);
     const data = await response.json();
     return data.map((item) => ({ id: item.id, label: item.name }));

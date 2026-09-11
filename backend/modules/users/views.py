@@ -827,9 +827,15 @@ class UserTrashListView(generics.ListAPIView):
     queryset = User.all_objects.filter(is_deleted=True).order_by("-deleted_at")
     serializer_class = UserTrashSerializer
 
+    def get_permissions(self):
+        return [HasPermission("view_user")]
+
 
 class UserRestoreView(APIView):
     # Restaura un usuario eliminado
+    def get_permissions(self):
+        return [HasPermission("edit_user")]
+
     def post(self, request, pk):
         user = User.all_objects.filter(pk=pk, is_deleted=True).first()
         if not user:
@@ -855,6 +861,9 @@ class ResendCredentialsView(APIView):
     # Genera una nueva contraseña para un usuario existente y se la reenvia por correo.
     # Util cuando el correo original no llego, fue a spam, o se corrigio un email mal escrito.
 
+    def get_permissions(self):
+        return [HasPermission("edit_user")]
+
     def post(self, request, pk):
         try:
             user = User.objects.get(pk=pk)
@@ -879,6 +888,16 @@ class ResendCredentialsView(APIView):
         user.set_password(new_password)
         user.must_change_password = True
         user.save(update_fields=["password", "must_change_password"])
+
+        audit_log(
+            actor=request.user,
+            module=AuditLog.MODULE_USERS,
+            action=AuditLog.ACTION_PASSWORD_RESET,
+            target_id=user.pk,
+            target_repr=f"{user.first_name} {user.last_name} <{user.email}>",
+            detail="Credenciales reenviadas por un administrador.",
+            request=request,
+        )
 
         return Response(
             {"mensaje": f"Credenciales reenviadas a {user.email}"},

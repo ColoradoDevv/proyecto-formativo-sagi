@@ -85,6 +85,9 @@ function UserEditForm({ id, user, documentTypes, groups, allGroups }) {
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
     const [showTaskModal, setShowTaskModal] = useState(false);
+    // Igual que en UserRegisterForm: el input de correo institucional solo se
+    // muestra si el usuario ya tiene uno guardado, o si el admin lo agrega.
+    const [showEmailInst, setShowEmailInst] = useState(Boolean(user.institutional_email));
     // Indica si la lista de grupos ya fue cargada al menos una vez.
     // Se usa como guardia para distinguir "grupos aún no disponibles" de
     // "el admin cambió el grupo activamente". Usar useState en lugar de useRef
@@ -215,6 +218,21 @@ function UserEditForm({ id, user, documentTypes, groups, allGroups }) {
                 </div>
             )}
 
+            {/* Banner: el usuario tiene más de un grupo asignado (p.ej. datos
+                heredados o asignado por fuera de esta pantalla) — el selector
+                de abajo es de un solo grupo, así que guardar sin tocarlo
+                dejaría solo el que aparece preseleccionado. */}
+            {user.groups && user.groups.length > 1 && (
+                <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-warning bg-warning/10 px-4 py-3 text-sm text-text-primary">
+                    <ShieldAlert size={18} className="shrink-0 mt-0.5 text-warning" />
+                    <p>
+                        Este usuario tiene varios grupos asignados ({user.groups.map((g) => g.name).join(", ")}),
+                        pero aquí solo se puede tener uno a la vez. Si guardas cambios, se quedará únicamente
+                        con el grupo seleccionado abajo y perderá los demás.
+                    </p>
+                </div>
+            )}
+
             <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-3">
 
                 <UserForm
@@ -237,6 +255,31 @@ function UserEditForm({ id, user, documentTypes, groups, allGroups }) {
                             onChange={handleChange}
                             error={errors.additionalPhone}
                         />
+                    }
+                    emailInst={
+                        <div className="flex flex-col gap-2">
+                            <StatusLabel optional>Correo Institucional</StatusLabel>
+                            {!showEmailInst ? (
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="md"
+                                    onClick={() => setShowEmailInst(true)}
+                                >
+                                    Agregar Correo Institucional
+                                </Button>
+                            ) : (
+                                <Input
+                                    name="institutionalEmail"
+                                    type="email"
+                                    optional
+                                    placeholder="correo@sena.edu.co"
+                                    onChange={handleChange}
+                                    value={formData.institutionalEmail}
+                                    error={errors.institutionalEmail}
+                                />
+                            )}
+                        </div>
                     }
                     systemExtraSlot={
                         <div className="flex flex-col gap-3">

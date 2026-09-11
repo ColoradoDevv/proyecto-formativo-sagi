@@ -95,6 +95,10 @@ class UserSerializer(serializers.ModelSerializer):
             # saber si está editando al superadmin primigenio y deshabilitar
             # los controles sensibles. Nunca debe ser escritura desde la API.
             "is_primary_admin": {"read_only": True},
+            # is_staff da acceso al panel /admin de Django. Ningún flujo del
+            # frontend lo necesita escribir; bloquearlo evita que un usuario
+            # con edit_user se autoconceda (o le conceda a otro) ese acceso.
+            "is_staff": {"read_only": True},
         }
 
     def validate_document_number(self, value):
@@ -176,6 +180,16 @@ class UserSerializer(serializers.ModelSerializer):
         # El flujo de edicion no cambia: aqui si se respeta una password
         # si el admin decide asignarla manualmente al editar.
         password = validated_data.pop("password", None)
+        if password:
+            # Import local para evitar un ciclo de imports (views.py ya
+            # importa este modulo). Reutiliza la misma politica de
+            # contraseñas que el flujo de OTP y el de primer login.
+            from .views import ResetPasswordView
+            if not ResetPasswordView._password_is_valid(password):
+                raise serializers.ValidationError({
+                    "password": "La contraseña debe tener al menos 10 caracteres, "
+                                 "una mayúscula, una minúscula, un número y un carácter especial."
+                })
 
         # Campos unique+nullable: convertir string vacío a None para no romper
         # la constraint UNIQUE (la BD acepta múltiples NULL pero no múltiples '').

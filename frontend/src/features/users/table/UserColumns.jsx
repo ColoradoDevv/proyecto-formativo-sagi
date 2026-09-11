@@ -1,8 +1,10 @@
-import { ActiveSwitch, promptAlert } from "@/shared";
+import { ActiveSwitch, promptAlert, StatusBadge, usePermissions } from "@/shared";
 import { toggleUserActive } from "@/features/users/services/userService"; // ajusta la ruta segun tu estructura real
 import UserRowActions from "@/features/users/components/list/UserRowActions"; // ajusta la ruta segun tu estructura real
 
-function UserActiveSwitch({ user }) {
+function UserActiveSwitch({ user, onToggled }) {
+    const { isSuper, can } = usePermissions();
+
     const requestDeactivationReason = async (nextIsActive) => {
         if (nextIsActive) return undefined;
 
@@ -25,6 +27,12 @@ function UserActiveSwitch({ user }) {
             : false;
     };
 
+    // Sin edit_user, el backend rechazaría el PATCH — mostrar el estado como
+    // solo lectura en vez de un switch que siempre terminaría en un 403.
+    if (!isSuper && !can("edit_user")) {
+        return <StatusBadge active={user.is_active} />;
+    }
+
     return (
         <ActiveSwitch
             id={user.id}
@@ -32,6 +40,7 @@ function UserActiveSwitch({ user }) {
             toggleFn={toggleUserActive}
             entity="usuario"
             beforeToggle={requestDeactivationReason}
+            onToggled={onToggled}
         />
     );
 }
@@ -73,7 +82,7 @@ export const getUserColumns = (onDeleted) => [
         id: "is_active",
         header: "Estado",
         meta: { filterVariant: "select" },
-        cell: ({ row }) => <UserActiveSwitch user={row.original} />,
+        cell: ({ row }) => <UserActiveSwitch user={row.original} onToggled={onDeleted} />,
     },
     {
         id: "actions",

@@ -328,11 +328,16 @@ class UserPermissionView(generics.GenericAPIView):
 class UserGroupView(generics.GenericAPIView):
     """
     Vista para gestionar membresía de usuarios en grupos.
-    Solo superusuarios pueden modificar.
+    Usa el mismo par view_user/edit_user que UserDetailView, ya que
+    asignar el grupo de un usuario es parte de editarlo.
     """
 
-    permission_classes = [IsAuthenticated, IsSuperUser]
     serializer_class = UserGroupSerializer
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [HasPermission("view_user")]
+        return [HasPermission("edit_user")]
 
     def get_user(self, user_id):
         try:

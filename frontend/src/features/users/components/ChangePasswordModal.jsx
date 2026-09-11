@@ -223,7 +223,8 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
             />
 
             <div className="flex gap-3 justify-between pt-1">
-                {/* Volver al paso 1 para reenviar */}
+                {/* Vuelve al paso 1 para corregir los datos y volver a pedir un
+                    código — este botón por sí solo no reenvía nada. */}
                 <Button
                     type="button"
                     variant="ghost"
@@ -231,7 +232,7 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
                     disabled={loading}
                     className="text-small"
                 >
-                    Reenviar código
+                    Corregir datos
                 </Button>
                 <div className="flex gap-3">
                     <Button type="button" variant="secondary" onClick={handleClose} disabled={loading}>

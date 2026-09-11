@@ -12,6 +12,8 @@ export const PERMISSION_MODULES = [
       { codename: "disable_user", label: "Deshabilitar usuarios" },
       { codename: "view_user", label: "Ver usuarios" },
       { codename: "export_users", label: "Generar reporte de usuarios" },
+      { codename: "edit_user", label: "Editar usuarios" },
+      { codename: "delete_user", label: "Eliminar usuarios" },
     ],
   },
   {

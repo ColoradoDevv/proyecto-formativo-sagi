@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { Eye, EyeOff, KeyRound, ShieldAlert } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff, KeyRound, LogOut, ShieldAlert } from "lucide-react";
 import { TailChase } from "ldrs/react";
-import { Button, Input, Modal, showAlert } from "@/shared";
+import { Button, Input, Modal, cancelAlert, showAlert } from "@/shared";
 import { getStoredUser, isAuthenticated } from "@/shared/services/api";
-import { changePasswordFirstLogin } from "../services/authService";
+import { changePasswordFirstLogin, logout } from "../services/authService";
 
 const EMPTY_FORM = {
     currentPassword: "",
@@ -24,10 +25,12 @@ const EMPTY_ERRORS = {
  * el usuario establezca una contraseña personalizada.
  */
 export default function MandatoryPasswordChangeModal() {
+    const navigate = useNavigate();
     const [open, setOpen] = useState(false);
     const [form, setForm] = useState(EMPTY_FORM);
     const [errors, setErrors] = useState(EMPTY_ERRORS);
     const [loading, setLoading] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
     const [showCurrent, setShowCurrent] = useState(false);
     const [showNew, setShowNew] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
@@ -45,6 +48,24 @@ export default function MandatoryPasswordChangeModal() {
 
     const handleChange = (field) => (e) =>
         setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+    // Escotilla de salida: sin esto, un usuario que no recuerda su contraseña
+    // temporal (o simplemente quiere ceder el equipo) queda atrapado en este
+    // modal sin forma de volver al login.
+    const handleLogout = async () => {
+        const result = await cancelAlert({
+            title: "¿Cerrar sesión?",
+            text: "Tendrás que iniciar sesión de nuevo con tu contraseña temporal.",
+            confirmText: "Sí, cerrar sesión",
+            cancelText: "Seguir aquí",
+        });
+        if (!result.isConfirmed) return;
+
+        setLoggingOut(true);
+        await logout();
+        setOpen(false);
+        navigate("/iniciar-sesion", { replace: true });
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -188,12 +209,22 @@ export default function MandatoryPasswordChangeModal() {
                         }
                     />
 
-                    <Button type="submit" disabled={loading} className="w-full">
+                    <Button type="submit" disabled={loading || loggingOut} className="w-full">
                         {loading
                             ? <TailChase size="16" speed="1.75" color="currentColor" />
                             : <><KeyRound size={15} /> Cambiar contraseña y continuar</>
                         }
                     </Button>
+
+                    <button
+                        type="button"
+                        onClick={handleLogout}
+                        disabled={loading || loggingOut}
+                        className="flex items-center justify-center gap-1.5 text-small text-text-muted hover:text-text-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                        <LogOut size={14} />
+                        {loggingOut ? "Cerrando sesión..." : "Cerrar sesión y volver al inicio"}
+                    </button>
                 </form>
             </div>
         </Modal>

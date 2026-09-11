@@ -82,9 +82,16 @@ class UserAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         """Hook para hacer tareas adicionales al guardar"""
-        # Si la contraseña cambió y no está hasheada, hashearla
+        # Si la contraseña cambió y no está hasheada, hashearla.
+        # Igual que en UserSerializer.create()/.update() y ResendCredentialsView:
+        # cualquier contraseña que no fije el propio usuario debe forzar un
+        # cambio en el siguiente login. Sin esto, restablecer una contraseña
+        # desde este panel dejaba al usuario con una contraseña permanente
+        # que nadie más que el admin conocía, sin que el sistema se lo pidiera
+        # cambiar.
         if 'password' in form.changed_data:
             obj.set_password(obj.password)
+            obj.must_change_password = True
 
         super().save_model(request, obj, form, change)
 
