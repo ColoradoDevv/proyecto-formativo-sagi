@@ -454,6 +454,10 @@ class LoginView(APIView):
                 "must_change_password": user.must_change_password,
                 "role": primary_group,  # Devuelve el nombre del grupo principal
                 "groups": [g.group.name for g in user_groups],  # Lista todos los grupos
+                # Misma ruta que UserSerializer.get_profile_picture — sin esto,
+                # el avatar del Navbar no tiene foto hasta que se resuba una
+                # vez iniciada la sesión (updateStoredUser la agrega recién ahí).
+                "profile_picture": f"/media/{user.profile_picture}" if user.profile_picture else None,
             },
         })
 

@@ -121,10 +121,10 @@ class UserSerializer(serializers.ModelSerializer):
         return document_number
 
     def _validate_dates(self, attrs):
-        start = attrs.get("start_date")
-        end = attrs.get("end_date")
-
         if self.instance is None:
+            # Creación: ambas fechas son obligatorias, sin excepción.
+            start = attrs.get("start_date")
+            end = attrs.get("end_date")
             if not start:
                 raise serializers.ValidationError(
                     {"start_date": "La fecha de inicio es obligatoria."}
@@ -134,16 +134,25 @@ class UserSerializer(serializers.ModelSerializer):
                     {"end_date": "La fecha de finalización es obligatoria."}
                 )
         else:
-            start = start if "start_date" in attrs else self.instance.start_date
-            end = end if "end_date" in attrs else self.instance.end_date
-            if not start:
+            # Edición (incluye PATCH parciales, p.ej. MyProfileView.patch()
+            # que solo manda la foto): solo se exige un valor cuando el
+            # propio request está tocando ese campo y lo manda vacío. No se
+            # vuelve a exigir un campo que ni siquiera vino en este PATCH,
+            # aunque el registro ya lo tenga incompleto por datos previos
+            # (p.ej. un usuario creado saltándose campos obligatorios) — de
+            # lo contrario CUALQUIER PATCH parcial sobre esa cuenta quedaría
+            # bloqueado hasta que alguien complete esos campos aparte, sin
+            # relación con lo que el PATCH actual está modificando.
+            if "start_date" in attrs and not attrs["start_date"]:
                 raise serializers.ValidationError(
                     {"start_date": "La fecha de inicio es obligatoria."}
                 )
-            if not end:
+            if "end_date" in attrs and not attrs["end_date"]:
                 raise serializers.ValidationError(
                     {"end_date": "La fecha de finalización es obligatoria."}
                 )
+            start = attrs.get("start_date", self.instance.start_date)
+            end = attrs.get("end_date", self.instance.end_date)
 
         if start and end and end < start:
             raise serializers.ValidationError(

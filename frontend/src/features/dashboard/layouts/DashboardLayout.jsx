@@ -124,7 +124,6 @@ export default function DashboardLayout() {
                         value={card.value}
                         hasError={card.hasError}
                         to={card.to}
-                        isFeatured={index === 0}
                         style={{ animationDelay: `${index * 60}ms` }}
                     />
                 ))}

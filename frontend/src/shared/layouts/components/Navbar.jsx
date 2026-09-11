@@ -51,9 +51,17 @@ export default function Navbar({ onToggleSidebar }) {
                 className="flex items-center gap-3 shrink-0 rounded-xl px-3 py-1.5 hover:bg-surface-muted transition-colors cursor-pointer"
             >
                 <span className="hidden sm:inline text-text-primary">{userName}</span>
-                <span className="w-10 h-10 rounded-full bg-[var(--color-primary-600)] text-text-primary flex items-center justify-center font-heading text-h3">
-                    {userInitial}
-                </span>
+                {user?.profile_picture ? (
+                    <img
+                        src={user.profile_picture}
+                        alt={userName}
+                        className="w-10 h-10 rounded-full object-cover shrink-0"
+                    />
+                ) : (
+                    <span className="w-10 h-10 rounded-full bg-[var(--color-primary-600)] text-text-primary flex items-center justify-center font-heading text-h3">
+                        {userInitial}
+                    </span>
+                )}
             </Link>
 
         </nav>
