@@ -1,10 +1,8 @@
-import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { TailChase } from "ldrs/react";
 import { CloudAlert, Download, Plus } from "lucide-react";
-import Alert from "@mui/material/Alert";
 
-import { Button } from "@/shared";
+import { Button, usePermissions } from "@/shared";
 import DataTable from "@/shared/components/DataTable";
 import { materialColumns } from "../../table/materialColumns.jsx";
 import { consumablesReportConfig } from "../../reports/consumablesReportConfig.js";
@@ -12,9 +10,10 @@ import useProducts from "../../hooks/useCMs.js";
 
 export default function ListCmPage() {
     const navigate = useNavigate();
+    const { isSuper, can } = usePermissions();
+    const canCreate = isSuper || can("create_consumable");
 
     const { CMs, setCMs, loading, error } = useProducts();
-    const [notification, setNotification]   = useState(null);
 
     if (loading)
         return (
@@ -42,17 +41,14 @@ export default function ListCmPage() {
                 <h2 className="text-h3 font-heading">
                     Listado de Materiales de Consumo
                 </h2>
-                {notification && (
-                    <Alert severity={notification.severity} onClose={() => setNotification(null)}>
-                        {notification.message}
-                    </Alert>
-                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Link to="/consumibles/crear" className="w-full">
-                        <Button className="w-full" variant="soft" icon={Plus}>
-                            Registrar Material
-                        </Button>
-                    </Link>
+                    {canCreate && (
+                        <Link to="/consumibles/crear" className="w-full">
+                            <Button className="w-full" variant="soft" icon={Plus}>
+                                Registrar Material
+                            </Button>
+                        </Link>
+                    )}
                     <Button
                         data={CMs}
                         reportConfig={consumablesReportConfig}

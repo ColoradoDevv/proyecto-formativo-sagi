@@ -1,6 +1,24 @@
-import { ActiveSwitch } from "@/shared";
+import { ActiveSwitch, StatusBadge, usePermissions } from "@/shared";
 import { toggleCmActive } from "../services/consumableService";
 import CmRowActions from "../components/list/CmRowActions";
+
+// Sin edit_consumable, el backend rechazaría el PATCH de toggle_active con
+// un 403 — mostrar el estado como solo lectura en vez de un switch que
+// siempre terminaría fallando (mismo patrón que UserActiveSwitch).
+function CmActiveSwitch({ cm, onToggled }) {
+    const { isSuper, can } = usePermissions();
+    if (!isSuper && !can("edit_consumable")) {
+        return <StatusBadge active={cm.is_active} />;
+    }
+    return (
+        <ActiveSwitch
+            id={cm.id}
+            isActive={cm.is_active}
+            toggleFn={toggleCmActive}
+            onToggled={onToggled}
+        />
+    );
+}
 
 export const materialColumns = (setCMs) => [
     {
@@ -62,13 +80,11 @@ export const materialColumns = (setCMs) => [
     {
         accessorFn: (row) => row.is_active ? "Activo" : "Inactivo",
         id: "is_active",
-        header: "Estado",
+        header: "Activo",
         meta: { filterVariant: "select" },
         cell: ({ row }) => (
-            <ActiveSwitch
-                id={row.original.id}
-                isActive={row.original.is_active}
-                toggleFn={toggleCmActive}
+            <CmActiveSwitch
+                cm={row.original}
                 onToggled={(updatedMaterial) => {
                     setCMs((prev) => prev.map((item) =>
                         item.id === row.original.id

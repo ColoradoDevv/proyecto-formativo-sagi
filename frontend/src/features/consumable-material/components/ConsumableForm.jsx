@@ -105,21 +105,7 @@ export function ConsumableInventoryCard({ formData, errors = {}, onChange }) {
                 optional
                 onChange={onChange}
                 error={errors.serial}
-
             />
-            {/* <Input
-                label="S/N"
-                name="serial"
-                            placeholder="Numero serial del material"
-                            value={formData.serial}
-                            onChange={onChange}
-                            error={errors.serial}
-                            required={categoryRules.requiresId}
-                            optional={!categoryRules.requiresId}
-                            labelAction={<CreateOptionButton variant="spacer" />}
-
-                        /> */}
-
             <Input
                 label="Ubicación (opcional)"
                 name="location"
@@ -320,6 +306,15 @@ export default function ConsumableForm({
                         error={errors.quantity}
                         hint={hasSenaPlate ? "La cantidad es 1 porque el material tiene placa SENA, no es editable." : undefined}
                         required
+                    />
+                    <Input
+                        label="S/N"
+                        name="serial"
+                        placeholder="Numero serial del material"
+                        value={formData.serial}
+                        optional
+                        onChange={onChange}
+                        error={errors.serial}
                     />
                     <Input
                         label="Ubicación (opcional)"

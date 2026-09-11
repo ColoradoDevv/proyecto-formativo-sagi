@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { KeyRound, Save, UserRound } from "lucide-react";
 import { TailChase } from "ldrs/react";
 import { Button, EditCard, Input, ProfileFileInput, showAlert } from "@/shared";
+import { updateStoredUser } from "@/shared/services/api";
 import { getMyProfile, updateUserProfilePicture } from "../../services/userService";
 import ChangePasswordModal from "../../components/ChangePasswordModal";
 
@@ -51,6 +52,10 @@ export default function ProfileEditPage() {
                 ? [`${updatedUser.profile_picture}?t=${Date.now()}`]
                 : [];
             setProfilePicture(pictureUrl);
+            // Persistir en la sesión (no solo en el estado local del
+            // componente) y avisar al resto de la app — así el avatar del
+            // Navbar se actualiza sin recargar la página.
+            updateStoredUser({ profile_picture: updatedUser.profile_picture });
             await showAlert({
                 icon: "success",
                 iconColor: "var(--color-success)",

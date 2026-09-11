@@ -153,7 +153,7 @@ export default function RmRegisterForm() {
                                 multiple
                                 required
                                 maxFiles={3}
-                                maxSixeMB={3}
+                                maxSizeMB={3}
                                 className="w-full h-14 rounded-2xl"
                             />                        </div>
                     }

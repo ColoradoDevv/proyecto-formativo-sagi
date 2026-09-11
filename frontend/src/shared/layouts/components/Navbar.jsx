@@ -1,11 +1,15 @@
 import { Archive, Menu } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getStoredUser } from "@/shared/services/api";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 
 
 export default function Navbar({ onToggleSidebar }) {
 
-    const user = getStoredUser();
+    // usePermissions() expone el usuario de forma reactiva (se refresca solo
+    // con sia:session-updated) — a diferencia de leer getStoredUser()
+    // directamente, así el avatar se actualiza sin recargar la página al
+    // cambiar la foto de perfil desde "Mi perfil".
+    const { user } = usePermissions();
     const userName = user?.first_name ?? "Usuario";
     const userInitial = (user?.first_name?.[0] ?? "U").toUpperCase();
 

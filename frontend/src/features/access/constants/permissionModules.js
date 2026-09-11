@@ -25,6 +25,9 @@ export const PERMISSION_MODULES = [
       { codename: "update_returnable_material", label: "Actualizar material devolutivo" },
       { codename: "disable_returnable_material", label: "Deshabilitar material devolutivo" },
       { codename: "export_returnable_materials", label: "Generar reporte de materiales devolutivos" },
+      { codename: "create_returnable", label: "Crear material devolutivo (API)" },
+      { codename: "view_returnable", label: "Ver material devolutivo (API)" },
+      { codename: "edit_returnable", label: "Editar material devolutivo (API)" },
     ],
   },
   {
@@ -36,6 +39,9 @@ export const PERMISSION_MODULES = [
       { codename: "update_consumable_material", label: "Actualizar material de consumo" },
       { codename: "disable_consumable_material", label: "Deshabilitar material de consumo" },
       { codename: "export_consumable_materials", label: "Generar reporte de materiales de consumo" },
+      { codename: "create_consumable", label: "Crear material de consumo (API)" },
+      { codename: "view_consumable", label: "Ver material de consumo (API)" },
+      { codename: "edit_consumable", label: "Editar material de consumo (API)" },
     ],
   },
   {
@@ -49,6 +55,7 @@ export const PERMISSION_MODULES = [
       { codename: "return_material", label: "Devolver material devolutivo" },
       { codename: "register_surplus", label: "Registrar sobrante" },
       { codename: "validate_loan_return", label: "Validar devolución" },
+      { codename: "create_return", label: "Registrar devolución de préstamo (API)" },
     ],
   },
   {

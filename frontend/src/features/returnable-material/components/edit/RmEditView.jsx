@@ -278,7 +278,7 @@ function RmEditForm({ RM, categories, brands, states, onCreateBrand }) {
                                         accept="application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/png"
                                         multiple={false}
                                         maxFiles={1}
-                                        maxSixeMB={3}
+                                        maxSizeMB={3}
                                         className="w-full h-10 rounded-[var(--radius-full)]"
                                         value={[]}
                                         onChange={(files) => {

@@ -82,11 +82,17 @@ class LoanReturnViewSet(AuditMixin, viewsets.ModelViewSet):
                 else:
                     new_loan_state = 'Finalizado'
             else:
-                # Consumo: si se reportó sobrante y el material sigue Bueno,
-                # se reintegra al stock. Si está dañado no se reintegra.
+                # Consumo: lo prestado se considera consumido, salvo el
+                # sobrante. Si el sobrante está en buen estado, se reintegra
+                # al stock disponible; si no, también se descuenta (queda
+                # inutilizable). No se toca material.state: a diferencia de
+                # un devolutivo (una unidad física real), un consumible es
+                # una fila de stock agregado — su Estado lo controla el
+                # admin desde crear/editar y activar/desactivar, no una
+                # devolución individual.
+                material.quantity = max(0, (material.quantity or 0) - loan.amount_lent)
                 if leftover and condition == 'Bueno':
-                    material.quantity = (material.quantity or 0) + leftover
-                material.state = new_material_state
+                    material.quantity += leftover
                 new_loan_state = 'Finalizado'
 
             material.save()
