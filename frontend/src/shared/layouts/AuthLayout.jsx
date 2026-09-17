@@ -24,8 +24,8 @@ export default function AuthLayout({ children }) {
                 rounded-[var(--radius-3xl)]
                 flex flex-row
                 backdrop-blur-md
-                bg-white/25
-                border border-white/40
+                bg-surface-hover/25
+                border border-surface-hover/40
                 shadow-[var(--shadow-elevation-5)]
                 overflow-hidden
             ">

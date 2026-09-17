@@ -122,8 +122,9 @@ export const userSchema = userBaseSchema
 
 
 // Schema para EDICION: usa los nombres de campo locales del UserEditView.
-// No incluye confirmacion de correo ni contrasena (no se editan aqui) y la
-// foto/fecha fin son opcionales; si la fecha fin viene, debe ser >= inicio.
+// No incluye confirmacion de correo ni contrasena (no se editan aqui).
+// Solo la foto es opcional; startDate/endDate siguen siendo obligatorias
+// (igual que en creación) y endDate debe ser >= startDate.
 export const userEditSchema = z.object({
     firstName: z
         .string()

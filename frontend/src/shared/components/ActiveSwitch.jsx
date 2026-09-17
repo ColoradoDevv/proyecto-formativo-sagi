@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Switch, cancelAlert } from "@/shared";
+import { Switch, cancelAlert, showAlert } from "@/shared";
 
 export default function ActiveSwitch({ id, isActive, toggleFn, entity = "material", size = "md", onToggled, beforeToggle }) {
     const [active, setActive] = useState(isActive);
@@ -25,6 +25,12 @@ export default function ActiveSwitch({ id, isActive, toggleFn, entity = "materia
             onToggled?.(updatedMaterial);
         } catch (error) {
             console.error("Error al actualizar estado:", error);
+            await showAlert({
+                icon: "error",
+                iconColor: "var(--color-error)",
+                title: `No se pudo ${value ? "activar" : "desactivar"} el ${entity}`,
+                text: error.message,
+            });
         }
     };
 

@@ -104,7 +104,7 @@ export default function AccessPage() {
         <p className="text-medium text-text-primary uppercase tracking-widest font-medium">
           Administración / Seguridad
         </p>
-        <h1 className="text-h1 font-heading">Gestión de permisos</h1>
+        <h2 className="text-h2 font-heading">Gestión de permisos</h2>
         <p className="text-small text-text-secondary">
           Asigna y revisa los permisos disponibles para grupos y usuarios.
         </p>

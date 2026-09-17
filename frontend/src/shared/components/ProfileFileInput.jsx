@@ -114,7 +114,7 @@ export default function ProfileFileInput({
                         <div
                             className="
                                 absolute inset-0
-                                bg-black/50
+                                bg-background-inverse/50
                                 opacity-0 group-hover:opacity-100
                                 transition-opacity duration-[var(--duration-base)]
                                 flex flex-col items-center justify-center gap-2

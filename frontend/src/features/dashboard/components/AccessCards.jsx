@@ -2,17 +2,14 @@ import { useNavigate } from "react-router-dom";
 import { SlidersHorizontal } from "lucide-react";
 
 
-export default function AccessCards({ className = "", Icon, label, value, to, isFeatured = false }) {
+export default function AccessCards({ className = "", style, Icon, label, value, hasError = false, to }) {
     const navigate = useNavigate();
 
     return (
         <div
             onClick={() => navigate(to)}
-            className={`rounded-2xl cursor-pointer shadow-(--shadow-elevation-4) hover:shadow-(--shadow-elevation-5) hover:-translate-y-1 p-5 w-full flex flex-col gap-4 transition-all duration-200 border border-border animate-slide-up ${
-                isFeatured
-                    ? "bg-gradient-to-br from-white to-[var(--color-secondary-200)]"
-                    : "bg-surface-hover"
-            } ${className}`}
+            style={style}
+            className={`rounded-2xl cursor-pointer shadow-(--shadow-elevation-4) hover:shadow-(--shadow-elevation-5) hover:-translate-y-1 bg-surface-hover hover:bg-gradient-to-br hover:from-surface-hover hover:to-[var(--color-secondary-200)] p-5 w-full flex flex-col gap-4 transition-all duration-200 border border-border animate-slide-up ${className}`}
         >
             <div className="flex items-start justify-between">
                 {Icon && (
@@ -24,7 +21,9 @@ export default function AccessCards({ className = "", Icon, label, value, to, is
             </div>
             <div className="flex flex-col gap-1">
                 <p className="text-text-primary leading-tight">{label}</p>
-                <p className="text-h1 font-heading text-text-primary text-bold-variant">{value}</p>
+                <p className={`text-h1 font-heading text-bold-variant ${hasError ? "text-text-muted" : "text-text-primary"}`}>
+                    {hasError ? "—" : value}
+                </p>
             </div>
         </div>
     );

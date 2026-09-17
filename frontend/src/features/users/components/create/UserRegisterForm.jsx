@@ -85,9 +85,11 @@ export default function UserRegisterForm() {
     const [submitting, setSubmitting] = useState(false);
     const [showAdditionalPhone, setShowAdditionalPhone] = useState(false);
     const [showEmailInst, setShowEmailInst] = useState(false);
-    const { can, isAdmin } = usePermissions();
-    // RFADMIN02: crear usuarios requiere el rol ADMIN/SADMIN y el permiso.
-    const canCreateUsers = isAdmin && can("create_user");
+    const { can, isSuper } = usePermissions();
+    // RFADMIN02: crear usuarios requiere el permiso create_user (o ser superusuario).
+    // Misma regla que UserListPage — antes exigía además el grupo "ADMIN" exacto,
+    // lo que rebotaba a admins con create_user por un grupo personalizado.
+    const canCreateUsers = isSuper || can("create_user");
 
     const [documentTypes, setDocumentTypes] = useState([]);
     useEffect(() => {
@@ -326,6 +328,19 @@ export default function UserRegisterForm() {
             navigate("/usuarios");
 
         } catch (error) {
+            if (error.partialSuccess) {
+                // El usuario ya se creó (y su contraseña ya se envió por correo) —
+                // solo falló la asignación del grupo. Navegar igual, mismo criterio
+                // que UserEditView para este mismo tipo de fallo.
+                await showAlert({
+                    icon: "warning",
+                    iconColor: "var(--color-warning)",
+                    title: "Usuario creado, pero con un problema",
+                    text: error.message,
+                });
+                navigate("/usuarios");
+                return;
+            }
             console.error("Error al crear usuario:", error);
             if (error.fieldErrors) setErrors((prev) => ({ ...prev, ...error.fieldErrors }));
             // Los errores NO llevan timer: deben permanecer hasta que el usuario los lea y cierre.

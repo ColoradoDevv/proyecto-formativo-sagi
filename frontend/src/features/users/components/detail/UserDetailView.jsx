@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, IconButton, Input, StatusBadge, EditCard, showAlert, cancelAlert } from "@/shared";
+import { Button, IconButton, Input, StatusBadge, EditCard, showAlert, cancelAlert, usePermissions } from "@/shared";
 import useUser from "../../hooks/useUser.js";
 import { resendCredentials } from "../../services/userService.js";
 import { TailChase } from 'ldrs/react'
@@ -14,6 +14,9 @@ export default function UserDetailView() {
 
     // FETCH GET /api/users/{id}/
     const { user, loading, error } = useUser(id);
+
+    const { isSuper, can } = usePermissions();
+    const canEdit = isSuper || can("edit_user");
 
     // Estado local para el boton de reenviar credenciales
     const [resending, setResending] = useState(false);
@@ -143,19 +146,21 @@ export default function UserDetailView() {
                         <Input label="Teléfono adicional" value={user.second_phone_number ?? "No definido"} disabled readOnly />
 
                         {/* Accion administrativa: reenviar credenciales de acceso */}
-                        <div className="pt-2">
-                            <Button
-                                type="button"
-                                variant="secondary"
-                                size="md"
-                                className="flex gap-2 justify-center w-full"
-                                onClick={handleResendCredentials}
-                                disabled={resending}
-                            >
-                                <Mail size={16} />
-                                {resending ? "Enviando..." : "Reenviar credenciales"}
-                            </Button>
-                        </div>
+                        {canEdit && (
+                            <div className="pt-2">
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="md"
+                                    className="flex gap-2 justify-center w-full"
+                                    onClick={handleResendCredentials}
+                                    disabled={resending}
+                                >
+                                    <Mail size={16} />
+                                    {resending ? "Enviando..." : "Reenviar credenciales"}
+                                </Button>
+                            </div>
+                        )}
                     </EditCard>
 
                     <EditCard title="Información del Sistema">
@@ -174,9 +179,11 @@ export default function UserDetailView() {
                     <Button variant="secondary" size="md" onClick={() => navigate(`/usuarios`)}>
                         Volver al inicio
                     </Button>
-                    <Button variant="primary" size="md" onClick={() => navigate(`/usuarios/editar/${user.id}`)}>
-                        Editar
-                    </Button>
+                    {canEdit && (
+                        <Button variant="primary" size="md" onClick={() => navigate(`/usuarios/editar/${user.id}`)}>
+                            Editar
+                        </Button>
+                    )}
                     <Button
                         variant="secondary"
                         size="md"

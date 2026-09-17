@@ -22,10 +22,16 @@ export function usePermissions() {
     }, []);
 
     useEffect(() => {
-        window.addEventListener(PERMISSIONS_UPDATED_EVENT, reload);
         // sessionStorage no dispara "storage" en la misma pestaña,
-        // por eso usamos nuestro propio evento en vez de window.onstorage.
-        return () => window.removeEventListener(PERMISSIONS_UPDATED_EVENT, reload);
+        // por eso usamos nuestros propios eventos en vez de window.onstorage.
+        // "sia:session-updated" cubre cambios al usuario (p.ej. editar perfil);
+        // PERMISSIONS_UPDATED_EVENT cubre cambios a los permisos.
+        window.addEventListener(PERMISSIONS_UPDATED_EVENT, reload);
+        window.addEventListener("sia:session-updated", reload);
+        return () => {
+            window.removeEventListener(PERMISSIONS_UPDATED_EVENT, reload);
+            window.removeEventListener("sia:session-updated", reload);
+        };
     }, [reload]);
 
     const isSuper = user?.is_superuser === true;
@@ -44,5 +50,5 @@ export function usePermissions() {
         return codenames.some((c) => permissions.includes(c));
     }
 
-    return { permissions, can, canAny, isSuper, isAdmin, isPrimaryAdmin };
+    return { permissions, user, can, canAny, isSuper, isAdmin, isPrimaryAdmin };
 }

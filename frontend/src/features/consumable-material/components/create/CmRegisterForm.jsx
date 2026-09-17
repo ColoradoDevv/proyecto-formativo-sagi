@@ -95,8 +95,20 @@ export default function CmRegisterForm() {
         technicalSheet: [],
     });
 
-    useEffect(() => { getBrands().then(setBrands); }, []);
-    useEffect(() => { getUsers().then(setUsers); }, []);
+    useEffect(() => {
+        const controller = new AbortController();
+        getBrands(controller.signal).then(setBrands).catch((err) => {
+            if (err.name !== "AbortError") throw err;
+        });
+        return () => controller.abort();
+    }, []);
+    useEffect(() => {
+        const controller = new AbortController();
+        getUsers(controller.signal).then(setUsers).catch((err) => {
+            if (err.name !== "AbortError") throw err;
+        });
+        return () => controller.abort();
+    }, []);
 
     const clearErrorsForFields = (fields) => {
         setErrors((prev) => {
@@ -417,8 +429,8 @@ export default function CmRegisterForm() {
                                             accept="application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/png"
                                             multiple={false}
                                             maxFiles={1}
-                                            maxSixeMB={3}
-                                            description="Formato PDF, Excel o JPG. Tamaño máximo: 3MB. Máximo 1 archivo ."
+                                            maxSizeMB={3}
+                                            description="Formato PDF, Excel o PNG. Tamaño máximo: 3MB. Máximo 1 archivo."
                                             className="w-full h-14 rounded-2xl"
                                         />
                                     </div>

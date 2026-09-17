@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { IconButton, cancelAlert, showAlert} from "@/shared";
+import { IconButton, cancelAlert, showAlert, usePermissions } from "@/shared";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { deleteUser } from "@/features/users/services/userService"; // ajusta la ruta real
@@ -9,6 +9,9 @@ import { deleteUser } from "@/features/users/services/userService"; // ajusta la
 export default function UserRowActions({ user, onDeleted }) {
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState(false);
+  const { isSuper, can } = usePermissions();
+  const canEdit = isSuper || can("edit_user");
+  const canDelete = isSuper || can("delete_user");
 
   const handleEdit = () => navigate(`/usuarios/editar/${user.id}`);
   const handleVisualizer = () => navigate(`/usuarios/visualizar/${user.id}`);
@@ -16,7 +19,7 @@ export default function UserRowActions({ user, onDeleted }) {
   const handleDelete = async () => {
     const result = await cancelAlert({
       title: "¿Eliminar usuario?",
-      text: `${user.first_name} ${user.last_name} será eliminado. Esta acción se puede revertir después desde la papelera.`,
+      text: `${user.first_name} ${user.last_name} será eliminado del sistema.`,
       confirmText: "Sí, eliminar",
       cancelText: "Cancelar",
     });
@@ -48,22 +51,26 @@ export default function UserRowActions({ user, onDeleted }) {
 
   return (
     <div className="flex gap-2">
-      <IconButton onClick={handleEdit} variant="ghost" hitSize={32} iconSize={16}>
-        <Pencil size={16} />
-      </IconButton>
+      {canEdit && (
+        <IconButton onClick={handleEdit} variant="ghost" hitSize={32} iconSize={16}>
+          <Pencil size={16} />
+        </IconButton>
+      )}
       <IconButton onClick={handleVisualizer} variant="ghost" hitSize={32} iconSize={16}>
         <Eye size={16} />
       </IconButton>
-      <IconButton
-        onClick={handleDelete}
-        disabled={deleting}
-        variant="ghost"
-        hitSize={32}
-        iconSize={16}
-        ariaLabel="Eliminar usuario"
-      >
-        <Trash2 size={16} />
-      </IconButton>
+      {canDelete && (
+        <IconButton
+          onClick={handleDelete}
+          disabled={deleting}
+          variant="ghost"
+          hitSize={32}
+          iconSize={16}
+          ariaLabel="Eliminar usuario"
+        >
+          <Trash2 size={16} />
+        </IconButton>
+      )}
     </div>
   );
 }

@@ -159,7 +159,7 @@ export default function FileInput({
                             <div
                                 className="
                                     absolute inset-0
-                                    bg-black/40
+                                    bg-background-inverse/40
                                     opacity-0 group-hover:opacity-100
                                     transition-opacity duration-[var(--duration-base)]
                                 "

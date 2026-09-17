@@ -71,8 +71,12 @@ class ConsumableMaterialSerializer(serializers.ModelSerializer):
         if obj.quantity is None:
             return None
         from modules.loans.models import Loans
+        # Incluye 'Pendiente' además de 'Activo': un préstamo pendiente de
+        # firma ya reserva el stock (LoanSerializer.validate lo exige así
+        # al crear un nuevo préstamo), así que el disponible mostrado debe
+        # coincidir con lo que realmente se puede reservar.
         already_lent = (
-            Loans.objects.filter(id_material=obj, state='Activo')
+            Loans.objects.filter(id_material=obj, state__in=['Activo', 'Pendiente'])
             .aggregate(total=Sum('amount_lent'))['total'] or 0
         )
         return max(0, obj.quantity - already_lent)
@@ -85,6 +89,26 @@ class ConsumableMaterialSerializer(serializers.ModelSerializer):
         available = self.get_available_quantity(obj)
         return available is not None and available <= 0
 
+    def to_internal_value(self, data):
+        # Un <select> de marca sin elegir nada, o un botón "Eliminar" de
+        # foto/ficha técnica, llegan como string vacío "" en el multipart —
+        # DRF no trata "" como "ausente" (solo lo hace con la llave faltante
+        # o null), así que sin esto PrimaryKeyRelatedField/ImageField/FileField
+        # levantan un error crudo en vez de interpretarlo como "sin marca"/
+        # "quitar el archivo".
+        if hasattr(data, "copy"):
+            data = data.copy()
+        if data.get("brand_id") == "":
+            data["brand_id"] = None
+
+        self._clear_files = []
+        for field in ("image", "technical_sheet"):
+            if data.get(field) == "":
+                del data[field]
+                self._clear_files.append(field)
+
+        return super().to_internal_value(data)
+
     def validate_sena_plate(self, value):
         if not value:
             return None
@@ -93,6 +117,19 @@ class ConsumableMaterialSerializer(serializers.ModelSerializer):
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
             raise serializers.ValidationError("Ya existe un material con esta placa SENA.")
+        return value
+
+    def validate_serial(self, value):
+        # Mismo tratamiento que sena_plate: "" se normaliza a None (en vez
+        # de guardar un string vacío) para no chocar contra la restricción
+        # unique si dos materiales quedan con serial="".
+        if not value:
+            return None
+        qs = ConsumableMaterial.objects.filter(serial__iexact=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Ya existe un material con este número de serie.")
         return value
 
     def validate(self, data):
@@ -107,6 +144,17 @@ class ConsumableMaterialSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'quantity': 'El stock no puede ser negativo.'})
 
         return data
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        # Campos marcados en to_internal_value() como "quitar archivo"
+        # (llegaron como "" en vez de un File nuevo).
+        clear_files = getattr(self, "_clear_files", [])
+        if clear_files:
+            for field in clear_files:
+                getattr(instance, field).delete(save=False)
+            instance.save(update_fields=clear_files)
+        return instance
 
     # ── Serialización de salida ───────────────────────────────────────────
 
@@ -130,7 +178,8 @@ class ConsumableMaterialSerializer(serializers.ModelSerializer):
         model = ConsumableMaterial
         fields = "__all__"
         extra_kwargs = {
-            "sena_plate": {"required": False, "allow_null": True},
+            "sena_plate": {"required": False, "allow_null": True, "allow_blank": True},
+            "serial":     {"required": False, "allow_null": True, "allow_blank": True},
             "quantity":   {"required": False, "allow_null": True},
         }
 
@@ -201,8 +250,10 @@ class ReturnableMaterialSerializer(serializers.ModelSerializer):
             from django.db.models import Sum as _Sum
 
             qty = int(c.quantity)  # cast defensivo por si vuelve a llegar como str
+            # Incluye 'Pendiente' junto con 'Activo' — ver la nota equivalente
+            # en ConsumableMaterialSerializer.get_available_quantity.
             already_lent = (
-                Loans.objects.filter(id_material=c, state='Activo')
+                Loans.objects.filter(id_material=c, state__in=['Activo', 'Pendiente'])
                 .aggregate(total=_Sum('amount_lent'))['total'] or 0
             )
             rep['is_exhausted']       = qty <= 0 or max(0, qty - already_lent) == 0

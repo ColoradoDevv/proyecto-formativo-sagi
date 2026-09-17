@@ -83,7 +83,7 @@ export default function Input({
             </div>
 
             {error && (
-                <p className={`text-error place-self-start mt-1 ${variant === "auth" ? "text-caption pl-1" : "text-small"}`}>
+                <p className={`text-error text-small place-self-start mt-1 ${variant === "auth" ? "pl-1" : ""}`}>
                     {error}
                 </p>
             )}

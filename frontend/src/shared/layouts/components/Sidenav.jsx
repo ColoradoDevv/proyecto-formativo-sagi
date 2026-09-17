@@ -181,7 +181,7 @@ export default function Sidenav({ isOpen = false, onClose }) {
                 {/* Backdrop */}
                 <div
                     role="presentation"
-                    className={`absolute inset-0 bg-black/40 transition-opacity duration-[var(--duration-slow)] ${isOpen ? "opacity-100" : "opacity-0"}`}
+                    className={`absolute inset-0 bg-background-inverse/40 transition-opacity duration-[var(--duration-slow)] ${isOpen ? "opacity-100" : "opacity-0"}`}
                     onClick={onClose}
                 />
 
