@@ -28,15 +28,22 @@ export async function getLoanById(id) {
  * Devuelve { batch_id, message, draft_count, expires_at }.
  */
 export async function createLoanDraft(loanData) {
+    const receptorIsRegistered = loanData.receptorIsRegistered !== false;
     const response = await apiFetch("/api/loans/draft/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             id_responsable_user: loanData.loanResponsableUser,
-            id_receptor_user:    loanData.loanReceptorUser,
+            receptor_is_registered: receptorIsRegistered,
+            // Registrado: se manda el id del usuario. No registrado: se
+            // mandan nombre/correo y el backend crea el préstamo sin FK.
+            ...(receptorIsRegistered
+                ? { id_receptor_user: loanData.loanReceptorUser }
+                : { receptor_name: loanData.receptorName, receptor_email: loanData.receptorEmail }),
             id_material:         loanData.loanMaterial,
             amount_lent:         loanData.loanMaterialQuantities,
             apprentice_group:    loanData.loanGroup,
+            loan_type:           loanData.loanType,
             justification_use:   loanData.loanJustification,
             return_date:         loanData.loanReturnDate,
         }),

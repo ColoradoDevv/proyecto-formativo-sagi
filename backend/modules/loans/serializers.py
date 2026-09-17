@@ -51,6 +51,10 @@ class LoanSerializer(serializers.ModelSerializer):
             'state': {'read_only': True},
             # loan_date se rellena automáticamente (auto_now_add)
             'loan_date': {'read_only': True},
+            # El flujo de receptor no registrado solo existe en el camino de
+            # borrador (LoanDraftCreateView) — este serializer es del CRUD
+            # directo/legado, que sigue exigiendo un usuario receptor real.
+            'id_receptor_user': {'required': True},
         }
 
     # ── Campos computados ─────────────────────────────────────────────────
@@ -59,7 +63,7 @@ class LoanSerializer(serializers.ModelSerializer):
         return f"{obj.id_responsable_user.first_name} {obj.id_responsable_user.last_name}"
 
     def get_usuario_receptor(self, obj):
-        return f"{obj.id_receptor_user.first_name} {obj.id_receptor_user.last_name}"
+        return obj.receptor_display_name
 
     def get_material(self, obj):
         return obj.id_material.name
