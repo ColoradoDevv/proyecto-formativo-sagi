@@ -1,20 +1,28 @@
 import { ChevronDown, Menu } from "lucide-react";
-import { Dropdown, DropdownTrigger, DropdownContent, DropdownItem, DropdownSeparator, IconButton } from "@/shared";
+import {
+    Dropdown,
+    DropdownContent,
+    DropdownItem,
+    DropdownSeparator,
+    DropdownTrigger,
+    IconButton,
+    cancelAlert,
+} from "@/shared";
 import { Link, useNavigate } from "react-router-dom";
-import { getStoredUser } from "@/shared/services/api"
+import { getStoredUser } from "@/shared/services/api";
 import { logout } from "@/features/auth/services/authService";
-import { cancelAlert } from "@/shared";
 import { useState } from "react";
 import clsx from "clsx";
+import ThemeToggle from "@/shared/components/ThemeToggle";
 
 
 export default function Navbar({ onToggleSidebar }) {
 
+    const [open, setOpen] = useState(false);
     const navigate = useNavigate();
+    const userPlaceholder = getStoredUser()?.first_name;
 
-    const userPlaceholder = getStoredUser()?.first_name
-
-        async function handleLogout() {
+    async function handleLogout() {
         const result = await cancelAlert({
             title: "¿Cerrar sesión?",
             text: "Tendrás que volver a iniciar sesión para acceder al sistema.",
@@ -34,7 +42,7 @@ export default function Navbar({ onToggleSidebar }) {
     };
 
     return (
-        <div className={clsx("bg-surface-hover dark:bg-amber-950 px-4 sm:px-6 border-b border-border flex items-center text-text-primary  h-(--size-control-2xl) shrink-0")}>
+        <div className={clsx("bg-surface-hover px-4 sm:px-6 border-b border-border flex items-center text-text-primary h-(--size-control-2xl) shrink-0")}>
 
             {/* Hamburger / Toggle Sidebar */}
             {onToggleSidebar && (
@@ -51,12 +59,17 @@ export default function Navbar({ onToggleSidebar }) {
             {/* Título — completo desde sm, abreviado en móvil */}
             <h1 className="text-h2 font-heading flex-1 truncate">
                 SGI - Inventario<span className="hidden sm:inline"> Teleínformatica</span>
-
             </h1>
 
+            {/* Selector de tema (claro / oscuro / sistema) */}
+            <ThemeToggle />
+
             {/* Menú de usuario */}
-            <Dropdown>
-                <DropdownTrigger>
+            <Dropdown open={open} onOpenChange={setOpen}>
+                <DropdownTrigger
+                    aria-label="Menú de usuario"
+                    className="ml-3 flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-surface-muted transition-colors text-text-primary"
+                >
                     <span className="hidden lg:inline underline cursor-pointer">{userPlaceholder}</span>
                     <ChevronDown className="size-5 cursor-pointer" />
                 </DropdownTrigger>
@@ -64,7 +77,7 @@ export default function Navbar({ onToggleSidebar }) {
                     <DropdownItem>
                         <Link to="/configuracion" className="block w-full">Ver Perfil</Link>
                     </DropdownItem>
-                          <DropdownSeparator />
+                    <DropdownSeparator />
                     <DropdownItem>
                         <button type="button" onClick={handleLogout} className="block w-full text-left">Cerrar Sesión</button>
                     </DropdownItem>

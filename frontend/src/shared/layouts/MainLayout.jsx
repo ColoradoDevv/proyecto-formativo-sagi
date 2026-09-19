@@ -42,7 +42,6 @@ export default function MainLayout({ children }) {
     return (
         <div className={clsx ("h-screen flex flex-col", isDark ? "dark" : "")}>
             <Navbar onToggleSidebar={() => setSidebarOpen(prev => !prev)}/>
-                <button onClick={toggleTheme}> fenfefenfen</button>
             <div className="flex flex-1 overflow-hidden">
                 <Sidenav isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
                 <main className="flex-1 bg-background/70 text-text-primary overflow-y-auto">

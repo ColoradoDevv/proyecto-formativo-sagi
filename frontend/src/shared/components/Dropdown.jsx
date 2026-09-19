@@ -19,6 +19,7 @@ export function Dropdown({
     open: controlledOpen,
     onOpenChange,
     className = "",
+    triggerRef: externalTriggerRef,
 }) {
     const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
 
@@ -37,7 +38,8 @@ export function Dropdown({
     )
 
     const containerRef = useRef(null)
-    const triggerRef   = useRef(null)
+    const internalTriggerRef = useRef(null)
+    const triggerRef = externalTriggerRef ?? internalTriggerRef
     const contentRef   = useRef(null)
 
     useEffect(() => {
