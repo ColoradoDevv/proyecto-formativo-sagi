@@ -3,8 +3,8 @@ import { Dropdown, DropdownTrigger, DropdownContent } from "./Dropdown";
 import Checkbox from "./Checkbox";
 
 const TYPE_STYLES = {
-    Consumo:    "bg-blue-500/15 text-blue-400 border border-blue-500/30",
-    Devolutivo: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
+    Consumo:    "bg-brand/8 text-brand border border-brand/40",
+    Devolutivo: "bg-success/8 text-success border border-success/40",
 };
 
 function TypeBadge({ type }) {

@@ -1,7 +1,7 @@
 import { apiFetch } from "@/shared/services/api";
 
-export async function getBrands() {
-    const response = await apiFetch("/api/products/brands/")
+export async function getBrands(signal) {
+    const response = await apiFetch("/api/products/brands/", { signal })
     const data = await response.json()
     return data.filter((brand) => brand.is_active).map((brand) => ({ id: brand.id, label: brand.name }))
 }
@@ -32,8 +32,8 @@ export function getStates() {
     ]);
 }
 
-export async function getUsers() {
-    const response = await apiFetch("/api/users/?is_accountable=true&is_active=true")
+export async function getUsers(signal) {
+    const response = await apiFetch("/api/users/?is_accountable=true&is_active=true", { signal })
     const data = await response.json()
     return data.map((user) => ({ id: user.id, label: `${user.first_name} ${user.last_name}` }))
 }

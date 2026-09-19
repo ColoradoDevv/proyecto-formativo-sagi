@@ -7,7 +7,7 @@ import "./swal.css";
 export const swalBase = Swal.mixin({
     reverseButtons: true,
     customClass: {
-        popup: "!rounded-[var(--radius-3xl)] !shadow-[var(--shadow-elevation-5)] !p-6 !bg-white/90 !backdrop-blur-2xl !border !border-white/50",
+        popup: "!rounded-[var(--radius-3xl)] !shadow-[var(--shadow-elevation-5)] !p-6 !bg-surface-hover/90 !backdrop-blur-2xl !border !border-surface-hover/50",
         title: "!text-h3 !font-heading !text-text-primary",
         htmlContainer: "!text-small !text-text-secondary",
         icon: "!border-0",

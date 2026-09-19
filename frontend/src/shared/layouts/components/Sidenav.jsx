@@ -13,19 +13,19 @@ import { usePermissions } from "@/shared/hooks/usePermissions";
 const NAV_MODULES = [
     {
         to: "/",
-        icon: <House size={24} />,
+        icon: <House size={20} />,
         label: "Inicio",
         requiredPerms: [], // visible siempre
     },
     {
         to: "/usuarios",
-        icon: <Users size={24} />,
+        icon: <Users size={20} />,
         label: "Usuarios",
         requiredPerms: ["view_user", "create_user", "edit_user", "delete_user", "list_users"],
     },
     {
         to: "/consumibles",
-        icon: <Wrench size={24} />,
+        icon: <Wrench size={20} />,
         label: "Consumibles",
         requiredPerms: [
             "view_consumable_material", "list_consumable_materials",
@@ -35,7 +35,7 @@ const NAV_MODULES = [
     },
     {
         to: "/devolutivos",
-        icon: <Scroll size={24} />,
+        icon: <Scroll size={20} />,
         label: "Devolutivos",
         requiredPerms: [
             "view_returnable_material", "list_returnable_materials",
@@ -45,7 +45,7 @@ const NAV_MODULES = [
     },
     {
         to: "/prestamos",
-        icon: <Truck size={24} />,
+        icon: <Truck size={20} />,
         label: "Préstamos",
         requiredPerms: ["view_loan", "create_loan", "edit_loan", "list_loans"],
     },
@@ -61,13 +61,25 @@ function NavLinks({ onLinkClick, isCollapsed = false }) {
     );
 
     const linkClass = ({ isActive }) =>
-        `flex items-center gap-3 p-2.5 rounded-lg transition-colors ${
-            isCollapsed ? "justify-center" : ""
+        `flex items-center gap-3 h-10 min-h-10 box-border p-2.5 rounded-lg transition-colors ${
+            isCollapsed ? "justify-start" : ""
         } ${
             isActive
-                ? "bg-surface-muted text-primary font-medium"
+                ? "bg-brand text-text-inverse font-medium"
                 : "hover:bg-surface-muted text-text-primary"
         }`;
+
+    const renderNavContent = (icon, label, isActive) => (
+        <>
+            <span className={`shrink-0 flex items-center justify-center transition-transform duration-300 ease-in-out ${isCollapsed ? "translate-x-1" : "translate-x-0"}`}>
+                {icon}
+            </span>
+            {!isCollapsed && <span className="truncate whitespace-nowrap flex-1">{label}</span>}
+            {!isCollapsed && isActive && (
+                <span className="w-1.5 h-1.5 rounded-full bg-text-inverse shrink-0" />
+            )}
+        </>
+    );
 
     async function handleLogout() {
         const result = await cancelAlert({
@@ -88,7 +100,7 @@ function NavLinks({ onLinkClick, isCollapsed = false }) {
 
     return (
         <div className="flex flex-col h-full justify-between gap-6 overflow-y-auto">
-            <ul className="flex flex-col gap-4">
+            <ul className="flex flex-col gap-1">
                 {visibleModules.map(({ to, icon, label }) => (
                     <li key={to}>
                         <NavLink
@@ -98,20 +110,18 @@ function NavLinks({ onLinkClick, isCollapsed = false }) {
                             className={linkClass}
                             title={label}
                         >
-                            <span className="shrink-0 flex items-center justify-center">{icon}</span>
-                            {!isCollapsed && <span className="truncate whitespace-nowrap">{label}</span>}
+                            {({ isActive }) => renderNavContent(icon, label, isActive)}
                         </NavLink>
                     </li>
                 ))}
             </ul>
 
-            <ul className="flex flex-col gap-4 pt-4 border-t border-border/50">
+            <ul className="flex flex-col gap-1 pt-4 border-t border-border/50">
                 {/* Configuración */}
                 {(isSuper || canAny(["manage_groups", "manage_role_permissions", "create_role", "list_roles"])) && (
                     <li>
                         <NavLink to="/configuracion" onClick={onLinkClick} className={linkClass} title="Configuración">
-                            <span className="shrink-0 flex items-center justify-center"><Settings size={24} /></span>
-                            {!isCollapsed && <span className="truncate whitespace-nowrap">Configuración</span>}
+                            {({ isActive }) => renderNavContent(<Settings size={20} />, "Configuración", isActive)}
                         </NavLink>
                     </li>
                 )}
@@ -120,8 +130,7 @@ function NavLinks({ onLinkClick, isCollapsed = false }) {
                 {isPrimaryAdmin && (
                     <li>
                         <NavLink to="/auditoria" onClick={onLinkClick} className={linkClass} title="Auditoría">
-                            <span className="shrink-0 flex items-center justify-center"><ClipboardList size={24} /></span>
-                            {!isCollapsed && <span className="truncate whitespace-nowrap">Auditoría</span>}
+                            {({ isActive }) => renderNavContent(<ClipboardList size={20} />, "Auditoría", isActive)}
                         </NavLink>
                     </li>
                 )}
@@ -132,11 +141,13 @@ function NavLinks({ onLinkClick, isCollapsed = false }) {
                         type="button"
                         onClick={handleLogout}
                         title="Cerrar sesión"
-                        className={`flex items-center gap-3 p-2.5 rounded-lg hover:bg-surface-muted transition-colors w-full text-left cursor-pointer ${
-                            isCollapsed ? "justify-center" : ""
+                        className={`flex items-center gap-3 h-10 min-h-10 box-border p-2.5 rounded-lg hover:bg-surface-muted transition-colors w-full text-left cursor-pointer text-text-primary ${
+                            isCollapsed ? "justify-start" : ""
                         }`}
                     >
-                        <span className="shrink-0 flex items-center justify-center"><LogOut size={24} /></span>
+                        <span className={`shrink-0 flex items-center justify-center transition-transform duration-300 ease-in-out ${isCollapsed ? "translate-x-1" : "translate-x-0"}`}>
+                            <LogOut size={20} />
+                        </span>
                         {!isCollapsed && <span className="truncate whitespace-nowrap">Cerrar sesión</span>}
                     </button>
                 </li>
@@ -149,7 +160,7 @@ export default function Sidenav({ isOpen = false, onClose }) {
     const [isCollapsed, setIsCollapsed] = useState(() => {
         return localStorage.getItem("sidebar_collapsed") === "true";
     });
-    
+
     useEffect(() => {
         const handleToggle = () => {
             setIsCollapsed((prev) => {
@@ -170,7 +181,7 @@ export default function Sidenav({ isOpen = false, onClose }) {
                 {/* Backdrop */}
                 <div
                     role="presentation"
-                    className={`absolute inset-0 bg-black/40 transition-opacity duration-[var(--duration-slow)] ${isOpen ? "opacity-100" : "opacity-0"}`}
+                    className={`absolute inset-0 bg-background-inverse/40 transition-opacity duration-[var(--duration-slow)] ${isOpen ? "opacity-100" : "opacity-0"}`}
                     onClick={onClose}
                 />
 
@@ -178,7 +189,7 @@ export default function Sidenav({ isOpen = false, onClose }) {
                 <aside
                     className={`
                         absolute left-0 top-0 h-full w-64
-                        bg-surface-hover border-r border-border text-text-primary
+                        bg-[var(--color-primary-50)] border-r border-border text-text-primary
                         p-5 flex flex-col justify-between
                         transition-transform duration-[var(--duration-slow)] ease-in-out
                         ${isOpen ? "translate-x-0" : "-translate-x-full"}
@@ -204,7 +215,7 @@ export default function Sidenav({ isOpen = false, onClose }) {
 
             {/* ── Desktop: sidebar colapsable ── */}
             <aside
-                className={`hidden lg:flex bg-surface-hover border-r border-border text-text-primary p-4 flex-col justify-between shrink-0 transition-all duration-300 ease-in-out ${
+                className={`hidden lg:flex bg-[var(--color-primary-50)] border-r border-border text-text-primary p-4 flex-col justify-between shrink-0 transition-all duration-300 ease-in-out ${
                     isCollapsed ? "w-16 px-2" : "w-64"
                 }`}
             >

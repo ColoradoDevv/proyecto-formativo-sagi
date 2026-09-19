@@ -61,7 +61,7 @@ export default function ReturnableForm({
                             error={errors.model}
                             labelAction={<CreateOptionButton variant="spacer" />}
 
-                            required
+                            //required
                         />
                         <Input
                             label="Placa SENA"
@@ -86,16 +86,15 @@ export default function ReturnableForm({
                             labelAction={<CreateOptionButton variant="spacer" />}
                         />    
                         <Input
-                            label="ID"
+                            label="S/N"
                             name="serial"
-                            placeholder="ID del material"
+                            placeholder="Numero serial del material"
                             value={formData.serial}
                             onChange={onChange}
                             error={errors.serial}
                             required={categoryRules.requiresId}
                             optional={!categoryRules.requiresId}
                             labelAction={<CreateOptionButton variant="spacer" />}
-
                         />
 
                         
@@ -106,7 +105,7 @@ export default function ReturnableForm({
                                 value={formData.brand}
                                 onChange={onChange}
                                 error={errors.brand}
-                                required
+                                optional
                                 labelAction={
                                     <CreateOptionButton
                                         onCreate={onCreateBrand}

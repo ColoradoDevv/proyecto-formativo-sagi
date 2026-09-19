@@ -55,6 +55,10 @@
     --color-error: #E53935;
     --color-error-soft: #FDE7E7;   /* fondo suave para estados de error/inactivo */
 
+    /* Warning color */
+    --color-warning: #B45309;
+    --color-warning-soft: #FEF3C7; /* fondo suave para estados de advertencia/pendiente */
+
     /* Base/Basic color */
     --color-white: #fff;
     --color-black: #000000;

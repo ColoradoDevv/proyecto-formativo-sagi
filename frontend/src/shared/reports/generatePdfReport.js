@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { PDF_COLORS as C } from "./pdfColors";
 
 /**
  * Genera un PDF protegido contra modificaciones.
@@ -47,15 +48,15 @@ export function generatePdfReport({
     }).format(generatedAt);
 
     doc.setFontSize(11);
-    doc.setTextColor(12, 45, 72); // #0C2D48
+    doc.setTextColor(...C.navy);
     doc.text("SGI - Sistema de Gestión de Inventario", 14, 14);
 
     doc.setFontSize(16);
-    doc.setTextColor(12, 45, 72);
+    doc.setTextColor(...C.navy);
     doc.text(reportTitle, 14, 22);
 
     doc.setFontSize(9);
-    doc.setTextColor(82, 107, 123); // #526B7B
+    doc.setTextColor(...C.muted);
     doc.text(`Generado por: ${generatedBy}`, 14, 29);
     doc.text(`Fecha y hora: ${dateTime}`, 14, 35);
 
@@ -65,8 +66,8 @@ export function generatePdfReport({
         body: rows,
         theme: "grid",
         headStyles: {
-            fillColor: [32, 63, 87],  // #203F57
-            textColor: 255,
+            fillColor: C.steel,
+            textColor: C.white,
             fontSize: 10,
             fontStyle: "bold",
         },
@@ -75,7 +76,7 @@ export function generatePdfReport({
             cellPadding: 3,
         },
         alternateRowStyles: {
-            fillColor: [245, 248, 250],
+            fillColor: C.stripe,
         },
         margin: { left: 14, right: 14 },
     });

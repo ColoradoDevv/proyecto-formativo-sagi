@@ -98,10 +98,10 @@ export default function ForgotForm() {
     };
 
     return (
-        <div className="bg-surface-hover rounded-[var(--radius-3xl)] shadow-[var(--shadow-elevation-5)] px-6 sm:px-8 py-10 w-full sm:w-[var(--size-field-md)]">
-            <h1 className="text-center text-h2 font-heading mb-2 text-text-primary">
+        <div className="bg-surface-hover rounded-[var(--radius-3xl)] shadow-[var(--shadow-elevation-5)] px-6 sm:px-8 py-10 w-full sm:w-[var(--size-field-md)] animate-slide-up">
+            <h2 className="text-center text-h2 font-heading mb-2 text-text-primary">
                 Recuperar Contraseña
-            </h1>
+            </h2>
 
             {sent ? (
                 /* Estado de exito */

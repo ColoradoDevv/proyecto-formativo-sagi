@@ -95,6 +95,10 @@ class UserSerializer(serializers.ModelSerializer):
             # saber si está editando al superadmin primigenio y deshabilitar
             # los controles sensibles. Nunca debe ser escritura desde la API.
             "is_primary_admin": {"read_only": True},
+            # is_staff da acceso al panel /admin de Django. Ningún flujo del
+            # frontend lo necesita escribir; bloquearlo evita que un usuario
+            # con edit_user se autoconceda (o le conceda a otro) ese acceso.
+            "is_staff": {"read_only": True},
         }
 
     def validate_document_number(self, value):
@@ -117,10 +121,10 @@ class UserSerializer(serializers.ModelSerializer):
         return document_number
 
     def _validate_dates(self, attrs):
-        start = attrs.get("start_date")
-        end = attrs.get("end_date")
-
         if self.instance is None:
+            # Creación: ambas fechas son obligatorias, sin excepción.
+            start = attrs.get("start_date")
+            end = attrs.get("end_date")
             if not start:
                 raise serializers.ValidationError(
                     {"start_date": "La fecha de inicio es obligatoria."}
@@ -130,16 +134,25 @@ class UserSerializer(serializers.ModelSerializer):
                     {"end_date": "La fecha de finalización es obligatoria."}
                 )
         else:
-            start = start if "start_date" in attrs else self.instance.start_date
-            end = end if "end_date" in attrs else self.instance.end_date
-            if not start:
+            # Edición (incluye PATCH parciales, p.ej. MyProfileView.patch()
+            # que solo manda la foto): solo se exige un valor cuando el
+            # propio request está tocando ese campo y lo manda vacío. No se
+            # vuelve a exigir un campo que ni siquiera vino en este PATCH,
+            # aunque el registro ya lo tenga incompleto por datos previos
+            # (p.ej. un usuario creado saltándose campos obligatorios) — de
+            # lo contrario CUALQUIER PATCH parcial sobre esa cuenta quedaría
+            # bloqueado hasta que alguien complete esos campos aparte, sin
+            # relación con lo que el PATCH actual está modificando.
+            if "start_date" in attrs and not attrs["start_date"]:
                 raise serializers.ValidationError(
                     {"start_date": "La fecha de inicio es obligatoria."}
                 )
-            if not end:
+            if "end_date" in attrs and not attrs["end_date"]:
                 raise serializers.ValidationError(
                     {"end_date": "La fecha de finalización es obligatoria."}
                 )
+            start = attrs.get("start_date", self.instance.start_date)
+            end = attrs.get("end_date", self.instance.end_date)
 
         if start and end and end < start:
             raise serializers.ValidationError(
@@ -176,6 +189,16 @@ class UserSerializer(serializers.ModelSerializer):
         # El flujo de edicion no cambia: aqui si se respeta una password
         # si el admin decide asignarla manualmente al editar.
         password = validated_data.pop("password", None)
+        if password:
+            # Import local para evitar un ciclo de imports (views.py ya
+            # importa este modulo). Reutiliza la misma politica de
+            # contraseñas que el flujo de OTP y el de primer login.
+            from .views import ResetPasswordView
+            if not ResetPasswordView._password_is_valid(password):
+                raise serializers.ValidationError({
+                    "password": "La contraseña debe tener al menos 10 caracteres, "
+                                 "una mayúscula, una minúscula, un número y un carácter especial."
+                })
 
         # Campos unique+nullable: convertir string vacío a None para no romper
         # la constraint UNIQUE (la BD acepta múltiples NULL pero no múltiples '').

@@ -104,7 +104,7 @@ export default function LoanSignPage() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-surface p-4">
-            <div className="bg-surface-hover rounded-[var(--radius-3xl)] shadow-[var(--shadow-elevation-5)] px-6 sm:px-10 py-10 w-full max-w-md flex flex-col items-center gap-5">
+            <div className="bg-surface-hover rounded-[var(--radius-3xl)] shadow-[var(--shadow-elevation-5)] px-6 sm:px-10 py-10 w-full max-w-md flex flex-col items-center gap-5 animate-slide-up">
 
                 <h1 className="text-h2 font-heading text-text-primary text-center">
                     Firma de Préstamo

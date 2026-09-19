@@ -6,7 +6,7 @@ export default function EditCard({ title, children, className = "", cols = 2 }) 
     }[cols] ?? "sm:grid-cols-2";
 
     return (
-        <div className={`flex flex-col gap-3 p-4 rounded-2xl border border-border bg-surface-hover ${className}`}>
+        <div className={`flex flex-col gap-3 p-4 rounded-2xl border border-border bg-surface-hover animate-fade-in ${className}`}>
             <h3 className={`text-medium font-heading border-b border-border pb-2`}>{title}</h3>
             <div className={`grid grid-cols-1 ${colsClass} gap-x-6 gap-y-3`}>
                 {children}

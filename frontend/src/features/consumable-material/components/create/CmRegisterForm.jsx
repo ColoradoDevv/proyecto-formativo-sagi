@@ -9,18 +9,19 @@ import { ConsumableAccountableCard, ConsumableGeneralCard, ConsumableInventoryCa
 import { Undo2, Package, Layers, BadgeDollarSign, UserCheck, Paperclip, CheckCircle2 } from "lucide-react";
 
 const GENERAL_FIELDS = ["name", "brand", "description"];
-const INVENTORY_FIELDS = ["senaPlate", "quantity", "location", "state"];
+const INVENTORY_FIELDS = ["senaPlate", "quantity", "location", "state", "serial"];
 const VALUES_FIELDS = ["purchaseDate", "unitPrice", "totalPrice"];
 const SUPPORT_FIELDS = ["user", "photo", "technicalSheet"];
 
 const generalStepSchema = cmBaseSchema.pick({
     name: true,
-    brand: true,
+    brand: false,
     description: true,
 });
 
 const inventoryStepSchema = cmBaseSchema.pick({
     senaPlate: true,
+    serial: true,
     quantity: true,
     location: true,
     state: true,
@@ -81,6 +82,7 @@ export default function CmRegisterForm() {
         name: "",
         description: "",
         senaPlate: "",
+        serial: "",
         quantity: "",
         location: "",
         brand: "",
@@ -93,8 +95,20 @@ export default function CmRegisterForm() {
         technicalSheet: [],
     });
 
-    useEffect(() => { getBrands().then(setBrands); }, []);
-    useEffect(() => { getUsers().then(setUsers); }, []);
+    useEffect(() => {
+        const controller = new AbortController();
+        getBrands(controller.signal).then(setBrands).catch((err) => {
+            if (err.name !== "AbortError") throw err;
+        });
+        return () => controller.abort();
+    }, []);
+    useEffect(() => {
+        const controller = new AbortController();
+        getUsers(controller.signal).then(setUsers).catch((err) => {
+            if (err.name !== "AbortError") throw err;
+        });
+        return () => controller.abort();
+    }, []);
 
     const clearErrorsForFields = (fields) => {
         setErrors((prev) => {
@@ -408,15 +422,15 @@ export default function CmRegisterForm() {
                                             label="Ficha Técnica"
                                             name="technicalSheet"
                                             placeholder="Subir ficha técnica"
-                                            optional
+                                            required
                                             value={formData.technicalSheet}
                                             onChange={handleFileChange("technicalSheet")}
                                             error={errors.technicalSheet}
                                             accept="application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/png"
                                             multiple={false}
                                             maxFiles={1}
-                                            maxSixeMB={3}
-                                            description="Formato PDF, Excel o JPG. Tamaño máximo: 3MB. Máximo 1 archivo."
+                                            maxSizeMB={3}
+                                            description="Formato PDF, Excel o PNG. Tamaño máximo: 3MB. Máximo 1 archivo."
                                             className="w-full h-14 rounded-2xl"
                                         />
                                     </div>

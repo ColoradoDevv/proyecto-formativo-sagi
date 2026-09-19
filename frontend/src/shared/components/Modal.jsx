@@ -7,8 +7,8 @@ import { IconButton } from "./IconButton";
 // y "solid" (tarjeta opaca, mejor legibilidad y tema oscuro).
 const VARIANTS = {
     glass: {
-        backdrop: "bg-slate-500/20 backdrop-blur-xs",
-        card: "bg-white/30 backdrop-blur-2xl border border-white/50",
+        backdrop: "bg-background-inverse/20 backdrop-blur-xs",
+        card: "bg-surface-hover/30 backdrop-blur-2xl border border-surface-hover/50",
     },
     solid: {
         backdrop: "bg-background-inverse/30",
@@ -81,7 +81,7 @@ export default function Modal({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={title ? titleId : undefined}
-                className={`relative z-10 w-full ${maxWidth} max-h-[90vh] overflow-y-auto ${styles.card} rounded-[var(--radius-3xl)] shadow-[var(--shadow-elevation-5)] p-6 sm:p-8 flex flex-col gap-5`}
+                className={`relative z-10 w-full ${maxWidth} max-h-[90vh] overflow-y-auto ${styles.card} rounded-[var(--radius-3xl)] shadow-[var(--shadow-elevation-5)] p-6 sm:p-8 flex flex-col gap-5 animate-slide-up`}
             >
                 {/* Header */}
                 {(title || showClose) && (

@@ -19,7 +19,7 @@ export const RmColumns = (setRMs, setNotification) => [
                 <span className="flex items-center gap-1.5">
                     {display}
                     {is_exhausted && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-red-500/15 text-red-400 border border-red-500/30">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-error/15 text-error border border-error/30">
                             Agotado
                         </span>
                     )}

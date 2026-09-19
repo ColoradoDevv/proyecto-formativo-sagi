@@ -99,32 +99,43 @@ export default function AccessPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 flex flex-col lg:flex-row gap-6 lg:gap-10 w-full">
+    <div className="min-h-full p-4 sm:p-6 flex flex-col gap-6 text-text-primary animate-fade-in">
+      <header className="flex flex-col gap-2">
+        <p className="text-medium text-text-primary uppercase tracking-widest font-medium">
+          Administración / Seguridad
+        </p>
+        <h2 className="text-h2 font-heading">Gestión de permisos</h2>
+        <p className="text-small text-text-secondary">
+          Asigna y revisa los permisos disponibles para grupos y usuarios.
+        </p>
+      </header>
 
-      <AccessSidebar
-        selectedGroup={selectedGroup}
-        setSelectedGroup={setSelectedGroup}
-        selectedUser={selectedUser}
-        setSelectedUser={setSelectedUser}
-        groupPermissions={permissionsDraft}
-        setGroupPermissions={setGroupPermissions}
-        isEditing={isEditing}
-      />
+      <div className="flex flex-col lg:flex-row items-start gap-6 lg:gap-8 w-full">
+        <div className="w-full lg:w-75 lg:shrink-0 animate-slide-up">
+          <AccessSidebar
+            selectedGroup={selectedGroup}
+            setSelectedGroup={setSelectedGroup}
+            selectedUser={selectedUser}
+            setSelectedUser={setSelectedUser}
+            groupPermissions={permissionsDraft}
+            setGroupPermissions={setGroupPermissions}
+            isEditing={isEditing}
+          />
+        </div>
 
-      <div className="flex-1 min-w-0">
-        <h2 className="text-h3 font-heading mb-4 sm:mb-6">Gestión de permisos</h2>
-
-        <PermissionModule
-          selectedGroup={selectedGroup}
-          selectedUser={selectedUser}
-          isEditing={isEditing}
-          saving={saving}
-          permissionsDraft={permissionsDraft}
-          setPermissionsDraft={setPermissionsDraft}
-          onEdit={handleEdit}
-          onCancel={handleCancel}
-          onSave={handleSave}
-        />
+        <main className="flex-1 min-w-0 w-full bg-surface-hover rounded-2xl border border-border shadow-(--shadow-elevation-4) p-5 sm:p-6 animate-slide-up">
+          <PermissionModule
+            selectedGroup={selectedGroup}
+            selectedUser={selectedUser}
+            isEditing={isEditing}
+            saving={saving}
+            permissionsDraft={permissionsDraft}
+            setPermissionsDraft={setPermissionsDraft}
+            onEdit={handleEdit}
+            onCancel={handleCancel}
+            onSave={handleSave}
+          />
+        </main>
       </div>
     </div>
   );

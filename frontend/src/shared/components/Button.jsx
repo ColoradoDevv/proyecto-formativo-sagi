@@ -51,9 +51,12 @@ import ReportModal from "./ReportModal";
                     cursor-pointer
                     inline-flex items-center justify-center
                     rounded-[var(--radius-full)]
-                    transition-colors duration-[var(--duration-base)]
+                    transition-all duration-[var(--duration-base)]
+                    hover:-translate-y-0.5 hover:shadow-(--shadow-elevation-1)
+                    active:translate-y-0 active:shadow-none
                     focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2
                     disabled:cursor-not-allowed disabled:opacity-60
+                    disabled:hover:translate-y-0 disabled:hover:shadow-none
                     ${variants[variant]}
                     ${sizes[size]}
                     ${className}

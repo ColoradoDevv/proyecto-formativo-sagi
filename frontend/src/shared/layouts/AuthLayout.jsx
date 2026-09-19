@@ -24,8 +24,8 @@ export default function AuthLayout({ children }) {
                 rounded-[var(--radius-3xl)]
                 flex flex-row
                 backdrop-blur-md
-                bg-white/25
-                border border-white/40
+                bg-surface-hover/25
+                border border-surface-hover/40
                 shadow-[var(--shadow-elevation-5)]
                 overflow-hidden
             ">
@@ -37,7 +37,6 @@ export default function AuthLayout({ children }) {
                             className="h-12 sm:h-16 w-auto object-contain"
                         />
                     </div>
-
 
                 {/* ── Lado derecho: formulario ── */}
                 <div className="relative grid items-center justify-center p-6 pt-20 sm:pt-24 md:p-0 ">
@@ -54,7 +53,6 @@ export default function AuthLayout({ children }) {
                     </div>
                 </div>
             </div>
-
         </div>
     );
 }

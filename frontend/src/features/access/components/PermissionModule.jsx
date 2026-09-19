@@ -50,7 +50,7 @@ export default function PermissionModule({
 
   if (!target) {
     return (
-      <div className="rounded-[var(--radius-2xl)] border border-border bg-surface-hover p-8 text-center text-text-muted">
+      <div className="rounded-[var(--radius-2xl)] border border-border bg-surface-hover p-8 text-center text-text-muted animate-fade-in">
         Seleccione un grupo o usuario para ver y editar sus permisos.
       </div>
     );
@@ -79,7 +79,7 @@ export default function PermissionModule({
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 max-h-[75vh] overflow-y-auto pr-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 items-start gap-3 max-h-[75vh] overflow-y-auto pr-2">
         {PERMISSION_MODULES.map((module) => (
           <AccordionItem
             key={module.title}

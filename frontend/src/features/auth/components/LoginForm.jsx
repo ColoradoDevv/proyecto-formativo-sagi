@@ -57,10 +57,10 @@ export default function LoginForm() {
     };
 
     return (
-        <div className="bg-surface-hover rounded-[var(--radius-3xl)] shadow-[var(--shadow-elevation-5)] px-6 sm:px-8 py-10 w-full sm:w-[var(--size-field-md)]   select-none">
-            <h1 className="text-center text-h2 font-heading mb-7 text-text-primary select-none">
+        <div className="bg-surface-hover rounded-[var(--radius-3xl)] shadow-[var(--shadow-elevation-5)] px-6 sm:px-8 py-10 w-full sm:w-[var(--size-field-md)]   select-none animate-slide-up">
+            <h2 className="text-center text-h2 font-heading mb-7 text-text-primary select-none">
                 Iniciar Sesión
-            </h1>
+            </h2>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 {/* Correo */}

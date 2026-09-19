@@ -61,7 +61,8 @@ export const rmSchema = z.object({
 
     brand: z
         .string()
-        .min(1, "Debe seleccionar una marca"),
+        .trim()
+        .optional(),
 
     serial: z
         .string()
@@ -200,7 +201,8 @@ export const rmEditSchema = z.object({
 
     brand: z
         .string()
-        .min(1, "Debe seleccionar una marca"),
+        .trim()
+        .optional(),
 
     description: z
         .string()

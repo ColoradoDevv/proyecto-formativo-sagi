@@ -44,11 +44,20 @@ export function AccordionItem({ title, defaultOpen = false, open: openProp, onTo
                 />
             </button>
 
-            {open && (
-                <div className="px-6 pb-6">
-                    {children}
+            <div
+                aria-hidden={!open}
+                className={`grid transition-[grid-template-rows,opacity] duration-[var(--duration-base)] ease-in-out ${
+                    open
+                        ? "grid-rows-[1fr] opacity-100"
+                        : "grid-rows-[0fr] opacity-0 pointer-events-none"
+                }`}
+            >
+                <div className="overflow-hidden">
+                    <div className="px-6 pb-6">
+                        {children}
+                    </div>
                 </div>
-            )}
+            </div>
         </section>
     );
 }

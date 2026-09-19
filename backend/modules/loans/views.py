@@ -11,13 +11,16 @@ import django_filters
 import jwt
 from django.conf import settings
 from django.core.cache import cache
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.mail import send_mail
+from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -64,6 +67,15 @@ def _reset_rl(request, prefix):
 def _get_client_ip(request) -> str:
     xff = request.META.get("HTTP_X_FORWARDED_FOR")
     return xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", "")
+
+
+def _is_valid_email(value: str) -> bool:
+    """True si `value` es un correo con formato válido."""
+    try:
+        validate_email(value)
+        return True
+    except DjangoValidationError:
+        return False
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -729,12 +741,18 @@ class LoanSignView(APIView):
 # Helpers del flujo draft (compartidos por los tres endpoints nuevos)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _build_draft_sign_token(batch_id: str, role: str, user_id: int) -> str:
-    """JWT de firma para el flujo draft. scope='loan_draft_sign'."""
+def _build_draft_sign_token(batch_id: str, role: str, user_id, external: bool = False) -> str:
+    """JWT de firma para el flujo draft. scope='loan_draft_sign'.
+
+    user_id es None y external=True cuando el receptor no está registrado en
+    el sistema — firma sin cuenta, probada solo con este token + el OTP
+    enviado a su correo (ver get_permissions() en las vistas de firma).
+    """
     payload = {
         "batch_id": str(batch_id),
         "role":     role,
         "user_id":  user_id,
+        "external": external,
         "scope":    "loan_draft_sign",
         "exp":      datetime.datetime.utcnow() + datetime.timedelta(minutes=_SIGN_TOKEN_TTL_MINUTES),
         "iat":      datetime.datetime.utcnow(),
@@ -784,9 +802,14 @@ def _get_draft_batch(batch_id_str):
     return drafts, None
 
 
-def _send_draft_sign_email(user, drafts: list, role: str, token: str) -> None:
-    """Correo de firma para el flujo draft."""
-    sign_link  = f"{settings.FRONTEND_URL}/prestamos/firmar?token={token}"
+def _send_draft_sign_email(name: str, email: str, drafts: list, role: str, token: str, external: bool = False) -> None:
+    """Correo de firma para el flujo draft.
+
+    Recibe (name, email) en vez de un User: cuando el receptor no está
+    registrado no hay ningún objeto User que leer.
+    """
+    sign_path  = "/prestamos/firmar-externo" if external else "/prestamos/firmar"
+    sign_link  = f"{settings.FRONTEND_URL}{sign_path}?token={token}"
     role_label = "responsable del préstamo" if role == "responsable" else "receptor del material"
     first      = drafts[0]
     materials_lines = "\n".join(
@@ -795,7 +818,7 @@ def _send_draft_sign_email(user, drafts: list, role: str, token: str) -> None:
     send_mail(
         subject="Firma requerida — Préstamo de material SGI",
         message=(
-            f"Hola {user.first_name},\n\n"
+            f"Hola {name},\n\n"
             f"Se ha registrado una solicitud de préstamo en la que figuras como {role_label}.\n"
             f"El préstamo quedará registrado definitivamente una vez que ambas partes firmen.\n\n"
             f"Para firmar, haz clic en el siguiente enlace "
@@ -809,20 +832,20 @@ def _send_draft_sign_email(user, drafts: list, role: str, token: str) -> None:
             "Si no reconoces esta solicitud, avisa al administrador."
         ),
         from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
+        recipient_list=[email],
         fail_silently=False,
     )
 
 
-def _send_draft_otp_email(user, code: str, drafts: list) -> None:
-    """Correo OTP para el flujo draft."""
+def _send_draft_otp_email(name: str, email: str, code: str, drafts: list) -> None:
+    """Correo OTP para el flujo draft. Recibe (name, email) — ver _send_draft_sign_email."""
     materials_lines = "\n".join(
         f"  • {d.id_material.name} — cantidad: {d.amount_lent}" for d in drafts
     )
     send_mail(
         subject="Tu código de verificación de firma — SGI",
         message=(
-            f"Hola {user.first_name},\n\n"
+            f"Hola {name},\n\n"
             f"Tu código de verificación para firmar la solicitud de préstamo es:\n\n"
             f"    {code}\n\n"
             f"Materiales:\n{materials_lines}\n\n"
@@ -831,7 +854,7 @@ def _send_draft_otp_email(user, code: str, drafts: list) -> None:
             "Si no solicitaste este código, contacta al administrador de inmediato."
         ),
         from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
+        recipient_list=[email],
         fail_silently=False,
     )
 
@@ -907,7 +930,7 @@ class LoanDraftStatusView(APIView):
             "signed_responsable": signed_responsable,
             "signed_receptor":    signed_receptor,
             "responsable_name":   f"{draft.id_responsable_user.first_name} {draft.id_responsable_user.last_name}",
-            "receptor_name":      f"{draft.id_receptor_user.first_name} {draft.id_receptor_user.last_name}",
+            "receptor_name":      draft.receptor_display_name,
             "committed":          draft.state == LoanDraft.STATE_COMMITTED,
             "committed_loan_id":  draft.committed_loan_id,
         }, status=status.HTTP_200_OK)
@@ -933,23 +956,37 @@ class LoanDraftCreateView(APIView):
         material_ids = data.get("id_material")
         loan_amounts = data.get("amount_lent", {})
 
-        # DEBUG temporal — eliminar en producción
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.warning("DRAFT POST data: %s", dict(data))
-
         responsable_id = data.get("id_responsable_user")
         receptor_id    = data.get("id_receptor_user")
         group          = data.get("apprentice_group", "").strip()
         justification  = data.get("justification_use", "").strip()
         return_date    = data.get("return_date")
+        loan_type      = data.get("loan_type")
+
+        # Checkbox "¿El receptor está registrado en el sistema?" — cuando es
+        # false se exige receptor_name/receptor_email en vez de id_receptor_user.
+        receptor_is_registered = data.get("receptor_is_registered", True)
+        if isinstance(receptor_is_registered, str):
+            receptor_is_registered = receptor_is_registered.strip().lower() not in ("false", "0", "")
+        receptor_name  = (data.get("receptor_name") or "").strip()
+        receptor_email = (data.get("receptor_email") or "").strip()
 
         # ── Validación básica de campos requeridos ────────────────────────
         field_errors = {}
         if not responsable_id:
             field_errors["id_responsable_user"] = "Este campo es obligatorio."
-        if not receptor_id:
-            field_errors["id_receptor_user"] = "Este campo es obligatorio."
+        if receptor_is_registered:
+            if not receptor_id:
+                field_errors["id_receptor_user"] = "Este campo es obligatorio."
+        else:
+            if not receptor_name:
+                field_errors["receptor_name"] = "Este campo es obligatorio."
+            if not receptor_email:
+                field_errors["receptor_email"] = "Este campo es obligatorio."
+            elif not _is_valid_email(receptor_email):
+                field_errors["receptor_email"] = "Debe ingresar un correo electrónico válido."
+        if loan_type not in dict(Loans.LOAN_TYPE):
+            field_errors["loan_type"] = "Debe seleccionar un tipo de préstamo válido (Interno o Externo)."
         if not group:
             field_errors["apprentice_group"] = "Este campo es obligatorio."
         if not justification:
@@ -982,10 +1019,14 @@ class LoanDraftCreateView(APIView):
             responsable = User.objects.get(pk=responsable_id)
         except User.DoesNotExist:
             return Response({"id_responsable_user": "Usuario no encontrado."}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            receptor = User.objects.get(pk=receptor_id)
-        except User.DoesNotExist:
-            return Response({"id_receptor_user": "Usuario no encontrado."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if receptor_is_registered:
+            try:
+                receptor = User.objects.get(pk=receptor_id)
+            except User.DoesNotExist:
+                return Response({"id_receptor_user": "Usuario no encontrado."}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            receptor = None
 
         materials = {}
         for mid in material_ids:
@@ -1023,9 +1064,12 @@ class LoanDraftCreateView(APIView):
                 batch_id          = batch,
                 id_responsable_user = responsable,
                 id_receptor_user  = receptor,
+                receptor_name     = None if receptor_is_registered else receptor_name,
+                receptor_email    = None if receptor_is_registered else receptor_email,
                 id_material       = materials[str(mid)],
                 amount_lent       = amount,
                 apprentice_group  = group,
+                loan_type         = loan_type,
                 justification_use = justification,
                 return_date       = return_date,
                 expires_at        = expires,
@@ -1048,10 +1092,19 @@ class LoanDraftCreateView(APIView):
         )
 
         # ── Enviar correos de firma ───────────────────────────────────────
-        for role, user in [("responsable", responsable), ("receptor", receptor)]:
-            token = _build_draft_sign_token(str(batch), role, user.id)
+        # El responsable siempre es un usuario registrado; el receptor puede
+        # no serlo — en ese caso no hay User que leer, se usan los datos
+        # sueltos capturados en el formulario.
+        sign_targets = [("responsable", responsable.first_name, responsable.email, responsable.id, False)]
+        if receptor_is_registered:
+            sign_targets.append(("receptor", receptor.first_name, receptor.email, receptor.id, False))
+        else:
+            sign_targets.append(("receptor", receptor_name, receptor_email, None, True))
+
+        for role, name, email, user_id, external in sign_targets:
+            token = _build_draft_sign_token(str(batch), role, user_id, external=external)
             try:
-                _send_draft_sign_email(user, saved_drafts, role, token)
+                _send_draft_sign_email(name, email, saved_drafts, role, token, external=external)
             except Exception:
                 pass   # correo fallido no aborta — el admin puede reenviar
 
@@ -1076,6 +1129,18 @@ class LoanDraftSignRequestOTPView(APIView):
     Body: { "token": "<jwt draft_sign>" }
     Genera y envía el OTP para confirmar la firma sobre el borrador.
     """
+
+    def get_permissions(self):
+        # Un receptor externo no tiene cuenta ni sesión — su identidad la
+        # prueba únicamente este token (firmado por el servidor) + el OTP
+        # que se le envía a su correo. El flag "external" viene del propio
+        # JWT, así que no se puede falsificar desde el cliente.
+        raw_token = self.request.data.get("token")
+        if raw_token:
+            payload, _ = _decode_draft_sign_token(raw_token)
+            if payload and payload.get("role") == "receptor" and payload.get("external"):
+                return [AllowAny()]
+        return super().get_permissions()
 
     def post(self, request):
         blocked = _check_rl(request, "draft_otp_req", _OTP_RL_MAX, _OTP_RL_MSG)
@@ -1119,9 +1184,11 @@ class LoanDraftSignRequestOTPView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Verificar identidad
+        # Verificar identidad — un receptor externo no tiene FK (expected es
+        # None) y por lo tanto no hay identidad de sesión que comparar: el
+        # token + el OTP a su correo ya son la prueba.
         expected = drafts[0].id_responsable_user if role == "responsable" else drafts[0].id_receptor_user
-        if request.user.id != expected.id:
+        if expected is not None and request.user.id != expected.id:
             return Response(
                 {"error": "No tienes permiso para firmar esta solicitud."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -1140,7 +1207,9 @@ class LoanDraftSignRequestOTPView(APIView):
 
         # Invalidar OTPs previos del mismo batch/rol
         SignOTP.objects.filter(
-            batch_id=uuid.UUID(batch_id), user=request.user, role=role, used=False
+            batch_id=uuid.UUID(batch_id),
+            user=request.user if request.user.is_authenticated else None,
+            role=role, used=False,
         ).delete()
 
         # Generar OTP
@@ -1165,8 +1234,14 @@ class LoanDraftSignRequestOTPView(APIView):
             "user_id":    request.user.id,
         }, timeout=SignOTP.OTP_TTL_MINUTES * 60 + 30)
 
+        # Receptor externo: no hay User que leer, se usa lo capturado en el draft.
+        if role == "receptor" and drafts[0].is_receptor_external:
+            otp_name, otp_email = drafts[0].receptor_display_name, drafts[0].receptor_contact_email
+        else:
+            otp_name, otp_email = request.user.first_name, request.user.email
+
         try:
-            _send_draft_otp_email(request.user, code, drafts)
+            _send_draft_otp_email(otp_name, otp_email, code, drafts)
         except Exception:
             cache.delete(cache_key)
             return Response(
@@ -1177,7 +1252,7 @@ class LoanDraftSignRequestOTPView(APIView):
         _reset_rl(request, "draft_otp_req")
         return Response(
             {
-                "message":          f"Código enviado a {request.user.email}. Válido por {SignOTP.OTP_TTL_MINUTES} minutos.",
+                "message":          f"Código enviado a {otp_email}. Válido por {SignOTP.OTP_TTL_MINUTES} minutos.",
                 "expires_in_minutes": SignOTP.OTP_TTL_MINUTES,
             },
             status=status.HTTP_200_OK,
@@ -1197,6 +1272,15 @@ class LoanDraftSignView(APIView):
     Cuando ambas partes firman, crea los registros Loans reales y marca
     los borradores como 'committed'.
     """
+
+    def get_permissions(self):
+        # Ver comentario equivalente en LoanDraftSignRequestOTPView.
+        raw_token = self.request.data.get("token")
+        if raw_token:
+            payload, _ = _decode_draft_sign_token(raw_token)
+            if payload and payload.get("role") == "receptor" and payload.get("external"):
+                return [AllowAny()]
+        return super().get_permissions()
 
     def post(self, request):
         blocked = _check_rl(request, "draft_sign", _SIGN_RL_MAX, _SIGN_RL_MSG)
@@ -1246,7 +1330,7 @@ class LoanDraftSignView(APIView):
             )
 
         expected = drafts[0].id_responsable_user if role == "responsable" else drafts[0].id_receptor_user
-        if request.user.id != expected.id:
+        if expected is not None and request.user.id != expected.id:
             _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
             return Response(
                 {"error": "No tienes permiso para firmar esta solicitud."},
@@ -1316,17 +1400,22 @@ class LoanDraftSignView(APIView):
         client_ip  = _get_client_ip(request)
         user_agent = request.META.get("HTTP_USER_AGENT", "")[:500]
 
+        # request.user es AnonymousUser cuando el receptor es externo — no es
+        # una instancia real de User, así que no se puede asignar a la FK
+        # signed_by_*. Su firma queda igualmente probada por signed_at_*.
+        signer = request.user if request.user.is_authenticated else None
+
         sign_fields = {}
         if role == "responsable":
             sign_fields = dict(
-                signed_by_responsable = request.user,
+                signed_by_responsable = signer,
                 signed_at_responsable = now,
                 signed_ip_responsable = client_ip,
                 signed_ua_responsable = user_agent,
             )
         else:
             sign_fields = dict(
-                signed_by_receptor = request.user,
+                signed_by_receptor = signer,
                 signed_at_receptor = now,
                 signed_ip_receptor = client_ip,
                 signed_ua_receptor = user_agent,
@@ -1356,9 +1445,12 @@ class LoanDraftSignView(APIView):
                         batch_id            = batch_uuid,
                         id_responsable_user = draft.id_responsable_user,
                         id_receptor_user    = draft.id_receptor_user,
+                        receptor_name       = draft.receptor_name,
+                        receptor_email      = draft.receptor_email,
                         id_material         = draft.id_material,
                         amount_lent         = draft.amount_lent,
                         apprentice_group    = draft.apprentice_group,
+                        loan_type           = draft.loan_type,
                         justification_use   = draft.justification_use,
                         return_date         = draft.return_date,
                         state               = 'Activo',
@@ -1513,9 +1605,7 @@ class LoanBatchListView(APIView):
                 'usuario_responsable': (
                     f"{first.id_responsable_user.first_name} {first.id_responsable_user.last_name}"
                 ),
-                'usuario_receptor': (
-                    f"{first.id_receptor_user.first_name} {first.id_receptor_user.last_name}"
-                ),
+                'usuario_receptor': first.receptor_display_name,
                 'state':       batch_state,
                 'is_active':   batch_state == 'Activo',
                 'loan_count':  len(loans),

@@ -10,6 +10,12 @@ import { Undo2, CircleCheck, Clock } from "lucide-react";
 
 const POLL_INTERVAL_MS = 5000; // consultar cada 5 segundos
 
+// Clasificación fija de 2 valores — no requiere un endpoint propio.
+const LOAN_TYPE_OPTIONS = [
+    { id: "Interno", label: "Interno" },
+    { id: "Externo", label: "Externo" },
+];
+
 function getTodayDateString() {
     const today = new Date();
     const year  = today.getFullYear();
@@ -35,9 +41,13 @@ export default function LoanRegisterForm() {
     const [formData, setFormData] = useState({
         loanResponsableUser:     currentUserId,   // auto-asignado, no editable
         loanReceptorUser:        "",
+        receptorIsRegistered:    true,
+        receptorName:            "",
+        receptorEmail:           "",
         loanMaterial:            [],
         loanMaterialQuantities:  {},
         loanGroup:               "",
+        loanType:                "",
         loanJustification:       "",
         loanReturnDate:          "",
     });
@@ -81,7 +91,7 @@ export default function LoanRegisterForm() {
     }, [draftCreated, navigate]);
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
+        const { name, value, type, checked } = e.target;
         if (name === "loanMaterial") {
             setFormData((prev) => ({
                 ...prev,
@@ -92,7 +102,7 @@ export default function LoanRegisterForm() {
             }));
             return;
         }
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        setFormData((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
     };
 
     const handleMaterialQuantityChange = (materialId, quantity) => {
@@ -168,7 +178,7 @@ export default function LoanRegisterForm() {
 
         return (
             <div className="h-full p-3 sm:p-4 flex items-center justify-center">
-                <div className="bg-surface-hover rounded-[var(--radius-3xl)] shadow-[var(--shadow-elevation-5)] px-6 sm:px-10 py-10 w-full max-w-md flex flex-col items-center gap-5">
+                <div className="bg-surface-hover rounded-[var(--radius-3xl)] shadow-[var(--shadow-elevation-5)] px-6 sm:px-10 py-10 w-full max-w-md flex flex-col items-center gap-5 animate-slide-up">
 
                     <div className="flex flex-col items-center gap-1">
                         <span className="text-h2 font-heading text-text-primary">{total}/2</span>
@@ -220,6 +230,7 @@ export default function LoanRegisterForm() {
                     users={users}
                     materials={materials}
                     multipleMaterials
+                    loan_type={LOAN_TYPE_OPTIONS}
                     onMaterialQuantityChange={handleMaterialQuantityChange}
                     loanDepartureDate={getTodayDateString()}
                     hideResponsable

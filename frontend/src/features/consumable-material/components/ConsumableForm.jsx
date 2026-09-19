@@ -40,7 +40,7 @@ export function ConsumableGeneralCard({
                     value={formData.brand}
                     onChange={onChange}
                     error={errors.brand}
-                    required
+                    optional
                     labelAction={
                         <CreateOptionButton
                             onCreate={onCreateBrand}
@@ -96,6 +96,15 @@ export function ConsumableInventoryCard({ formData, errors = {}, onChange }) {
                 error={errors.quantity}
                 hint={hasSenaPlate ? "La cantidad es 1 porque el material tiene placa SENA, no es editable." : undefined}
                 required
+            />
+            <Input
+                label="S/N"
+                name="serial"
+                placeholder="Numero serial del material"
+                value={formData.serial}
+                optional
+                onChange={onChange}
+                error={errors.serial}
             />
             <Input
                 label="Ubicación (opcional)"
@@ -236,7 +245,7 @@ export default function ConsumableForm({
                             value={formData.brand}
                             onChange={onChange}
                             error={errors.brand}
-                            required
+                            optional
                             labelAction={
                                 <CreateOptionButton
                                     onCreate={onCreateBrand}
@@ -297,6 +306,15 @@ export default function ConsumableForm({
                         error={errors.quantity}
                         hint={hasSenaPlate ? "La cantidad es 1 porque el material tiene placa SENA, no es editable." : undefined}
                         required
+                    />
+                    <Input
+                        label="S/N"
+                        name="serial"
+                        placeholder="Numero serial del material"
+                        value={formData.serial}
+                        optional
+                        onChange={onChange}
+                        error={errors.serial}
                     />
                     <Input
                         label="Ubicación (opcional)"

@@ -1,10 +1,15 @@
-import { Input, Select, SelectMultiple, TextArea, EditCard, CreateOptionButton } from "@/shared";
+import { Input, Select, SelectMultiple, TextArea, EditCard, CreateOptionButton, Checkbox } from "@/shared";
 
 // Campos de préstamo, reutilizables entre crear y editar.
 // PRESENTACIONAL: recibe formData/errors/onChange y las opciones de selects.
 // Props de control de usuarios:
 //   hideResponsable — oculta el select de responsable (creación: ya viene de sesión)
-//   readonlyUsers   — muestra responsable y receptor como texto no editable (edición)
+//   readonlyUsers   — muestra responsable y receptor como texto no editable (edición).
+//   receptorDisplayName — nombre a mostrar en modo readonlyUsers; si no se
+//     pasa, se resuelve buscando en `users` (solo funciona para un receptor
+//     registrado). En edición, el caller debe pasar el nombre ya resuelto
+//     por el backend (loan.usuario_receptor) para que un receptor externo
+//     también se muestre correctamente.
 export default function LoanForm({
     formData,
     errors = {},
@@ -12,15 +17,18 @@ export default function LoanForm({
     users = [],
     materials = [],
     multipleMaterials = false,
+    loan_type = [],
     onMaterialQuantityChange,
     loanDepartureDate = "",
     extraSlot = null,
     hideResponsable = false,
     readonlyUsers = false,
+    receptorDisplayName = null,
 }) {
     // Nombre legible del responsable/receptor para los campos de solo lectura.
     const responsableName = users.find((u) => String(u.id) === String(formData.loanResponsableUser))?.label ?? "—";
-    const receptorName    = users.find((u) => String(u.id) === String(formData.loanReceptorUser))?.label    ?? "—";
+    const receptorName    = receptorDisplayName
+        ?? (users.find((u) => String(u.id) === String(formData.loanReceptorUser))?.label ?? "—");
 
     return (
         <EditCard title="Información del Préstamo" cols={1}>
@@ -71,6 +79,16 @@ export default function LoanForm({
                         required
                     />
                 )}
+                    <Select
+                        label="Tipo de Préstamo"
+                        name="loanType"
+                        options={loan_type}
+                        value={formData.loanType}
+                        onChange={onChange}
+                        error={errors.loanType}
+                        labelAction={<CreateOptionButton variant="spacer" />}
+                        required
+                />
 
                 {/* ── Responsable ── */}
                 {!hideResponsable && (
@@ -88,19 +106,55 @@ export default function LoanForm({
                           />
                 )}
                 {/* ── Receptor ── */}
-                {readonlyUsers
-                    ? <Input label="Usuario Receptor del Préstamo" value={receptorName} disabled readOnly />
-                    : <Select
-                        label="Usuario Receptor del Préstamo"
-                        name="loanReceptorUser"
-                        options={users}
-                        value={formData.loanReceptorUser}
-                        onChange={onChange}
-                        error={errors.loanReceptorUser}
-                        required
-                        labelAction={<CreateOptionButton variant="spacer" />}
-                      />
-                }
+                {readonlyUsers ? (
+                    <Input label="Usuario Receptor del Préstamo" value={receptorName} disabled readOnly />
+                ) : (
+                    <>
+                        <div className="sm:col-span-2">
+                            <Checkbox
+                                id="receptorIsRegistered"
+                                name="receptorIsRegistered"
+                                label="El receptor está registrado en el sistema"
+                                checked={formData.receptorIsRegistered !== false}
+                                onChange={onChange}
+                            />
+                        </div>
+                        {formData.receptorIsRegistered !== false ? (
+                            <Select
+                                label="Usuario Receptor del Préstamo"
+                                name="loanReceptorUser"
+                                options={users}
+                                value={formData.loanReceptorUser}
+                                onChange={onChange}
+                                error={errors.loanReceptorUser}
+                                required
+                                labelAction={<CreateOptionButton variant="spacer" />}
+                            />
+                        ) : (
+                            <>
+                                <Input
+                                    label="Nombre completo del receptor"
+                                    name="receptorName"
+                                    placeholder="Nombre y apellido"
+                                    value={formData.receptorName}
+                                    onChange={onChange}
+                                    error={errors.receptorName}
+                                    required
+                                />
+                                <Input
+                                    label="Correo del receptor"
+                                    name="receptorEmail"
+                                    type="email"
+                                    placeholder="correo@ejemplo.com"
+                                    value={formData.receptorEmail}
+                                    onChange={onChange}
+                                    error={errors.receptorEmail}
+                                    required
+                                />
+                            </>
+                        )}
+                    </>
+                )}
                 {!multipleMaterials && (
                     <Input
                         label="Cantidad del Préstamo"
@@ -125,7 +179,7 @@ export default function LoanForm({
                     onChange={onChange}
                     error={errors.loanGroup}
                     labelAction={<CreateOptionButton variant="spacer" />}
-                    required
+                    optional
                 />
                 <Input
                     label="Fecha de salida"

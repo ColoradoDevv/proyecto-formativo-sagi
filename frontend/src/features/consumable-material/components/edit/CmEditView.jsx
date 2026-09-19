@@ -18,8 +18,20 @@ export default function CmEditView() {
     const [brands, setBrands] = useState([]);
     const [users,  setUsers]  = useState([]);
 
-    useEffect(() => { getBrands().then(setBrands); }, []);
-    useEffect(() => { getUsers().then(setUsers);   }, []);
+    useEffect(() => {
+        const controller = new AbortController();
+        getBrands(controller.signal).then(setBrands).catch((err) => {
+            if (err.name !== "AbortError") throw err;
+        });
+        return () => controller.abort();
+    }, []);
+    useEffect(() => {
+        const controller = new AbortController();
+        getUsers(controller.signal).then(setUsers).catch((err) => {
+            if (err.name !== "AbortError") throw err;
+        });
+        return () => controller.abort();
+    }, []);
 
     const handleCreateBrand = async (name) => {
         const option = await createBrand(name);
@@ -53,6 +65,7 @@ function CmEditForm({ id, CM, brands, users, onCreateBrand }) {
         name:         CM.name ?? "",
         description:  CM.description ?? "",
         senaPlate:    CM.sena_plate ?? "",
+        serial:    CM.serial ?? "",
         quantity:     CM.quantity != null ? String(CM.quantity) : "",
         location:     CM.location ?? "",
         brand:        CM.brand?.id != null ? String(CM.brand.id) : "",
@@ -102,10 +115,18 @@ function CmEditForm({ id, CM, brands, users, onCreateBrand }) {
         setSubmitting(true);
 
         try {
-            // Solo se envía el archivo si el usuario seleccionó uno nuevo (instanceof File).
-            // Si es una URL string (la que ya estaba), no se toca.
-            const newPhoto  = photo[0]          instanceof File ? photo[0]          : null;
-            const newSheet  = technicalSheet[0] instanceof File ? technicalSheet[0] : null;
+            // Distingue los 3 estados posibles de un FileInput/ProfileFileInput:
+            // - File nuevo seleccionado -> se envía tal cual.
+            // - Array vacío (se usó el botón "Eliminar") -> se envía "" como
+            //   señal explícita de "quitar archivo" (updateCm/backend lo interpretan así).
+            // - String (la URL original, sin tocar) -> undefined, no se manda la llave.
+            const resolveFileField = (files) => {
+                if (files[0] instanceof File) return files[0];
+                if (files.length === 0) return "";
+                return undefined;
+            };
+            const newPhoto = resolveFileField(photo);
+            const newSheet = resolveFileField(technicalSheet);
 
             await updateCm(id, { ...formData, photo: newPhoto, technicalSheet: newSheet });
             await showAlert({ icon: "success", iconColor: "var(--color-success)", title: "Material de consumo actualizado exitosamente" });
@@ -169,7 +190,8 @@ function CmEditForm({ id, CM, brands, users, onCreateBrand }) {
                                 accept="application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/png"
                                 multiple={false}
                                 maxFiles={1}
-                                maxSixeMB={3}
+                                maxSizeMB={3}
+                                description="Formato PDF, Excel o PNG. Tamaño máximo: 3MB."
                                 className="w-full h-14 rounded-2xl"
                             />
                         </div>

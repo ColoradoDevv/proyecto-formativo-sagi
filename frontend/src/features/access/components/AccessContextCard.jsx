@@ -10,7 +10,7 @@ export default function AccessContextCard({ mode, label, activeCount }) {
   const subtitle = isGroup ? "Grupo seleccionado" : "Usuario seleccionado";
 
   return (
-    <div className="flex flex-col gap-4 p-4 rounded-[var(--radius-2xl)] border border-border bg-surface-hover">
+    <div className="flex flex-col gap-4 p-4 rounded-[var(--radius-2xl)] border border-border bg-surface-hover animate-fade-in">
       <div className="flex items-center gap-3">
         <div className="flex items-center justify-center w-10 h-10 rounded-[var(--radius-full)]  text-text-primary shrink-0">
           <Icon size={20} />

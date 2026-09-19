@@ -3,8 +3,8 @@ import { renderActionButtons } from "./actionButtons";
 
 export default function cancelAlert({
     icon = "warning",
-    iconColor,
     title = "¿Cancelar el registro?",
+    iconColor,
     text = "Se perderán todos los datos ingresados. ¿Deseas continuar?",
     confirmText = "Sí, cancelar",
     cancelText = "Seguir aquí",

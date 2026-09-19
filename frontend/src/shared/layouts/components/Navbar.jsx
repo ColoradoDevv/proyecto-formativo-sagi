@@ -1,40 +1,17 @@
-import { ChevronDown, Menu } from "lucide-react";
-import {
-    Dropdown,
-    DropdownContent,
-    DropdownItem,
-    DropdownSeparator,
-    DropdownTrigger,
-    IconButton,
-    cancelAlert,
-} from "@/shared";
-import { Link, useNavigate } from "react-router-dom";
-import { getStoredUser } from "@/shared/services/api";
-import { logout } from "@/features/auth/services/authService";
-import { useState } from "react";
-import clsx from "clsx";
-import ThemeToggle from "@/shared/components/ThemeToggle";
+import { Archive, Menu } from "lucide-react";
+import { Link } from "react-router-dom";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 
 
 export default function Navbar({ onToggleSidebar }) {
 
-    const [open, setOpen] = useState(false);
-    const navigate = useNavigate();
-    const userPlaceholder = getStoredUser()?.first_name;
-
-    async function handleLogout() {
-        const result = await cancelAlert({
-            title: "¿Cerrar sesión?",
-            text: "Tendrás que volver a iniciar sesión para acceder al sistema.",
-            confirmText: "Sí, cerrar sesión",
-            cancelText: "Seguir aquí",
-        });
-
-        if (!result.isConfirmed) return;
-
-        logout();
-        navigate("/iniciar-sesion");
-    }
+    // usePermissions() expone el usuario de forma reactiva (se refresca solo
+    // con sia:session-updated) — a diferencia de leer getStoredUser()
+    // directamente, así el avatar se actualiza sin recargar la página al
+    // cambiar la foto de perfil desde "Mi perfil".
+    const { user } = usePermissions();
+    const userName = user?.first_name ?? "Usuario";
+    const userInitial = (user?.first_name?.[0] ?? "U").toUpperCase();
 
     const handleMenuClick = () => {
         if (onToggleSidebar) onToggleSidebar();
@@ -42,48 +19,51 @@ export default function Navbar({ onToggleSidebar }) {
     };
 
     return (
-        <div className={clsx("bg-surface-hover px-4 sm:px-6 border-b border-border flex items-center text-text-primary h-(--size-control-2xl) shrink-0")}>
+        <nav className="bg-[var(--color-primary-50)] border-b border-border flex items-center gap-3 px-4 sm:px-6 text-text-primary h-(--size-control-2xl) shrink-0">
 
             {/* Hamburger / Toggle Sidebar */}
             {onToggleSidebar && (
-                <IconButton
+                <button
                     type="button"
                     aria-label="Alternar menú de navegación"
                     onClick={handleMenuClick}
-                    className="mr-3 p-1.5 rounded-lg hover:bg-surface-muted transition-colors cursor-pointer text-text-primary"
+                    className="p-1.5 rounded-lg hover:bg-surface-muted transition-colors cursor-pointer text-text-primary"
                 >
                     <Menu size={22} />
-                </IconButton>
+                </button>
             )}
 
-            {/* Título — completo desde sm, abreviado en móvil */}
-            <h1 className="text-h2 font-heading flex-1 truncate">
-                SGI - Inventario<span className="hidden sm:inline"> Teleínformatica</span>
+            {/* Icono de inventario dentro de círculo */}
+            <div className="bg-brand text-text-inverse rounded-full w-10 h-10 flex items-center justify-center shrink-0">
+                <Archive size={18} strokeWidth={2.25} />
+            </div>
+
+            {/* Título */}
+            <h1 className="text-h3 font-heading flex-1 truncate uppercase tracking-wide">
+                SGI / Inventario
             </h1>
 
-            {/* Selector de tema (claro / oscuro / sistema) */}
-            <ThemeToggle />
+            {/* Perfil: nombre + avatar (clic redirige a /configuracion) */}
+            <Link
+                to="/configuracion"
+                aria-label="Ir a mi perfil"
+                title="Mi perfil"
+                className="flex items-center gap-3 shrink-0 rounded-xl px-3 py-1.5 hover:bg-surface-muted transition-colors cursor-pointer"
+            >
+                <span className="hidden sm:inline text-text-primary">{userName}</span>
+                {user?.profile_picture ? (
+                    <img
+                        src={user.profile_picture}
+                        alt={userName}
+                        className="w-10 h-10 rounded-full object-cover shrink-0"
+                    />
+                ) : (
+                    <span className="w-10 h-10 rounded-full bg-[var(--color-primary-600)] text-text-primary flex items-center justify-center font-heading text-h3">
+                        {userInitial}
+                    </span>
+                )}
+            </Link>
 
-            {/* Menú de usuario */}
-            <Dropdown open={open} onOpenChange={setOpen}>
-                <DropdownTrigger
-                    aria-label="Menú de usuario"
-                    className="ml-3 flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-surface-muted transition-colors text-text-primary"
-                >
-                    <span className="hidden lg:inline underline cursor-pointer">{userPlaceholder}</span>
-                    <ChevronDown className="size-5 cursor-pointer" />
-                </DropdownTrigger>
-                <DropdownContent className="right-0 w-48">
-                    <DropdownItem>
-                        <Link to="/configuracion" className="block w-full">Ver Perfil</Link>
-                    </DropdownItem>
-                    <DropdownSeparator />
-                    <DropdownItem>
-                        <button type="button" onClick={handleLogout} className="block w-full text-left">Cerrar Sesión</button>
-                    </DropdownItem>
-                </DropdownContent>
-            </Dropdown>
-
-        </div>
+        </nav>
     );
 }

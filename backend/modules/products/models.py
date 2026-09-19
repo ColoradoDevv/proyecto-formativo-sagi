@@ -41,16 +41,20 @@ class ConsumableMaterial(models.Model):
         null=False
     )
 
-    # FK a la marca - obligatorio segun diccionario
+    # FK a la marca - opcional según requerimiento
     brand = models.ForeignKey(
         Brand,
         on_delete=models.RESTRICT,
-        null=False,
-        
+        null=True,
+        blank=True,
     )
+
 
     # Placa SENA: unica, pero opcional (solo obligatoria si no es consumible puro)
     sena_plate = models.CharField(max_length=20, unique=True, null=True)
+
+    # Placa S/N: unica, pero opcional (solo obligatoria si no es consumible puro)
+    serial = models.CharField(max_length=20, unique=True, null=True)
 
     # Nombre obligatorio segun diccionario
     name = models.CharField(max_length=100)

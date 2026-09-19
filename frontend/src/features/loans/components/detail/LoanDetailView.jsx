@@ -127,7 +127,7 @@ export default function LoanDetailView() {
 
             {/* Trazabilidad de firma para préstamos ya activos */}
             {!isPending && (firmaResponsable || firmaReceptor) && (
-                <div className="flex flex-col gap-2 rounded-[var(--radius-xl)] border border-border bg-surface-hover px-4 py-3">
+                <div className="flex flex-col gap-2 rounded-[var(--radius-xl)] border border-border bg-surface-hover px-4 py-3 animate-fade-in">
                     <p className="text-small font-medium text-text-primary">Trazabilidad de firma</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {firmaResponsable && (

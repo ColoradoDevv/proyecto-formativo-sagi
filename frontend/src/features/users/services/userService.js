@@ -18,8 +18,8 @@ const FIELD_MAP = {
 };
 
 // METODO GET (obtener lista de usuarios)
-export async function getUsers() {
-    const response = await apiFetch("/api/users/");
+export async function getUsers(signal) {
+    const response = await apiFetch("/api/users/", { signal });
     if (!response.ok) await throwApiError(response, FIELD_MAP);
     return response.json();
 }
@@ -55,7 +55,7 @@ export async function createUser(userData) {
     formData.append("is_accountable", userData.isAccountable === true);
 
     if (userData.profilePicture?.[0])
-        formData.append("profile_picture", userData.profilePicture[0]);
+        formData.append("profile_picture_upload", userData.profilePicture[0]);
 
     const response = await apiFetch("/api/users/", {
         method: "POST",
@@ -73,15 +73,28 @@ export async function createUser(userData) {
     const groupIds = rawGroups.filter(Boolean);
 
     if (groupIds.length > 0) {
-        // Resolver nombres con un único GET en lugar de N GETs individuales.
-        const allGroupsRes = await apiFetch("/api/permissions/groups/");
-        if (!allGroupsRes.ok) await throwApiError(allGroupsRes, FIELD_MAP);
-        const allGroups = await allGroupsRes.json();
-        // Normalizar a String para evitar que el lookup falle cuando el backend
-        // devuelve ids numéricos y groupIds contiene strings (o viceversa).
-        const nameById = Object.fromEntries(allGroups.map(g => [String(g.id), g.name]));
-        const groupNames = groupIds.map(id => nameById[String(id)]).filter(Boolean);
-        await assignUserGroups(user.id, groupNames);
+        try {
+            // Resolver nombres con un único GET en lugar de N GETs individuales.
+            const allGroupsRes = await apiFetch("/api/permissions/groups/");
+            if (!allGroupsRes.ok) await throwApiError(allGroupsRes, FIELD_MAP);
+            const allGroups = await allGroupsRes.json();
+            // Normalizar a String para evitar que el lookup falle cuando el backend
+            // devuelve ids numéricos y groupIds contiene strings (o viceversa).
+            const nameById = Object.fromEntries(allGroups.map(g => [String(g.id), g.name]));
+            const groupNames = groupIds.map(id => nameById[String(id)]).filter(Boolean);
+            await assignUserGroups(user.id, groupNames);
+        } catch (groupError) {
+            // El usuario YA se creó (y su contraseña ya se envió por correo) — no
+            // es un fallo total. Se marca partialSuccess para que la UI lo distinga
+            // de un "Error al crear usuario" genérico, igual que en updateUser().
+            const err = new Error(
+                "El usuario se creó correctamente, pero hubo un problema al asignarle el grupo. Ingresa a su edición y verifica el grupo asignado."
+            );
+            err.partialSuccess = true;
+            err.cause = groupError;
+            err.user = user;
+            throw err;
+        }
     }
 
     return user;
@@ -123,14 +136,17 @@ export async function updateUser(id, userData) {
     if (userData.deactivationReason) formData.append("deactivation_reason", userData.deactivationReason);
     formData.append("end_date", userData.endDate);
 
-    if (userData.additionalPhone) formData.append("second_phone_number", userData.additionalPhone);
-    if (userData.institutionalEmail) formData.append("institutional_email", userData.institutionalEmail);
+    // Siempre se envían (aunque vengan vacíos) para que un campo borrado en el
+    // formulario también se borre en el backend — un FormData con la llave
+    // ausente deja el valor anterior intacto en un PATCH parcial.
+    formData.append("second_phone_number", userData.additionalPhone ?? "");
+    formData.append("institutional_email", userData.institutionalEmail ?? "");
     formData.append("is_instructor_planta", userData.isInstructorPlanta === true);
     formData.append("is_accountable", userData.isAccountable === true);
 
     // La foto solo se reemplaza si el usuario subio un archivo nuevo (File).
     const picture = userData.profilePicture?.[0];
-    if (picture instanceof File) formData.append("profile_picture", picture);
+    if (picture instanceof File) formData.append("profile_picture_upload", picture);
 
     const response = await apiFetch(`/api/users/${id}/`, {
         method: "PATCH",

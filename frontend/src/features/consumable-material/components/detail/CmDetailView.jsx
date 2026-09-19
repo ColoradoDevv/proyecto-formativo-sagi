@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, IconButton, Input, TextArea, StatusBadge, EditCard } from "@/shared";
+import { Button, IconButton, Input, TextArea, StatusBadge, EditCard, usePermissions } from "@/shared";
 import useCm from "../../hooks/useCm";
 import { TailChase } from 'ldrs/react';
 import 'ldrs/react/TailChase.css';
@@ -8,6 +8,8 @@ import { Undo2, ImageOff, FileText, CloudAlert } from "lucide-react";
 export default function CmDetailView() {
     const navigate = useNavigate();
     const { id } = useParams();
+    const { isSuper, can } = usePermissions();
+    const canEdit = isSuper || can("edit_consumable");
 
     const { CM, loading, error } = useCm(id);
 
@@ -86,6 +88,7 @@ export default function CmDetailView() {
                         <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 min-w-0">
                             <Input label="Nombre" value={CM.name ?? ""} disabled readOnly />
                             <Input label="Placa SENA" value={CM.sena_plate ?? "Sin placa"} disabled readOnly />
+                            <Input label="Numero de serial" value={CM.serial ?? "Sin numero de serial"} disabled readOnly />
                             <Input label="Marca" value={brandLabel} disabled readOnly />
                             <Input label="Cuentadante" value={userLabel} disabled readOnly />
                             <div className="sm:col-span-2">
@@ -99,7 +102,16 @@ export default function CmDetailView() {
                 {/* Inventario y Valores lado a lado */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <EditCard title="Inventario">
-                        <Input label="Cantidad" value={CM.quantity ?? "Sin cantidad"} disabled readOnly />
+                        <Input
+                            label="Cantidad disponible"
+                            value={
+                                (CM.available_quantity ?? CM.quantity ?? null) != null
+                                    ? `${CM.available_quantity ?? CM.quantity}${CM.is_exhausted ? " (Agotado)" : ""}`
+                                    : "Sin cantidad"
+                            }
+                            disabled
+                            readOnly
+                        />
                         <Input label="Ubicación" value={CM.location ?? "Sin ubicación"} disabled readOnly />
                         <Input label="Estado" value={CM.state ?? ""} disabled readOnly />
                         <Input label="Fecha de compra" value={CM.purchase_date ?? ""} disabled readOnly />
@@ -115,9 +127,11 @@ export default function CmDetailView() {
                     <Button variant="secondary" size="md" onClick={() => navigate("/consumibles")}>
                         Volver al listado
                     </Button>
-                    <Button variant="primary" size="md" onClick={() => navigate(`/consumibles/editar/${CM.id}`)}>
-                        Editar
-                    </Button>
+                    {canEdit && (
+                        <Button variant="primary" size="md" onClick={() => navigate(`/consumibles/editar/${CM.id}`)}>
+                            Editar
+                        </Button>
+                    )}
                 </div>
 
             </div>

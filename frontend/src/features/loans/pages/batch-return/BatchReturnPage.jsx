@@ -213,7 +213,7 @@ export default function BatchReturnPage() {
                         return (
                             <div
                                 key={row.loanId}
-                                className="rounded-[var(--radius-xl)] border border-border bg-surface-hover p-4 flex flex-col gap-4"
+                                className="rounded-[var(--radius-xl)] border border-border bg-surface-hover p-4 flex flex-col gap-4 animate-fade-in"
                             >
                                 {/* Cabecera del material */}
                                 <div className="flex items-center justify-between">

@@ -13,6 +13,7 @@ const FIELD_MAP = {
   total_price: "totalPrice",
   purchase_date: "purchaseDate",
   sena_plate: "senaPlate",
+  serial: "serial",
   quantity: "quantity",
   location: "location",
   image: "photo",
@@ -20,15 +21,15 @@ const FIELD_MAP = {
 };
 
 // METODO GET (obtener lista de products)
-export async function getCM() {
-  const response = await apiFetch("/api/products/consumables/");
+export async function getCM(signal) {
+  const response = await apiFetch("/api/products/consumables/", { signal });
   if (!response.ok) await throwApiError(response, FIELD_MAP);
   return response.json();
 }
 
 // METODO GET (obtener un products por su ID)
-export async function getCMById(id) {
-  const response = await apiFetch(`/api/products/consumables/${id}/`);
+export async function getCMById(id, signal) {
+  const response = await apiFetch(`/api/products/consumables/${id}/`, { signal });
   if (!response.ok) await throwApiError(response, FIELD_MAP);
   return response.json();
 }
@@ -49,6 +50,8 @@ export async function createCm(cmData) {
 
   if (cmData.senaPlate)
     formData.append("sena_plate", cmData.senaPlate);
+  if (cmData.serial)
+    formData.append("serial", cmData.serial);
   if (cmData.quantity)
     formData.append("quantity", cmData.quantity);
   if (cmData.location)
@@ -80,15 +83,24 @@ export async function updateCm(id, cmData) {
   formData.append("total_price", cmData.totalPrice);
   formData.append("purchase_date", cmData.purchaseDate);
 
-  if (cmData.senaPlate)
-    formData.append("sena_plate", cmData.senaPlate);
+  // Placa SENA/ubicación siempre se mandan (aunque vengan vacías) para que
+  // borrarlas en el formulario también las borre en el backend — un
+  // FormData con la llave ausente deja el valor anterior intacto en un
+  // PATCH parcial. quantity no necesita este tratamiento: el schema no deja
+  // llegar aquí con 0/vacío.
+  formData.append("sena_plate", cmData.senaPlate ?? "");
+  formData.append("location", cmData.location ?? "");
+  if (cmData.serial !== undefined)
+    formData.append("serial", cmData.serial ?? "");
   if (cmData.quantity)
     formData.append("quantity", cmData.quantity);
-  if (cmData.location)
-    formData.append("location", cmData.location);
-  if (cmData.photo)
+
+  // photo/technicalSheet: File = archivo nuevo, "" = se eliminó
+  // explícitamente (el backend lo interpreta como "quitar archivo"),
+  // undefined/null = no se tocó, no se manda la llave.
+  if (cmData.photo instanceof File || cmData.photo === "")
     formData.append("image", cmData.photo);
-  if (cmData.technicalSheet)
+  if (cmData.technicalSheet instanceof File || cmData.technicalSheet === "")
     formData.append("technical_sheet", cmData.technicalSheet);
 
   const response = await apiFetch(`/api/products/consumables/${id}/`, {

@@ -25,7 +25,7 @@ function isValidDateString(value) {
 // Antes era un objeto estatico `loanSchema`; ahora es una funcion porque la
 // validacion de cantidad depende del stock disponible de cada material,
 // que solo se conoce en tiempo de ejecucion (viene de `materials`).
-export default function loanSchema(materials = [], { multipleMaterials = false } = {}) {
+export default function loanSchema(materials = [], { multipleMaterials = false, skipReceptorValidation = false } = {}) {
     const amountSchema = z
         .string()
         .trim()
@@ -43,9 +43,13 @@ export default function loanSchema(materials = [], { multipleMaterials = false }
             .string()
             .min(1, "Debe seleccionar un usuario responsable"),
 
-        loanReceptorUser: z
-            .string()
-            .min(1, "Debe seleccionar un usuario receptor"),
+        // Requerido solo cuando el receptor está registrado — ver superRefine.
+        loanReceptorUser: z.string().optional().default(""),
+        // Checkbox "¿El receptor está registrado en el sistema?" — cuando es
+        // false, se exige receptorName/receptorEmail en su lugar.
+        receptorIsRegistered: z.boolean().default(true),
+        receptorName: z.string().optional().default(""),
+        receptorEmail: z.string().optional().default(""),
 
         loanMaterial: multipleMaterials
             ? z.array(z.string()).min(1, "Debe seleccionar al menos un material")
@@ -60,7 +64,15 @@ export default function loanSchema(materials = [], { multipleMaterials = false }
             .trim()
             .min(1, "Debe ingresar el grupo")
             .regex(/^\d+$/, "El grupo debe contener solo numeros")
-            .max(10, "El grupo no puede tener mas de 10 caracteres"),
+            .max(10, "El grupo no puede tener mas de 10 caracteres")
+            .optional(),
+
+        loanType: z
+            .string()
+            .min(1, "Debe seleccionar el tipo de préstamo")
+            .refine((val) => ["Interno", "Externo"].includes(val), {
+                message: "El tipo de préstamo debe ser Interno o Externo",
+            }),
 
         loanJustification: z
             .string()
@@ -76,6 +88,36 @@ export default function loanSchema(materials = [], { multipleMaterials = false }
                 message: "La fecha de devolucion no puede ser anterior a hoy",
             }),
     }).superRefine((data, ctx) => {
+        // En edición, el receptor es de solo lectura (no se puede reasignar
+        // ni cambiar su tipo registrado/externo desde este formulario) —
+        // no tiene sentido volver a exigir estos campos ahí.
+        if (!skipReceptorValidation) {
+        if (data.receptorIsRegistered) {
+            if (!data.loanReceptorUser) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ["loanReceptorUser"],
+                    message: "Debe seleccionar un usuario receptor",
+                });
+            }
+        } else {
+            if (!data.receptorName.trim()) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ["receptorName"],
+                    message: "Debe ingresar el nombre del receptor",
+                });
+            }
+            if (!z.string().email().safeParse(data.receptorEmail).success) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ["receptorEmail"],
+                    message: "Debe ingresar un correo electrónico válido",
+                });
+            }
+        }
+        }
+
         const selectedMaterialIds = Array.isArray(data.loanMaterial)
             ? data.loanMaterial
             : [data.loanMaterial];

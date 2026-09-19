@@ -10,6 +10,12 @@ import LoanForm from "../LoanForm";
 import { TailChase } from "ldrs/react";
 import "ldrs/react/TailChase.css";
 
+// Clasificación fija de 2 valores — no requiere un endpoint propio.
+const LOAN_TYPE_OPTIONS = [
+    { id: "Interno", label: "Interno" },
+    { id: "Externo", label: "Externo" },
+];
+
 // Componente externo: maneja el fetch, loading y error
 export default function LoanEditView() {
     const { id } = useParams();
@@ -43,8 +49,15 @@ function LoanEditForm({ loan, users, materials }) {
         loanMaterial:        loan.id_material          != null ? String(loan.id_material)         : "",
         loanAmount:          loan.amount_lent          != null ? String(loan.amount_lent)          : "",
         loanGroup:           loan.apprentice_group  ?? "",
+        loanType:            loan.loan_type ?? "",
         loanJustification:   loan.justification_use ?? "",
         loanReturnDate:      loan.return_date        ?? "",
+        // El receptor no se puede reasignar aquí (readonlyUsers más abajo,
+        // y loanSchema se llama con skipReceptorValidation) — estos valores
+        // solo importan para que LoanForm sepa que no debe pedir el checkbox.
+        receptorIsRegistered: loan.id_receptor_user != null,
+        receptorName:        "",
+        receptorEmail:       "",
     });
 
     const [errors, setErrors] = useState({});
@@ -58,7 +71,7 @@ function LoanEditForm({ loan, users, materials }) {
     async function handleSubmit(e) {
         e.preventDefault();
 
-        const schema = loanSchema(materials);
+        const schema = loanSchema(materials, { skipReceptorValidation: true });
         const result = schema.safeParse(formData);
 
         if (!result.success) {
@@ -111,8 +124,10 @@ function LoanEditForm({ loan, users, materials }) {
                     onChange={handleChange}
                     users={users}
                     materials={materials}
+                    loan_type={LOAN_TYPE_OPTIONS}
                     loanDepartureDate={loan.loan_date ?? ""}
                     readonlyUsers
+                    receptorDisplayName={loan.usuario_receptor}
                 />
 
                 <div className="flex gap-4 justify-center md:justify-end">

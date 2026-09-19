@@ -2,7 +2,7 @@ import { forwardRef } from "react";
 import { Search, X, LoaderCircle } from "lucide-react";
 import clsx from "clsx";
 
-const baseStyles = "search flex items-center rounded-[var(--radius-full)] px-4 transition-all border";
+const baseStyles = "search flex items-center rounded-[var(--radius-xl)] px-4 transition-all border";
 
 const sizeStyles = {
     sm: "h-[var(--size-control-sm)] text-small",
@@ -11,8 +11,8 @@ const sizeStyles = {
 };
 
 const variantStyles = {
-    filled: "bg-surface-muted border-brand hover:border-brand-hover focus-within:bg-surface-hover",
-    outlined: "bg-surface-hover border-brand hover:border-brand-hover",
+    filled: "bg-surface-muted border-border hover:border-border-hover focus-within:bg-surface-hover",
+    outlined: "bg-surface-hover border-border hover:border-border-hover",
 };
 
 const SearchField = forwardRef(

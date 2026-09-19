@@ -10,6 +10,11 @@
 
 @theme {
 
+    /* ============ ANIMATIONS ============ */
+    --animate-fade-in: fadeIn var(--duration-base) ease-out both;
+    --animate-slide-up: slideUp var(--duration-slow) ease-out both;
+    --animate-slide-down: slideDown var(--duration-slow) ease-out both;
+
     /* =========== BRAND ============ */
     --color-brand: var(--semantic-brand);
     --color-brand-hover: var(--semantic-brand-hover);
@@ -118,9 +123,29 @@
 
 }
 
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 @layer base {
     :root {
         font-family: 'Work Sans', 'Calibri', Helvetica, Arial, sans-serif;
+    }
+
+    ::selection {
+        background-color: var(--color-secondary-400);
+        color: var(--semantic-text-primary);
     }
 
     input[type="search"]::-webkit-search-decoration,

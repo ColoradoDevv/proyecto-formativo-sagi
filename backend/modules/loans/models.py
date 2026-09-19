@@ -18,6 +18,11 @@ class Loans(models.Model):
         ('Incompleto', 'Incompleto'),
     ]
 
+    LOAN_TYPE = [
+        ('Interno', 'Interno'),
+        ('Externo', 'Externo')
+    ]
+
     # id_loan: PK, AI, Único, obligatorio — Django lo genera automático con AutoField
     id_loan = models.AutoField(primary_key=True)
 
@@ -30,13 +35,19 @@ class Loans(models.Model):
         null=False
     )
 
+    # Nulo cuando el receptor no está registrado en el sistema — en ese caso
+    # se usa receptor_name/receptor_email en su lugar (ver propiedades
+    # receptor_display_name/receptor_contact_email/is_receptor_external).
     id_receptor_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.RESTRICT,
         db_column='id_receptor_user',
         related_name='prestamos_recibidos',
-        null=False
+        null=True,
+        blank=True,
     )
+    receptor_name = models.CharField(max_length=150, null=True, blank=True)
+    receptor_email = models.EmailField(null=True, blank=True)
 
     # ── Agrupación de préstamos por lote ────────────────────────────────
     # Cuando se crean varios préstamos en la misma transacción (multi-material),
@@ -97,6 +108,14 @@ class Loans(models.Model):
         max_length=20,
         choices=STATE_CHOICES,
         default='Pendiente',
+    )
+
+    # loan_type: clasificación del préstamo (Interno/Externo), independiente
+    # del ciclo de vida en `state`.
+    loan_type = models.CharField(
+        max_length=20,
+        choices=LOAN_TYPE,
+        default='Interno',
     )
 
     # ── Trazabilidad de firma electrónica ────────────────────────────────
@@ -162,8 +181,28 @@ class Loans(models.Model):
 
     @property
     def both_signed(self):
-        """True cuando ambas partes ya firmaron."""
-        return self.signed_by_responsable_id is not None and self.signed_by_receptor_id is not None
+        """True cuando ambas partes ya firmaron.
+
+        Se usa el timestamp (signed_at_*) y no la FK (signed_by_*): un
+        receptor externo nunca tiene signed_by_receptor poblado (no hay
+        User al que apuntar), pero sí queda su signed_at_receptor.
+        """
+        return self.signed_at_responsable is not None and self.signed_at_receptor is not None
+
+    @property
+    def is_receptor_external(self):
+        """True cuando el receptor no es un usuario registrado del sistema."""
+        return self.id_receptor_user_id is None
+
+    @property
+    def receptor_display_name(self):
+        if self.id_receptor_user_id:
+            return f"{self.id_receptor_user.first_name} {self.id_receptor_user.last_name}"
+        return self.receptor_name or self.receptor_email
+
+    @property
+    def receptor_contact_email(self):
+        return self.id_receptor_user.email if self.id_receptor_user_id else self.receptor_email
 
 
 class LoanDraft(models.Model):
@@ -200,11 +239,17 @@ class LoanDraft(models.Model):
         on_delete=models.CASCADE,
         related_name='draft_prestamos_responsable',
     )
+    # Nulo cuando el receptor no está registrado — ver receptor_name/
+    # receptor_email y las propiedades espejo de Loans.
     id_receptor_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='draft_prestamos_recibidos',
+        null=True,
+        blank=True,
     )
+    receptor_name = models.CharField(max_length=150, null=True, blank=True)
+    receptor_email = models.EmailField(null=True, blank=True)
     id_material = models.ForeignKey(
         'products.ConsumableMaterial',
         on_delete=models.CASCADE,
@@ -215,6 +260,10 @@ class LoanDraft(models.Model):
     justification_use = models.CharField(max_length=255)
     return_date       = models.DateField()
     loan_date         = models.DateField(auto_now_add=True)
+
+    # Misma clasificación que Loans.loan_type — se copia al Loans real al
+    # comprometer el borrador (ver LoanDraftSignView).
+    loan_type = models.CharField(max_length=20, choices=[('Interno', 'Interno'), ('Externo', 'Externo')], default='Interno')
 
     state = models.CharField(max_length=20, choices=STATE_CHOICES, default=STATE_PENDING)
 
@@ -252,15 +301,32 @@ class LoanDraft(models.Model):
 
     @property
     def both_signed(self):
+        # Ver el comentario equivalente en Loans.both_signed: se usa el
+        # timestamp, no la FK, porque un receptor externo nunca tiene
+        # signed_by_receptor poblado.
         return (
-            self.signed_by_responsable_id is not None
-            and self.signed_by_receptor_id is not None
+            self.signed_at_responsable is not None
+            and self.signed_at_receptor is not None
         )
 
     @property
     def is_expired(self):
         from django.utils import timezone
         return timezone.now() >= self.expires_at
+
+    @property
+    def is_receptor_external(self):
+        return self.id_receptor_user_id is None
+
+    @property
+    def receptor_display_name(self):
+        if self.id_receptor_user_id:
+            return f"{self.id_receptor_user.first_name} {self.id_receptor_user.last_name}"
+        return self.receptor_name or self.receptor_email
+
+    @property
+    def receptor_contact_email(self):
+        return self.id_receptor_user.email if self.id_receptor_user_id else self.receptor_email
 
 
 class SignOTP(models.Model):

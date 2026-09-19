@@ -91,6 +91,16 @@ class ConsumableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
         from modules.permissions.permissions_drf import IsSuperUser
         return [IsSuperUser()]
 
+    def destroy(self, request, *args, **kwargs):
+        from django.db.models.deletion import RestrictedError
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except RestrictedError:
+            return Response(
+                {"error": "No se puede eliminar: el material tiene préstamos u otros registros asociados."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
     @action(detail=True, methods=["patch"])
     def toggle_active(self, request, pk=None):
         """

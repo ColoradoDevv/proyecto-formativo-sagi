@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, SearchField, IconButton, ActiveSwitch } from '@/shared';
-import { Plus, ArrowLeft, ArrowRight, Pencil, CloudAlert } from 'lucide-react';
+import { Plus, ArrowLeft, ArrowRight, Pencil, CloudAlert, Tag, Award } from 'lucide-react';
 import { TailChase } from 'ldrs/react';
 import Alert from '@mui/material/Alert';
 import useBrands from '../../hooks/useBrands';
@@ -49,11 +49,13 @@ export default function BrandListPage() {
     if (error)
         return (
             <div className="h-full flex items-center justify-center">
-                <div className="flex items-center gap-3 bg-text-secondary border border-text-secondary text-text-inverse rounded-lg px-6 py-4 max-w-md">
-                    <span className="text-h1"><CloudAlert /></span>
-                    <div>
-                        <p className="font-heading">Error al cargar Marcas</p>
-                        <p className="text-small">{error.message}</p>
+                <div className="bg-surface-hover rounded-2xl border border-border shadow-(--shadow-elevation-2) p-6 max-w-md animate-fade-in">
+                    <div className="flex items-center gap-3 text-text-primary">
+                        <span className="text-h2 text-text-secondary"><CloudAlert /></span>
+                        <div>
+                            <p className="font-heading">No se pudieron cargar las marcas</p>
+                            <p className="text-small text-text-secondary">{error.message}</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -63,9 +65,10 @@ export default function BrandListPage() {
         brand.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const totalPages = Math.ceil(filteredBrands.length / itemsPerPage);
+    const totalPages = Math.max(1, Math.ceil(filteredBrands.length / itemsPerPage));
     const startIdx = currentPage * itemsPerPage;
     const paginatedBrands = filteredBrands.slice(startIdx, startIdx + itemsPerPage);
+    const safePage = Math.min(currentPage, totalPages - 1);
 
     const handlePrevPage = () => setCurrentPage((p) => Math.max(0, p - 1));
     const handleNextPage = () => setCurrentPage((p) => Math.min(totalPages - 1, p + 1));
@@ -85,85 +88,119 @@ export default function BrandListPage() {
         <div className="h-full p-4 sm:p-6 text-text-primary flex flex-col gap-6">
 
             {/* Encabezado */}
-            <div className="flex flex-col gap-4">
-                <h2 className="text-primary font-heading">Marcas</h2>
+            <div className="flex flex-col gap-2">
+                <p className="text-medium text-text-primary uppercase tracking-widest font-medium">
+                    Catálogo
+                </p>
+                <h2 className="text-h2 text-text-primary font-heading">
+                    Marcas
+                </h2>
+                <p className="text-small text-text-secondary">
+                    Gestiona las marcas registradas en el sistema.
+                </p>
+            </div>
 
-                {notification && (
-                    <Alert severity={notification.severity} onClose={() => setNotification(null)}>
-                        {notification.message}
-                    </Alert>
-                )}
+            {notification && (
+                <Alert severity={notification.severity} onClose={() => setNotification(null)}>
+                    {notification.message}
+                </Alert>
+            )}
 
-                <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+            {/* Toolbar */}
+            <div className="bg-surface-hover rounded-2xl border border-border shadow-(--shadow-elevation-4) p-6 flex flex-col gap-4 animate-fade-in">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <SearchField
                         placeholder="Buscar marca..."
                         variant="outlined"
                         value={searchTerm}
                         onChange={setSearchTerm}
                         fullWidth
-                        className="sm:flex-1"
+                        className="sm:w-full sm:flex-1"
                     />
-                    <Button className="w-full sm:w-auto flex gap-2 shrink-0" onClick={openCreateModal} variant="soft">
+                    <Button
+                        onClick={openCreateModal}
+                        variant="soft"
+                        className="w-full sm:w-auto shrink-0"
+                    >
                         <Plus size={18} />
                         Registrar Marca
                     </Button>
                 </div>
-            </div>
 
-            {/* Grid */}
-            {paginatedBrands.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-                    {paginatedBrands.map((brand) => (
-                        <div
-                            key={brand.id}
-                            className="bg-surface-hover rounded-[var(--radius-2xl)] p-4 border border-border flex flex-col gap-3 hover:shadow-[var(--shadow-elevation-2)] transition-shadow"
-                        >
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-small font-heading flex-1 truncate" title={brand.name}>{brand.name}</h3>
-                                <div className="flex gap-2 items-center">
-                                    <IconButton
-                                        variant="ghost"
-                                        hitSize={32}
-                                        iconSize={16}
-                                        onClick={() => openBrandModal(brand, 'edit')}
+                {/* Grid */}
+                {paginatedBrands.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                        {paginatedBrands.map((brand, index) => (
+                            <div
+                                key={brand.id}
+                                style={{ animationDelay: `${index * 50}ms` }}
+                                className="bg-surface-hover rounded-2xl border border-border shadow-(--shadow-elevation-4) hover:shadow-(--shadow-elevation-5) hover:-translate-y-1 transition-all duration-200 p-5 flex flex-col gap-4 animate-slide-up"
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <span className="bg-success-soft rounded-full w-10 h-10 flex items-center justify-center shrink-0">
+                                        <Award size={18} className="text-text-primary" />
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                        <IconButton
+                                            variant="ghost"
+                                            hitSize={32}
+                                            iconSize={16}
+                                            onClick={() => openBrandModal(brand, 'edit')}
+                                            ariaLabel="Editar marca"
+                                        >
+                                            <Pencil size={16} />
+                                        </IconButton>
+                                        <ActiveSwitch
+                                            id={brand.id}
+                                            isActive={brand.is_active}
+                                            toggleFn={handleToggle}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-1">
+                                    <h3 className="text-medium font-medium text-text-primary truncate" title={brand.name}>
+                                        {brand.name}
+                                    </h3>
+                                    <button
+                                        type="button"
+                                        onClick={() => openBrandModal(brand, 'view')}
+                                        className="text-brand text-small hover:underline text-left w-fit cursor-pointer"
                                     >
-                                        <Pencil size={16} />
-                                    </IconButton>
-                                    <ActiveSwitch
-                                        id={brand.id}
-                                        isActive={brand.is_active}
-                                        toggleFn={handleToggle}
-                                    />
+                                        Ver detalles
+                                    </button>
                                 </div>
                             </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="bg-[var(--color-secondary-100)] rounded-2xl border-2 border-dashed border-[var(--color-secondary-400)] py-12 px-6 flex flex-col items-center gap-3">
+                        <span className="bg-surface-hover rounded-full w-14 h-14 flex items-center justify-center shadow-(--shadow-elevation-1)">
+                            <Tag size={22} className="text-text-primary" />
+                        </span>
+                        <p className="text-medium font-medium text-text-primary">
+                            {brands.length === 0 ? "Aún no hay marcas registradas." : "No se encontraron marcas."}
+                        </p>
+                        <p className="text-small text-text-secondary text-center">
+                            {brands.length === 0
+                                ? "Cuando registres una marca, aparecerá aquí."
+                                : "Intenta ajustar la búsqueda."}
+                        </p>
+                    </div>
+                )}
+            </div>
 
-                            <button
-                                type="button"
-                                onClick={() => openBrandModal(brand, 'view')}
-                                className="text-brand text-small hover:underline text-left w-fit cursor-pointer"
-                            >
-                                Ver detalles
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="text-center py-12">
-                    <p className="text-text-muted">No se encontraron marcas</p>
-                </div>
-            )}
-
-            {/* Paginación */}
+            {/* Paginación (fuera de la card) */}
             {totalPages > 1 && (
                 <div className="flex items-center justify-between">
-                    <Button variant="secondary" onClick={handlePrevPage} disabled={currentPage === 0}>
+                    <Button variant="secondary" onClick={handlePrevPage} disabled={safePage === 0}>
                         <ArrowLeft size={18} />
                         Anterior
                     </Button>
                     <span className="text-small text-text-muted">
-                        Página {currentPage + 1} de {totalPages}
+                        Página {safePage + 1} de {totalPages}
                     </span>
-                    <Button variant="secondary" onClick={handleNextPage} disabled={currentPage === totalPages - 1}>
+                    <Button variant="secondary" onClick={handleNextPage} disabled={safePage >= totalPages - 1}>
                         Siguiente
                         <ArrowRight size={18} />
                     </Button>
