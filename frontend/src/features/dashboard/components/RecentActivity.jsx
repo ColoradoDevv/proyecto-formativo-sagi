@@ -54,7 +54,7 @@ export default function RecentActivity() {
                     </div>
                 </div>
             ) : loans.length === 0 ? (
-                <div className="bg-[var(--color-secondary-100)] rounded-2xl border-2 border-dashed border-[var(--color-secondary-400)] py-12 px-6 flex flex-col items-center gap-3">
+                <div className="bg-surface-hover rounded-2xl border-2 border-dashed border-border-strong py-12 px-6 flex flex-col items-center gap-3">
                     <span className="bg-surface-hover rounded-full w-14 h-14 flex items-center justify-center shadow-(--shadow-elevation-1)">
                         <Package size={22} className="text-text-primary" />
                     </span>

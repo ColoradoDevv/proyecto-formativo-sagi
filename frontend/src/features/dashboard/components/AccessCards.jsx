@@ -9,11 +9,11 @@ export default function AccessCards({ className = "", style, Icon, label, value,
         <div
             onClick={() => navigate(to)}
             style={style}
-            className={`rounded-2xl cursor-pointer shadow-(--shadow-elevation-4) hover:shadow-(--shadow-elevation-5) hover:-translate-y-1 bg-surface-hover hover:bg-gradient-to-br hover:from-surface-hover hover:to-[var(--color-secondary-200)] p-5 w-full flex flex-col gap-4 transition-all duration-200 border border-border animate-slide-up ${className}`}
+            className={`rounded-2xl cursor-pointer shadow-(--shadow-elevation-4) hover:shadow-(--shadow-elevation-5) hover:-translate-y-1 bg-surface-hover hover:bg-gradient-to-br hover:from-surface-hover hover:to-surface-muted p-5 w-full flex flex-col gap-4 transition-all duration-200 border border-border animate-slide-up ${className}`}
         >
             <div className="flex items-start justify-between">
                 {Icon && (
-                    <span className="bg-[var(--color-secondary-300)] rounded-xl w-12 h-12 flex items-center justify-center text-text-primary shrink-0">
+                    <span className="bg-surface-muted rounded-xl w-12 h-12 flex items-center justify-center text-text-primary shrink-0">
                         {Icon}
                     </span>
                 )}
