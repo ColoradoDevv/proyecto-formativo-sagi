@@ -30,6 +30,7 @@ export const IconButton = React.forwardRef(function IconButton(
         cursor-pointer
         focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
         disabled:opacity-50 disabled:pointer-events-none
+
     `
 
     const variants = {
@@ -50,6 +51,7 @@ export const IconButton = React.forwardRef(function IconButton(
             focus-visible:ring-focus-ring
             cursor-pointer
         `,
+
     }
 
     return (

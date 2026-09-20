@@ -22,6 +22,7 @@ function useMustChangePassword() {
 }
 
 export default function MainLayout({ children }) {
+
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const mustChangePassword = useMustChangePassword();
     useInactivityLogout();
@@ -29,15 +30,15 @@ export default function MainLayout({ children }) {
     // Mientras el cambio de contraseña es obligatorio, no montamos la UI
     // del sistema para evitar interacciones y peticiones API innecesarias.
     if (mustChangePassword) {
-        return <div className="h-screen bg-background/70" aria-hidden="true" />;
+        return <div className="h-screen bg-background" aria-hidden="true" />;
     }
 
     return (
-        <div className="h-screen flex flex-col">
-            <Navbar onToggleSidebar={() => setSidebarOpen(prev => !prev)} />
-            <div className="flex flex-1 overflow-hidden">
+        <div className="h-screen flex flex-col bg-background overflow-hidden max-w-full">
+            <Navbar onToggleSidebar={() => setSidebarOpen(prev => !prev)}/>
+            <div className="flex flex-1 overflow-hidden min-w-0">
                 <Sidenav isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-                <main className="flex-1 bg-background/70 text-text-primary overflow-y-auto">
+                <main className="flex-1 min-w-0 bg-background/70 text-text-primary overflow-y-auto overflow-x-clip">
                     {children ?? <Outlet />}
                 </main>
             </div>

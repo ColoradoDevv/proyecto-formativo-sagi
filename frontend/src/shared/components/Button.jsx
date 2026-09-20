@@ -1,7 +1,7 @@
 import { useState } from "react";
 import ReportModal from "./ReportModal";
 
-export default function Button({
+ export default function Button({
     variant = "primary",
     size = "md",
     type = "button",
@@ -25,7 +25,7 @@ export default function Button({
     };
 
     const variants = {
-        primary:   "bg-brand text-text-inverse border border-brand hover:bg-brand-hover",
+        primary:   "bg-brand text-text-inverse border border-brand hover:bg-brand-hover ",
         secondary: "bg-transparent border border-border text-text-primary hover:bg-surface-muted",
         soft:      "bg-brand-soft text-text-primary border border-brand-soft hover:bg-brand-soft-hover",
         table:     "bg-surface-muted border border-brand text-text-primary hover:bg-brand hover:text-text-inverse",

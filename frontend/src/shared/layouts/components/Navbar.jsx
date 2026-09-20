@@ -1,6 +1,7 @@
 import { Archive, Menu } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePermissions } from "@/shared/hooks/usePermissions";
+import ThemeToggle from "@/shared/components/ThemeToggle";
 
 
 export default function Navbar({ onToggleSidebar }) {
@@ -19,7 +20,7 @@ export default function Navbar({ onToggleSidebar }) {
     };
 
     return (
-        <nav className="bg-[var(--color-primary-50)] border-b border-border flex items-center gap-3 px-4 sm:px-6 text-text-primary h-(--size-control-2xl) shrink-0">
+        <nav className="bg-surface-hover border-b border-border flex items-center gap-3 px-4 sm:px-6 text-text-primary h-(--size-control-2xl) shrink-0">
 
             {/* Hamburger / Toggle Sidebar */}
             {onToggleSidebar && (
@@ -43,6 +44,9 @@ export default function Navbar({ onToggleSidebar }) {
                 SGI / Inventario
             </h1>
 
+            {/* Selector de tema (claro / oscuro / sistema) */}
+            <ThemeToggle />
+
             {/* Perfil: nombre + avatar (clic redirige a /configuracion) */}
             <Link
                 to="/configuracion"
@@ -58,7 +62,7 @@ export default function Navbar({ onToggleSidebar }) {
                         className="w-10 h-10 rounded-full object-cover shrink-0"
                     />
                 ) : (
-                    <span className="w-10 h-10 rounded-full bg-[var(--color-primary-600)] text-text-primary flex items-center justify-center font-heading text-h3">
+                    <span className="w-10 h-10 rounded-full bg-brand text-text-inverse flex items-center justify-center font-heading text-h3">
                         {userInitial}
                     </span>
                 )}

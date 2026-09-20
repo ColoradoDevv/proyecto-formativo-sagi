@@ -3,6 +3,7 @@ import SessionExpiredModal from "@/features/auth/components/SessionExpiredModal"
 import MandatoryPasswordChangeModal from "@/features/auth/components/MandatoryPasswordChangeModal";
 
 export default function App() {
+
     return (
         <>
             <AppRouter />

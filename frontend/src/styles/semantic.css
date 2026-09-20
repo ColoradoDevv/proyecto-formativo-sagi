@@ -108,5 +108,43 @@
     --semantic-font-weight-label: var(--font-weight-regular);
 
     /* ============ DARK THEME ============== */
+}
 
+[data-theme="dark"] {
+    /* ========== BRAND =========== */
+    --semantic-brand: var(--color-secondary-300);              /* #CAD5D3 */
+    --semantic-brand-hover: var(--color-secondary-200);        /* #E1EBE3 */
+    --semantic-brand-soft: var(--color-secondary-800);         /* #375267 */
+    --semantic-brand-soft-hover: var(--color-secondary-700);   /* #526B7B */
+
+    /* ========= BACKGROUND ========== */
+    --semantic-background: var(--color-secondary-950);         /* #0C2D48 */
+    --semantic-surface: var(--color-gray-100);                 /* #242424 */
+    --semantic-surface-muted: var(--color-gray-200);           /* #3D3D3D */
+    --semantic-background-inverse: var(--color-secondary-100); /* #F0F5EE */
+
+    /* ============= TEXT =============== */
+    --semantic-text-primary: var(--color-secondary-100);       /* #F0F5EE */
+    --semantic-text-secondary: var(--color-secondary-400);    /* #AFBCBF */
+    --semantic-text-muted: var(--color-secondary-500);         /* #90A1A9 */
+    --semantic-text-inverse: var(--color-secondary-950);       /* #0C2D48 */
+
+    /* ============= BORDER ============ */
+    --semantic-border: var(--color-secondary-800);             /* #375267 */
+    --semantic-border-strong: var(--color-secondary-600);     /* #718691 */
+
+    /* ============== FOCUS ================*/
+    --semantic-focus-ring: var(--color-secondary-500);         /* #90A1A9 */
+    --semantic-focus-border: var(--color-secondary-400);       /* #AFBCBF */
+
+    /* ============= STATE ================ */
+    --semantic-success: var(--color-tertiary-300);             /* #B2D6C1 — fg claro */
+    --semantic-success-soft: var(--color-tertiary-800);        /* #168444 — bg oscuro */
+
+    /* Swap literal solid↔soft usando los mismos tokens */
+    --semantic-warning: var(--color-warning-soft);             /* #FEF3C7 — fg claro */
+    --semantic-warning-soft: var(--color-warning);             /* #B45309 — bg oscuro */
+
+    --semantic-error: var(--color-error-soft);                 /* #FDE7E7 — fg claro */
+    --semantic-error-soft: var(--color-error);                 /* #E53935 — bg oscuro */
 }

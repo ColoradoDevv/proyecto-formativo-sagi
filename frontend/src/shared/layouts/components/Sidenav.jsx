@@ -176,46 +176,44 @@ export default function Sidenav({ isOpen = false, onClose }) {
     return (
         <>
             {/* ── Móvil / tablet: drawer con overlay ── */}
-            <div className={`fixed inset-0 z-40 lg:hidden ${isOpen ? "" : "pointer-events-none"}`}>
-
-                {/* Backdrop */}
+            {isOpen && (
                 <div
-                    role="presentation"
-                    className={`absolute inset-0 bg-background-inverse/40 transition-opacity duration-[var(--duration-slow)] ${isOpen ? "opacity-100" : "opacity-0"}`}
-                    onClick={onClose}
-                />
-
-                {/* Panel deslizante */}
-                <aside
-                    className={`
-                        absolute left-0 top-0 h-full w-64
-                        bg-[var(--color-primary-50)] border-r border-border text-text-primary
-                        p-5 flex flex-col justify-between
-                        transition-transform duration-[var(--duration-slow)] ease-in-out
-                        ${isOpen ? "translate-x-0" : "-translate-x-full"}
-                    `}
+                    className="fixed inset-0 z-40 lg:hidden overflow-hidden animate-fade-in"
                 >
-                    <div className="flex flex-col gap-4 h-full">
-                        {/* Botón cerrar */}
-                        <button
-                            type="button"
-                            aria-label="Cerrar menú"
-                            onClick={onClose}
-                            className="self-end p-1 rounded hover:bg-surface-muted transition-colors cursor-pointer"
-                        >
-                            <X size={20} />
-                        </button>
-                        <div className="flex-1 overflow-hidden">
-                            <NavLinks onLinkClick={onClose} isCollapsed={false} />
-                        </div>
-                    </div>
-                </aside>
 
-            </div>
+                    {/* Backdrop */}
+                    <div
+                        role="presentation"
+                        className="absolute inset-0 bg-background-inverse/40 animate-fade-in"
+                        onClick={onClose}
+                    />
+
+                    {/* Panel deslizante */}
+                    <aside
+                        className="absolute left-0 top-0 h-full w-64 bg-surface-hover border-r border-border text-text-primary p-5 flex flex-col justify-between animate-slide-in-left"
+                    >
+                        <div className="flex flex-col gap-4 h-full">
+                            {/* Botón cerrar */}
+                            <button
+                                type="button"
+                                aria-label="Cerrar menú"
+                                onClick={onClose}
+                                className="self-end p-1 rounded hover:bg-surface-muted transition-colors cursor-pointer"
+                            >
+                                <X size={20} />
+                            </button>
+                            <div className="flex-1 overflow-hidden">
+                                <NavLinks onLinkClick={onClose} isCollapsed={false} />
+                            </div>
+                        </div>
+                    </aside>
+
+                </div>
+            )}
 
             {/* ── Desktop: sidebar colapsable ── */}
             <aside
-                className={`hidden lg:flex bg-[var(--color-primary-50)] border-r border-border text-text-primary p-4 flex-col justify-between shrink-0 transition-all duration-300 ease-in-out ${
+                className={`hidden lg:flex bg-surface-hover border-r border-border text-text-primary p-4 flex-col justify-between shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${
                     isCollapsed ? "w-16 px-2" : "w-64"
                 }`}
             >

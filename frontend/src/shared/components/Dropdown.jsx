@@ -19,6 +19,7 @@ export function Dropdown({
     open: controlledOpen,
     onOpenChange,
     className = "",
+    triggerRef: externalTriggerRef,
 }) {
     const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
 
@@ -37,7 +38,8 @@ export function Dropdown({
     )
 
     const containerRef = useRef(null)
-    const triggerRef   = useRef(null)
+    const internalTriggerRef = useRef(null)
+    const triggerRef = externalTriggerRef ?? internalTriggerRef
     const contentRef   = useRef(null)
 
     useEffect(() => {
@@ -108,13 +110,18 @@ export function DropdownContent({ children, className = "", align = "right", mat
             const triggerRect   = triggerRef.current.getBoundingClientRect()
             const contentHeight = contentRef.current.offsetHeight
             const contentWidth  = matchTriggerWidth ? triggerRect.width : contentRef.current.offsetWidth
-            const spaceBelow    = window.innerHeight - triggerRect.bottom
-            const spaceAbove    = triggerRect.top
+
+            // Si el trigger no tiene dimensiones válidas (no está pintado todavía
+            // o está oculto), no calculamos posición — dejamos el contenido oculto.
+            if (triggerRect.width === 0 || triggerRect.height === 0) return
+
+            const spaceBelow = window.innerHeight - triggerRect.bottom
+            const spaceAbove = triggerRect.top
 
             const goUp = spaceBelow < contentHeight && spaceAbove > spaceBelow
 
             const top = goUp
-                ? triggerRect.top - contentHeight - 4
+                ? Math.max(8, triggerRect.top - contentHeight - 4)
                 : triggerRect.bottom + 4
 
             const left = align === "right"

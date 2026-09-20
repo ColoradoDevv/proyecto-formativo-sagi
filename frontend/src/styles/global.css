@@ -2,13 +2,19 @@
 @import url(tokens.css);
 @import url(semantic.css);
 @import "tailwindcss";
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+
+
+
 
 @theme {
 
-    /* ============ ANIMATIONS ============ */
-    --animate-fade-in: fadeIn var(--duration-base) ease-out both;
-    --animate-slide-up: slideUp var(--duration-slow) ease-out both;
-    --animate-slide-down: slideDown var(--duration-slow) ease-out both;
+/* ============ ANIMATIONS ============ */
+--animate-fade-in: fadeIn var(--duration-base) ease-out both;
+--animate-slide-up: slideUp var(--duration-slow) ease-out both;
+--animate-slide-down: slideDown var(--duration-slow) ease-out both;
+--animate-slide-in-left: slideInLeft var(--duration-slow) ease-out both;
 
     /* =========== BRAND ============ */
     --color-brand: var(--semantic-brand);
@@ -133,9 +139,29 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes slideInLeft {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+}
+
 @layer base {
     :root {
         font-family: 'Work Sans', 'Calibri', Helvetica, Arial, sans-serif;
+    }
+
+    html, body {
+        background-color: var(--semantic-background);
+        overflow-x: clip;
+        max-width: 100%;
+    }
+
+    body {
+        position: relative;
+    }
+
+    #root {
+        overflow-x: clip;
+        max-width: 100%;
     }
 
     ::selection {
