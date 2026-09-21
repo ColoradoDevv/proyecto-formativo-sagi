@@ -1,4 +1,4 @@
-import { Input, Select, TextArea, EditCard, CreateOptionButton } from "@/shared";
+import { Input, Select, SelectMultiple, TextArea, EditCard, CreateOptionButton } from "@/shared";
 import { Plus } from "lucide-react";
 
 const CM_STATE_OPTIONS = [
@@ -15,10 +15,20 @@ export function ConsumableGeneralCard({
     errors = {},
     onChange,
     brands = [],
+    inventories = [],
+    categories = [],
     onCreateBrand = null,
+    onCreateInventory = null,
+    onCreateCategory = null,
 }) {
     const handleBrandCreated = (option) => {
         onChange({ target: { name: "brand", value: String(option.id) } });
+    };
+    const handleInventoryCreated = (option) => {
+        onChange({ target: { name: "inventory", value: String(option.id) } });
+    };
+    const handleCategoryCreated = (option) => {
+        onChange({ target: { name: "category", value: String(option.id) } });
     };
 
     return (
@@ -50,6 +60,48 @@ export function ConsumableGeneralCard({
                             inputPlaceholder="Ej. Bosch"
                             errorTitle="No se pudo crear la marca"
                             ariaLabel="Agregar nueva marca"
+                            icon={Plus}
+                        />
+                    }
+                />
+                <Select
+                    label="Nombre de inventario"
+                    name="inventory"
+                    options={inventories}
+                    value={formData.inventory}
+                    onChange={onChange}
+                    error={errors.inventory}
+                    optional
+                    labelAction={
+                        <CreateOptionButton
+                            onCreate={onCreateInventory}
+                            onCreated={handleInventoryCreated}
+                            title="Nuevo nombre de inventario"
+                            inputLabel="Nombre del inventario"
+                            inputPlaceholder="Ej. Almacén principal"
+                            errorTitle="No se pudo crear el nombre de inventario"
+                            ariaLabel="Agregar nuevo nombre de inventario"
+                            icon={Plus}
+                        />
+                    }
+                />
+                <Select
+                    label="Categoría"
+                    name="category"
+                    options={categories}
+                    value={formData.category}
+                    onChange={onChange}
+                    error={errors.category}
+                    optional
+                    labelAction={
+                        <CreateOptionButton
+                            onCreate={onCreateCategory}
+                            onCreated={handleCategoryCreated}
+                            title="Nueva categoría"
+                            inputLabel="Nombre de la categoría"
+                            inputPlaceholder="Ej. Tornillería, Cables"
+                            errorTitle="No se pudo crear la categoría"
+                            ariaLabel="Agregar nueva categoría"
                             icon={Plus}
                         />
                     }
@@ -163,24 +215,32 @@ export function ConsumableValuesCard({ formData, errors = {}, onChange }) {
     );
 }
 
-export function ConsumableAccountableCard({ formData, errors = {}, onChange, users = [] }) {
+// Card independiente para asignacion de cuentadantes (multi-select).
+// Acepta usuarios como opciones y emite un array de IDs en `formData.cuentadantes`.
+export function ConsumableAccountableCard({
+    formData,
+    errors = {},
+    onChange,
+    users = [],
+    name = "cuentadantes",
+}) {
+    const value = Array.isArray(formData.cuentadantes) ? formData.cuentadantes : [];
+
     return (
         <EditCard title="Asignación">
-            <Select
-                label="Cuentadante"
-                name="user"
+            <SelectMultiple
+                label="Cuentadantes"
+                name={name}
                 options={users}
-                value={formData.user}
+                value={value}
                 onChange={onChange}
-                error={errors.user}
+                error={errors[name] || errors.cuentadantes}
                 required
-                labelAction={
-                    <CreateOptionButton
-                        onCreate={null}
-                        variant="spacer"
-                    />
-                }
             />
+            <p className="text-small text-text-muted">
+                Un material puede tener varios cuentadantes. Cada uno será
+                responsable del mismo.
+            </p>
         </EditCard>
     );
 }
@@ -188,18 +248,24 @@ export function ConsumableAccountableCard({ formData, errors = {}, onChange, use
 // Campos de material de consumo, reutilizables entre crear y editar.
 // PRESENTACIONAL: recibe formData/errors/onChange, las opciones de selects, y
 // un slot para la seccion de foto (distinta en crear vs editar).
-// Convencion de nombres unificada: name, senaPlate, brand, user, state,
-// unitPrice, totalPrice, purchaseDate, quantity, location, description.
+// Convencion de nombres unificada: name, senaPlate, brand, state, unitPrice,
+// totalPrice, purchaseDate, quantity, location, description, cuentadantes,
+// inventory, category.
 export default function ConsumableForm({
     formData,
     errors = {},
     onChange,
     brands = [],
     users = [],
+    inventories = [],
+    categories = [],
     onCreateBrand = null,
+    onCreateInventory = null,
+    onCreateCategory = null,
     photoSlot = null,
 }) {
     const hasSenaPlate = (formData.senaPlate ?? "").trim() !== "";
+    const cuentasValue = Array.isArray(formData.cuentadantes) ? formData.cuentadantes : [];
 
     // Al crear una marca nueva: la selecciona automáticamente en el form.
     const handleBrandCreated = (option) => {
@@ -260,20 +326,42 @@ export default function ConsumableForm({
                             }
                         />
                         <Select
-                            label="Cuentadante"
-                            name="user"
-                            options={users}
-                            value={formData.user}
+                            label="Nombre de inventario"
+                            name="inventory"
+                            options={inventories}
+                            value={formData.inventory}
                             onChange={onChange}
-                            error={errors.user}
-                            required
+                            error={errors.inventory}
+                            optional
                             labelAction={
                                 <CreateOptionButton
-                                    onCreate={onCreateBrand}
-                                    variant="spacer"
+                                    onCreate={onCreateInventory}
+                                    onCreated={(option) =>
+                                        onChange({ target: { name: "inventory", value: String(option.id) } })
+                                    }
+                                    title="Nuevo nombre de inventario"
+                                    inputLabel="Nombre del inventario"
+                                    inputPlaceholder="Ej. Almacén principal"
+                                    errorTitle="No se pudo crear el nombre de inventario"
+                                    ariaLabel="Agregar nuevo nombre de inventario"
+                                    icon={Plus}
                                 />
                             }
                         />
+                        <div className="sm:col-span-2">
+                            <SelectMultiple
+                                label="Cuentadantes"
+                                name="cuentadantes"
+                                options={users}
+                                value={cuentasValue}
+                                onChange={onChange}
+                                error={errors.cuentadantes}
+                                required
+                            />
+                            <p className="text-small text-text-muted mt-1">
+                                Un material puede tener varios cuentadantes.
+                            </p>
+                        </div>
                         <div className="sm:col-span-2">
                             <TextArea
                                 label="Descripción"

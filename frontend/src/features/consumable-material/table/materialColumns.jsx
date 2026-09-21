@@ -1,4 +1,5 @@
 import { ActiveSwitch, StatusBadge, usePermissions } from "@/shared";
+import { joinCuentadantes } from "@/shared/utils/cuentadantes";
 import { toggleCmActive } from "../services/consumableService";
 import CmRowActions from "../components/list/CmRowActions";
 
@@ -20,12 +21,26 @@ function CmActiveSwitch({ cm, onToggled }) {
     );
 }
 
+const EMPTY = "Sin cuentadante";
+
 export const materialColumns = (setCMs) => [
     {
-        accessorFn: (row) => row.user ? `${row.user.first_name} ${row.user.last_name}` : "Sin cuentadante",
-        id: "user",
-        header: "Cuentadante",
+        accessorFn: (row) => joinCuentadantes(row, { emptyPlaceholder: EMPTY }),
+        id: "cuentadantes",
+        header: "Cuentadantes",
         meta: { filterVariant: "select" },
+        cell: ({ row }) => {
+            const text = joinCuentadantes(row.original, { emptyPlaceholder: EMPTY });
+            const isEmpty = text === EMPTY;
+            return (
+                <span
+                    className={`block max-w-xs truncate ${isEmpty ? "text-text-muted" : ""}`}
+                    title={text}
+                >
+                    {text}
+                </span>
+            );
+        },
     },
     {
         accessorKey: "name",

@@ -7,7 +7,9 @@ const FIELD_MAP = {
   name: "name",
   description: "description",
   brand_id: "brand",
-  user_id: "user",
+  inventory_id: "inventory",
+  category_id: "category",
+  user_id: "cuentadante",
   state: "state",
   unit_price: "unitPrice",
   total_price: "totalPrice",
@@ -18,6 +20,10 @@ const FIELD_MAP = {
   location: "location",
   image: "photo",
   technical_sheet: "technicalSheet",
+  // El backend acepta una lista de IDs bajo `cuentadante_ids`. Si el backend
+  // devuelve un error de validacion con esa clave, lo mostramos en el campo
+  // "cuentadante" del formulario.
+  cuentadante_ids: "cuentadante",
 };
 
 // METODO GET (obtener lista de products)
@@ -41,12 +47,25 @@ export async function createCm(cmData) {
   formData.append("name", cmData.name);
   formData.append("description", cmData.description);
   formData.append("brand_id", cmData.brand);
-  formData.append("user_id", cmData.user);
   formData.append("state", cmData.state);
   formData.append("unit_price", cmData.unitPrice);
   formData.append("total_price", cmData.totalPrice);
   formData.append("purchase_date", cmData.purchaseDate);
   formData.append("is_active", "true");
+
+  // Inventario: opcional. Si llega "", no se manda (backend lo trata como null).
+  if (cmData.inventory) formData.append("inventory_id", String(cmData.inventory));
+  // Categoria: opcional. "" = no se manda.
+  if (cmData.category) formData.append("category_id", String(cmData.category));
+
+  // Cuentadantes (M2M): se envian como multiples llaves con el mismo nombre
+  // `cuentadante_ids` para que el backend haga .set() sobre el M2M. Si el
+  // formulario trae la lista vacia, no se envia la clave.
+  if (Array.isArray(cmData.cuentadantes) && cmData.cuentadantes.length > 0) {
+    cmData.cuentadantes.forEach((id) => {
+      if (id != null && id !== "") formData.append("cuentadante_ids", String(id));
+    });
+  }
 
   if (cmData.senaPlate)
     formData.append("sena_plate", cmData.senaPlate);
@@ -77,11 +96,23 @@ export async function updateCm(id, cmData) {
   formData.append("name", cmData.name);
   formData.append("description", cmData.description);
   formData.append("brand_id", cmData.brand);
-  formData.append("user_id", cmData.user);
   formData.append("state", cmData.state);
   formData.append("unit_price", cmData.unitPrice);
   formData.append("total_price", cmData.totalPrice);
   formData.append("purchase_date", cmData.purchaseDate);
+
+  // Inventario: opcional. "" = no se manda (backend interpreta como null).
+  if (cmData.inventory) formData.append("inventory_id", String(cmData.inventory));
+  // Categoria: opcional. "" = no se manda.
+  if (cmData.category) formData.append("category_id", String(cmData.category));
+
+  // M2M: solo se envia si el formulario lo incluye (aunque sea array vacio
+  // para "ninguno"). El backend interpretara lista vacia como "quitar todos".
+  if (Array.isArray(cmData.cuentadantes)) {
+    cmData.cuentadantes.forEach((id) => {
+      if (id != null && id !== "") formData.append("cuentadante_ids", String(id));
+    });
+  }
 
   // Placa SENA/ubicación siempre se mandan (aunque vengan vacías) para que
   // borrarlas en el formulario también las borre en el backend — un
@@ -129,4 +160,3 @@ export async function deleteCm(id) {
   });
   if (!response.ok) await throwApiError(response);
 }
-

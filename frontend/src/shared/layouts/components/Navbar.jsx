@@ -2,6 +2,7 @@ import { Archive, Menu } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import ThemeToggle from "@/shared/components/ThemeToggle";
+import NotificationsBell from "./NotificationsBell";
 
 
 export default function Navbar({ onToggleSidebar }) {
@@ -43,6 +44,9 @@ export default function Navbar({ onToggleSidebar }) {
             <h1 className="text-h3 font-heading flex-1 truncate uppercase tracking-wide">
                 SGI / Inventario
             </h1>
+
+            {/* Campana de notificaciones (loans para admin, tareas para usuarios). */}
+            <NotificationsBell />
 
             {/* Selector de tema (claro / oscuro / sistema) */}
             <ThemeToggle />

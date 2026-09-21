@@ -1,3 +1,5 @@
+import { joinCuentadantes } from "@/shared/utils/cuentadantes";
+
 export const returnablesReportConfig = {
     reportTitle: "Reporte de Materiales Devolutivos",
     fileNamePrefix: "reporte-devolutivos",
@@ -9,10 +11,10 @@ export const returnablesReportConfig = {
         { key: "model",        label: "Modelo",         default: true  },
         { key: "serial",       label: "Serial",         default: true  },
         {
-            key: "user",
-            label: "Cuentadante",
+            key: "cuentadantes",
+            label: "Cuentadantes",
             default: true,
-            accessor: (row) => row.user ? `${row.user.first_name} ${row.user.last_name}` : "-",
+            accessor: (row) => joinCuentadantes(row),
         },
         { key: "dimensions",   label: "Dimensiones",    default: true  },
         { key: "state",        label: "Estado",         default: true  },

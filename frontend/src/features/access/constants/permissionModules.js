@@ -68,6 +68,24 @@ export const PERMISSION_MODULES = [
     ],
   },
   {
+    title: "Nombres de inventario",
+    permissions: [
+      { codename: "create_inventory", label: "Crear nombre de inventario" },
+      { codename: "view_inventory", label: "Ver nombres de inventario" },
+      { codename: "edit_inventory", label: "Editar nombre de inventario" },
+      { codename: "delete_inventory", label: "Eliminar nombre de inventario" },
+    ],
+  },
+  {
+    title: "Categorias",
+    permissions: [
+      { codename: "create_category", label: "Crear categoria" },
+      { codename: "view_category", label: "Ver categorias" },
+      { codename: "edit_category", label: "Editar categoria" },
+      { codename: "delete_category", label: "Eliminar categoria" },
+    ],
+  },
+  {
     title: "Roles y permisos",
     permissions: [
       { codename: "create_role", label: "Crear rol" },

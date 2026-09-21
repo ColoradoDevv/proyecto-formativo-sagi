@@ -79,6 +79,16 @@ export const cmBaseSchema = z.object({
         .trim()
         .optional(),
 
+    inventory: z
+        .string()
+        .trim()
+        .optional(),
+
+    category: z
+        .string()
+        .trim()
+        .optional(),
+
     state: z
         .string()
         .min(1, "Debe seleccionar un estado"),
@@ -105,9 +115,14 @@ export const cmBaseSchema = z.object({
             message: "El valor total debe ser mayor a 0",
         }),
 
-    user: z
-        .string()
-        .min(1, "Debe seleccionar un cuentadante"),
+    // Cuentadantes: ahora es un array de IDs (M2M). Al menos uno.
+    // `user` se mantiene como compat temporal: lo derivamos a partir de
+    // `cuentadantes` en el formulario para no romper consumidores del schema.
+    user: z.string().optional(),
+
+    cuentadantes: z
+        .array(z.string())
+        .min(1, "Debe asignar al menos un cuentadante"),
 
     purchaseDate: z
         .string()
@@ -214,7 +229,7 @@ export const cmEditSchema = z.object({
         .trim()
         .max(20, "El numero de serial es demasiado larga")
         .refine(val => val === "" || val.length >= 3, {
-            message: "El numero de serial debe tener minimo 3 caracteres"
+            message: "El numero de serial debe tener minimo 3 caracteres",
         })
         .optional(),
 
@@ -236,6 +251,14 @@ export const cmEditSchema = z.object({
         .string()
         .optional(),
 
+    inventory: z
+        .string()
+        .optional(),
+
+    category: z
+        .string()
+        .optional(),
+
     state: z
         .string()
         .min(1, "Debe seleccionar un estado"),
@@ -254,9 +277,12 @@ export const cmEditSchema = z.object({
         .refine(isValidMoney, { message: "El valor total debe ser un numero valido" })
         .refine((value) => Number(value) > 0, { message: "El valor total debe ser mayor a 0" }),
 
-    user: z
-        .string()
-        .min(1, "Debe seleccionar un cuentadante"),
+    // M2M: lista de IDs. En edicion se exige al menos uno.
+    user: z.string().optional(),
+
+    cuentadantes: z
+        .array(z.string())
+        .min(1, "Debe asignar al menos un cuentadante"),
 
     purchaseDate: z
         .string()

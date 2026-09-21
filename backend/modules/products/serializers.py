@@ -6,7 +6,7 @@
 from rest_framework import serializers
 from django.db.models import Sum
 
-from .models import Brand, Category, ConsumableMaterial, ReturnableMaterial
+from .models import Brand, Category, ConsumableMaterial, Inventory, ReturnableMaterial
 from modules.users.models import User
 
 
@@ -29,9 +29,36 @@ class BrandSerializer(serializers.ModelSerializer):
         fields = "__all__"
         
 class CategorySerializer(serializers.ModelSerializer):
+    # Serializer del catalogo de categorias (consumibles y devolutivos).
+    def validate_name(self, value):
+        # Unicidad case-insensitive consistente con Brand/Inventory.
+        qs = Category.objects.filter(name__iexact=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Ya existe una categoria con ese nombre.")
+        return value
+
     class Meta:
         model = Category
         fields = "__all__"
+
+
+class InventorySerializer(serializers.ModelSerializer):
+    """Serializer para el catalogo de nombres de inventario."""
+    def validate_name(self, value):
+        # Misma politica que BrandSerializer: unicidad case-insensitive.
+        qs = Inventory.objects.filter(name__iexact=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Ya existe un nombre de inventario con ese valor.")
+        return value
+
+    class Meta:
+        model = Inventory
+        fields = "__all__"
+
 
 class UserMinimalSerializer(serializers.ModelSerializer):
     class Meta:
@@ -41,7 +68,16 @@ class UserMinimalSerializer(serializers.ModelSerializer):
 class ConsumableMaterialSerializer(serializers.ModelSerializer):
     # ── Campos de solo lectura (enriquecidos) ─────────────────────────────
     brand              = BrandSerializer(read_only=True)
-    user               = UserMinimalSerializer(read_only=True)
+    inventory          = InventorySerializer(read_only=True)
+    category           = CategorySerializer(read_only=True)
+    # `cuentadantes`: lista de usuarios asignados (M2M). Solo lectura; para
+    # escritura se usa `cuentadante_ids` (write_only, lista de PKs).
+    # Importante: NO usar `source='cuentadantes'` (mismo nombre que el
+    # atributo). DRF dispara un AssertionError al construir el fields
+    # dict si source == field_name (incluso para read-only). El default
+    # (source=None) hace que DRF use el field_name como source, que es
+    # exactamente lo que queremos.
+    cuentadantes       = UserMinimalSerializer(many=True, read_only=True)
     available_quantity = serializers.SerializerMethodField()
     is_exhausted       = serializers.SerializerMethodField()
 
@@ -52,17 +88,51 @@ class ConsumableMaterialSerializer(serializers.ModelSerializer):
     technical_sheet = serializers.FileField(required=False,  allow_null=True, allow_empty_file=True, use_url=False)
 
     # ── Campos de escritura para FKs ──────────────────────────────────────
-    user_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(),
-        source='user',
-        write_only=True
-    )
     brand_id = serializers.PrimaryKeyRelatedField(
         queryset=Brand.objects.all(),
         source='brand',
         write_only=True,
         required=False,
         allow_null=True
+    )
+    # Inventario: opcional. Acepta null/vacio para desasignar.
+    inventory_id = serializers.PrimaryKeyRelatedField(
+        queryset=Inventory.objects.all(),
+        source='inventory',
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
+    # Categoria: opcional. Compartida con devolutivos; cualquier categoria
+    # activa del CRUD /api/products/categories/ es valida.
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.filter(is_active=True),
+        source='category',
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
+
+    # ── Cuentadantes (M2M) — escritura ────────────────────────────────────
+    # Lista de IDs de usuarios. Acepta vacia: si llega vacia y el material
+    # ya existia, se mantienen los anteriores (PATCH parcial); en create se
+    # exigira al menos uno via validate().
+    #
+    # Importante: NO poner `source='cuentadantes'`. Con `many=True`, DRF
+    # envuelve el campo en un `ListSerializer` cuyo field_name interno se
+    # deriva del `source`; si source == field_name dispara un AssertionError
+    # ("redundant source") que rompe el POST con 500. Sin `source`, el
+    # wrapper usa el nombre del atributo (`cuentadante_ids`) y se mapea a
+    # `cuentadantes` via `super().create()` en `create()`.
+    # El modelo ya expone `cuentadantes` (read-only) por el `fields = "__all__"`,
+    # asi que tenemos:
+    #   - `cuentadantes`       -> read-only, serializa la lista de usuarios anidada
+    #   - `cuentadante_ids`    -> write-only, recibe la lista de PKs en POST/PATCH
+    cuentadante_ids = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        write_only=True,
+        many=True,
+        required=False,
     )
 
     # ── Métodos computados ────────────────────────────────────────────────
@@ -107,6 +177,9 @@ class ConsumableMaterialSerializer(serializers.ModelSerializer):
                 del data[field]
                 self._clear_files.append(field)
 
+        # DRF con many=True + QueryDict (multipart) necesita la misma key
+        # repetida: ?cuentadante_ids=1&cuentadante_ids=2. Esto ya lo hace
+        # el frontend al construir el FormData.
         return super().to_internal_value(data)
 
     def validate_sena_plate(self, value):
@@ -143,10 +216,39 @@ class ConsumableMaterialSerializer(serializers.ModelSerializer):
         if quantity is not None and quantity < 0:
             raise serializers.ValidationError({'quantity': 'El stock no puede ser negativo.'})
 
+        # Reglas de "cuentadantes":
+        #   - En create: se exige al menos uno (la lista no puede estar ausente
+        #     ni venir vacia). Esto evita que un POST sin `cuentadante_ids` o
+        #     con `[]` cree un material huerfano.
+        #   - En update (PATCH): si NO se envia `cuentadante_ids` se mantienen
+        #     los anteriores (no se obliga a reenviarlos para un PATCH
+        #     parcial); si llega una lista (vacia o no) se reemplaza el set.
+        if not self.instance:
+            ids = data.get('cuentadante_ids')
+            if not ids:
+                raise serializers.ValidationError(
+                    {"cuentadante_ids": "Debe asignar al menos un cuentadante."}
+                )
+
         return data
 
+    def create(self, validated_data):
+        # Extraer M2M del validated_data antes del super().create().
+        # El nombre es `cuentadante_ids` (write-only), no `cuentadantes`
+        # (read-only); ver nota en la declaracion del campo.
+        m2m = validated_data.pop('cuentadante_ids', None)
+        instance = super().create(validated_data)
+        if m2m is not None:
+            instance.cuentadantes.set(m2m)
+        return instance
+
     def update(self, instance, validated_data):
+        # M2M: solo aplicar si vino en el payload (cuentadante_ids en el
+        # request). Si no esta, se preservan los anteriores.
+        m2m = validated_data.pop('cuentadante_ids', None)
         instance = super().update(instance, validated_data)
+        if m2m is not None:
+            instance.cuentadantes.set(m2m)
         # Campos marcados en to_internal_value() como "quitar archivo"
         # (llegaron como "" en vez de un File nuevo).
         clear_files = getattr(self, "_clear_files", [])
@@ -267,7 +369,16 @@ class ReturnableMaterialSerializer(serializers.ModelSerializer):
         rep['location']     = c.location
         rep['description']  = c.description
         rep['brand']        = BrandSerializer(c.brand).data if c.brand else None
-        rep['user']         = UserMinimalSerializer(c.user).data if c.user else None
+        rep['inventory']    = InventorySerializer(c.inventory).data if c.inventory else None
+        rep['category']     = CategorySerializer(c.category).data if c.category else None
+
+        # Cuentadantes: ahora vienen como lista (M2M) en lugar de un solo
+        # objeto. Cada elemento es { id, first_name, last_name }.
+        rep['cuentadantes'] = UserMinimalSerializer(c.cuentadantes.all(), many=True).data
+        # Mantener compat con clientes viejos que esperan `user` (singular):
+        # si hay al menos un cuentadante, expone el primero como `user`.
+        first = next(iter(c.cuentadantes.all()), None)
+        rep['user']         = UserMinimalSerializer(first).data if first else None
 
         # Fichas técnicas como lista de { id, url, uploaded_at }
         # (reemplaza el campo legacy technical_sheet de la tabla ReturnableMaterial)

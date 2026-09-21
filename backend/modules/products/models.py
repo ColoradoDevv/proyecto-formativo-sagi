@@ -13,9 +13,41 @@ class Brand(models.Model):
         return self.name
 
 
+class Inventory(models.Model):
+    # Nombre de inventario: catalogo cerrado de "inventarios" al que se asocia
+    # cada material (consumible o devolutivo). Sirve para clasificar el parque
+    # fisico: un mismo material puede vivir en distintos inventarios a lo
+    # largo de su vida util.
+    # Patron espejo de Brand: nombre unico, is_active para soft-delete.
+    name = models.CharField(max_length=100, unique=True)
+    description = models.CharField(max_length=255, blank=True, default="")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "Inventarios"
+        verbose_name = "Nombre de inventario"
+        verbose_name_plural = "Nombres de inventarios"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Category(models.Model):
-    # Categoria para ordenar el inventario.
-    name = models.CharField(max_length=100, unique=True)  # UNICO segun diccionario
+    # Categoria para clasificar materiales consumibles y devolutivos.
+    # Antes era read-only con un set fijo de 3 categorias (seed en 0006);
+    # ahora es administrable desde la UI (CRUD en el frontend) con los mismos
+    # 3 nombres sembrados como punto de partida.
+    name        = models.CharField(max_length=100, unique=True)
+    description = models.CharField(max_length=255, blank=True, default="")
+    is_active   = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name        = "Categoria"
+        verbose_name_plural = "Categorias"
+        ordering            = ["name"]
 
     def __str__(self):
         return self.name
@@ -34,17 +66,45 @@ class ConsumableMaterial(models.Model):
         ('Baja', 'Baja'),
     ]
 
-    # FK al usuario responsable - obligatorio segun diccionario
-    user = models.ForeignKey(
+    # Cuentadantes: usuarios responsables del material. Un material puede tener
+    # N cuentadantes (RF: varios usuarios custodian un mismo material).
+    # on_delete=RESTRICT conserva la regla de "no se puede borrar un usuario
+    # con materiales asignados" que tenia el FK antiguo.
+    cuentadantes = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
-        on_delete=models.RESTRICT,
-        null=False
+        related_name='cuentadante_materials',
+        related_query_name='cuentadante_material',
+        blank=True,
     )
 
     # FK a la marca - opcional según requerimiento
     brand = models.ForeignKey(
         Brand,
         on_delete=models.RESTRICT,
+        null=True,
+        blank=True,
+    )
+
+    # FK al inventario - opcional. on_delete=SET_NULL para que al "desactivar"
+    # o eliminar un inventario, los materiales no queden bloqueados por la
+    # restriccion RESTRICT (que usamos en brand/category para obligar a
+    # desvincular antes de borrar). En el inventario preferimos desvincular
+    # en cascada suave para no romper reportes historicos.
+    inventory = models.ForeignKey(
+        Inventory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    # FK a la categoria (antes solo la tenian los devolutivos; ahora se
+    # comparte para clasificar consumibles y devolutivos desde un mismo
+    # catalogo). Opcional — los 3 nombres sembrados quedan disponibles
+    # como punto de partida. on_delete=SET_NULL por la misma razon que
+    # `inventory`: desvincular en cascada suave para no romper historial.
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
     )

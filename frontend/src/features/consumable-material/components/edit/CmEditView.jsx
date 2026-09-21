@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button, IconButton, StatusBadge, showAlert, cancelAlert, FileInput, ProfileFileInput } from "@/shared";
 import { Undo2 } from "lucide-react";
 import useCm from "../../hooks/useCm";
-import { getBrands, getUsers, createBrand } from "../../services/selectServices";
+import { getBrands, getUsers, getInventories, getCategories, createBrand, createInventory, createCategory } from "@/shared/services/selectServices";
 import { updateCm } from "../../services/consumableService";
 import { cmEditSchema } from "../../schemas/cmSchema";
 import ConsumableForm from "../ConsumableForm";
@@ -17,6 +17,8 @@ export default function CmEditView() {
 
     const [brands, setBrands] = useState([]);
     const [users,  setUsers]  = useState([]);
+    const [inventories, setInventories] = useState([]);
+    const [categories, setCategories] = useState([]);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -32,10 +34,30 @@ export default function CmEditView() {
         });
         return () => controller.abort();
     }, []);
+    useEffect(() => {
+        const controller = new AbortController();
+        getInventories(controller.signal).then(setInventories).catch(() => setInventories([]));
+        return () => controller.abort();
+    }, []);
+    useEffect(() => {
+        const controller = new AbortController();
+        getCategories(controller.signal).then(setCategories).catch(() => setCategories([]));
+        return () => controller.abort();
+    }, []);
 
     const handleCreateBrand = async (name) => {
         const option = await createBrand(name);
         setBrands((prev) => [...prev, option]);
+        return option;
+    };
+    const handleCreateInventory = async (name) => {
+        const option = await createInventory(name);
+        setInventories((prev) => [...prev, option]);
+        return option;
+    };
+    const handleCreateCategory = async (name) => {
+        const option = await createCategory(name);
+        setCategories((prev) => [...prev, option]);
         return option;
     };
 
@@ -48,11 +70,23 @@ export default function CmEditView() {
 
     if (error) return <p>Error al cargar material: {error.message}</p>;
 
-    return <CmEditForm id={id} CM={CM} brands={brands} users={users} onCreateBrand={handleCreateBrand} />;
+    return (
+        <CmEditForm
+            id={id}
+            CM={CM}
+            brands={brands}
+            users={users}
+            inventories={inventories}
+            categories={categories}
+            onCreateBrand={handleCreateBrand}
+            onCreateInventory={handleCreateInventory}
+            onCreateCategory={handleCreateCategory}
+        />
+    );
 }
 
 // Componente interno: recibe CM ya cargado e inicializa el estado directamente
-function CmEditForm({ id, CM, brands, users, onCreateBrand }) {
+function CmEditForm({ id, CM, brands, users, inventories, categories, onCreateBrand, onCreateInventory, onCreateCategory }) {
     const navigate = useNavigate();
 
     // Foto: se inicializa con la URL actual para que ProfileFileInput muestre la preview.
@@ -69,10 +103,21 @@ function CmEditForm({ id, CM, brands, users, onCreateBrand }) {
         quantity:     CM.quantity != null ? String(CM.quantity) : "",
         location:     CM.location ?? "",
         brand:        CM.brand?.id != null ? String(CM.brand.id) : "",
+        // Inventario: id como string (SelectMultiple espera strings). Vacío = sin asignar.
+        inventory:     CM.inventory?.id != null ? String(CM.inventory.id) : "",
+        // Categoria: id como string. Vacio = sin asignar.
+        category:      CM.category?.id != null ? String(CM.category.id) : "",
         state:        CM.state ?? "",
         unitPrice:    CM.unit_price != null ? String(CM.unit_price) : "",
         totalPrice:   CM.total_price != null ? String(CM.total_price) : "",
-        user:         CM.user?.id != null ? String(CM.user.id) : "",
+        user:         "",
+        // Cuentadantes (M2M): se pre-carga desde la respuesta del backend
+        // (`CM.cuentadantes` es un array de { id, first_name, last_name }).
+        // Si el backend devolvio el compat `CM.user` (singular) y no la lista,
+        // caemos a ese valor para no perder el dato.
+        cuentadantes: Array.isArray(CM.cuentadantes)
+            ? CM.cuentadantes.map((u) => String(u.id))
+            : (CM.user?.id != null ? [String(CM.user.id)] : []),
         purchaseDate: CM.purchase_date ?? "",
     });
 
@@ -165,7 +210,11 @@ function CmEditForm({ id, CM, brands, users, onCreateBrand }) {
                     onChange={handleChange}
                     brands={brands}
                     users={users}
+                    inventories={inventories}
+                    categories={categories}
                     onCreateBrand={onCreateBrand}
+                    onCreateInventory={onCreateInventory}
+                    onCreateCategory={onCreateCategory}
                     photoSlot={
                         // Mismo layout que CmRegisterForm: foto arriba, ficha abajo.
                         <div className="w-full sm:w-[var(--size-field-sm)] flex flex-col gap-4">

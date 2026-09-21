@@ -13,23 +13,56 @@ function isValidDateString(value) {
     );
 }
 
-export const taskSchema = z.object({
+// Estados disponibles para una asignacion de tarea. Reutilizable en selects.
+export const TASK_STATES = [
+    { id: "Pendiente", label: "Pendiente" },
+    { id: "En progreso", label: "En progreso" },
+    { id: "Completada", label: "Completada" },
+    { id: "Cancelada", label: "Cancelada" },
+];
 
+// Alcance del destinatario de la asignacion.
+export const ASSIGNMENT_SCOPES = [
+    { id: "user",  label: "Usuario individual" },
+    { id: "group", label: "Grupo de usuarios" },
+];
+
+// Esquema de la PLANTILLA de tarea (TaskDefinition).
+export const taskDefinitionSchema = z.object({
     taskName: z
         .string()
         .trim()
-        .min(3, "El título debe tener mínimo 3 caracteres")
-        .max(100, "El título es demasiado largo"),
+        .min(3, "El titulo debe tener minimo 3 caracteres")
+        .max(100, "El titulo es demasiado largo"),
 
     taskDescription: z
         .string()
         .trim()
-        .min(3, "La descripción debe tener mínimo 3 caracteres")
-        .max(255, "La descripción no puede superar 255 caracteres"),
+        .min(3, "La descripcion debe tener minimo 3 caracteres")
+        .max(255, "La descripcion no puede superar 255 caracteres"),
+});
+
+// Esquema base de una asignacion. Aplica tanto para usuarios como para grupos:
+// segun `assignmentScope`, exactamente uno de `taskUser` / `taskGroup` debe
+// estar presente. Las fechas son independientes por asignacion.
+export const taskAssignmentSchema = z.object({
+    task: z
+        .string()
+        .min(1, "Debe seleccionar una tarea"),
+
+    assignmentScope: z.enum(["user", "group"], {
+        errorMap: () => ({ message: "Debe seleccionar el alcance de la asignacion" }),
+    }),
 
     taskUser: z
         .string()
-        .min(1, "Debe seleccionar un usuario"),
+        .optional()
+        .or(z.literal("")),
+
+    taskGroup: z
+        .string()
+        .optional()
+        .or(z.literal("")),
 
     taskState: z
         .string()
@@ -38,23 +71,27 @@ export const taskSchema = z.object({
     taskStartDate: z
         .string()
         .min(1, "Debe ingresar una fecha de inicio")
-        .refine(isValidDateString, { message: "Debe ingresar una fecha válida" }),
+        .refine(isValidDateString, { message: "Debe ingresar una fecha valida" }),
 
     taskEndDate: z
         .string()
-        .min(1, "Debe ingresar una fecha de finalización")
-        .refine(isValidDateString, { message: "Debe ingresar una fecha válida" }),
-
+        .min(1, "Debe ingresar una fecha de finalizacion")
+        .refine(isValidDateString, { message: "Debe ingresar una fecha valida" }),
 })
 .refine(
     (data) => !data.taskStartDate || !data.taskEndDate || data.taskEndDate >= data.taskStartDate,
     { message: "La fecha de fin no puede ser anterior a la de inicio", path: ["taskEndDate"] }
+)
+.refine(
+    (data) => {
+        if (data.assignmentScope === "user") return !!data.taskUser && data.taskUser !== "";
+        if (data.assignmentScope === "group") return !!data.taskGroup && data.taskGroup !== "";
+        return true;
+    },
+    (data) => {
+        if (data.assignmentScope === "user") {
+            return { message: "Debe seleccionar un usuario", path: ["taskUser"] };
+        }
+        return { message: "Debe seleccionar un grupo", path: ["taskGroup"] };
+    }
 );
-
-// Estados disponibles para una tarea (RFADMIN46). Reutilizable en selects.
-export const TASK_STATES = [
-    { id: "Pendiente", label: "Pendiente" },
-    { id: "En progreso", label: "En progreso" },
-    { id: "Completada", label: "Completada" },
-    { id: "Cancelada", label: "Cancelada" },
-];

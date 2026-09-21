@@ -987,8 +987,10 @@ class LoanDraftCreateView(APIView):
                 field_errors["receptor_email"] = "Debe ingresar un correo electrónico válido."
         if loan_type not in dict(Loans.LOAN_TYPE):
             field_errors["loan_type"] = "Debe seleccionar un tipo de préstamo válido (Interno o Externo)."
-        if not group:
-            field_errors["apprentice_group"] = "Este campo es obligatorio."
+        # `apprentice_group` (Numero de grupo o ficha) es OPCIONAL: el frontend
+        # ya no lo exige y se guarda vacio ("") si el usuario no lo llena.
+        # No validamos nada aqui para evitar 400 espurios cuando el cliente
+        # envia string vacio.
         if not justification:
             field_errors["justification_use"] = "Este campo es obligatorio."
         if not return_date:

@@ -12,13 +12,13 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models.functions import Lower
 from django.db.models import Count
 
-from .models import Brand, Category, ConsumableMaterial, ReturnableMaterial
+from .models import Brand, Category, ConsumableMaterial, Inventory, ReturnableMaterial
 
-from .models import Brand, Category, ConsumableMaterial, ReturnableMaterial
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
     ConsumableMaterialSerializer,
+    InventorySerializer,
     ReturnableMaterialSerializer,
 )
 from modules.permissions.permissions_drf import HasPermission
@@ -26,6 +26,7 @@ from modules.audit.mixins import AuditMixin
 from modules.audit.utils import log as audit_log
 from modules.audit.models import AuditLog
 from modules.audit.signals import audit_toggle_active
+from modules.users.models import User
 
 
 FIXED_RETURNABLE_CATEGORY_NAMES = (
@@ -56,27 +57,63 @@ class BrandViewSet(AuditMixin, viewsets.ModelViewSet):
         return [IsSuperUser()]
 
 
-class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    # Las categorías de devolutivos están definidas por el RFADMIN08.
-    # Solo se consultan: no se pueden crear, editar ni eliminar desde la API.
-    queryset = Category.objects.filter(name__in=FIXED_RETURNABLE_CATEGORY_NAMES).order_by("id")
-    serializer_class = CategorySerializer
+class InventoryViewSet(AuditMixin, viewsets.ModelViewSet):
+    # CRUD del catalogo "Nombre de inventario".
+    # Espejo de BrandViewSet, con permisos propios.
+    queryset = Inventory.objects.all().order_by(Lower("name"))
+    serializer_class = InventorySerializer
+    filter_backends  = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['is_active']
+    search_fields    = ['name', 'description']
+    ordering_fields  = ['name', 'id']
 
     def get_permissions(self):
-        return [HasPermission("view_returnable")]
+        if self.action in ("list", "retrieve"):
+            return [HasPermission("view_inventory")]
+        if self.action == "create":
+            return [HasPermission("create_inventory")]
+        if self.action in ("update", "partial_update"):
+            return [HasPermission("edit_inventory")]
+        from modules.permissions.permissions_drf import IsSuperUser
+        return [IsSuperUser()]
+
+
+class CategoryViewSet(AuditMixin, viewsets.ModelViewSet):
+    # CRUD del catalogo de categorias compartidas por consumibles y devolutivos.
+    # Antes era ReadOnlyModelViewSet con un set fijo de 3 categorias seed;
+    # ahora es administrable desde el frontend (RFADMIN08 se mantiene como
+    # el origen del seed inicial, pero los admins pueden agregar mas).
+    queryset = Category.objects.all().order_by(Lower("name"))
+    serializer_class = CategorySerializer
+    filter_backends  = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['is_active']
+    search_fields    = ['name', 'description']
+    ordering_fields  = ['name', 'id']
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [HasPermission("view_category")]
+        if self.action == "create":
+            return [HasPermission("create_category")]
+        if self.action in ("update", "partial_update"):
+            return [HasPermission("edit_category")]
+        from modules.permissions.permissions_drf import IsSuperUser
+        return [IsSuperUser()]
 
 
 class ConsumableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
     # CRUD de materiales consumibles.
-    queryset = ConsumableMaterial.objects.all().order_by(Lower("name"))
+    queryset = ConsumableMaterial.objects.prefetch_related('cuentadantes').all().order_by(Lower("name"))
     serializer_class = ConsumableMaterialSerializer
     filter_backends  = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = {
-        'name':      ['icontains', 'exact'],
-        'state':     ['exact'],
-        'is_active': ['exact'],
-        'brand':     ['exact'],       # ?brand=<id>
-        'user':      ['exact'],       # ?user=<id>  (cuentadante)
+        'name':         ['icontains', 'exact'],
+        'state':        ['exact'],
+        'is_active':    ['exact'],
+        'brand':        ['exact'],            # ?brand=<id>
+        'inventory':    ['exact'],            # ?inventory=<id>
+        'category':     ['exact'],            # ?category=<id>
+        'cuentadantes': ['exact'],            # ?cuentadantes=<id>  (M2M)
     }
     search_fields   = ['name', 'description', 'sena_plate', 'location']
     ordering_fields = ['name', 'state', 'is_active', 'purchase_date', 'id']
@@ -147,17 +184,20 @@ class ConsumableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
 
 class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = ReturnableMaterial.objects.select_related(
-        'consumable', 'consumable__brand', 'consumable__user', 'category'
+        'consumable', 'consumable__brand', 'consumable__inventory', 'category'
+    ).prefetch_related(
+        'consumable__cuentadantes'
     ).all().order_by(Lower("consumable__name"))
     serializer_class = ReturnableMaterialSerializer
     filter_backends  = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = {
-        'consumable__name':      ['icontains', 'exact'],
-        'consumable__state':     ['exact'],
-        'consumable__is_active': ['exact'],
-        'consumable__user':      ['exact'],   # ?consumable__user=<id>  (cuentadante)
-        'category':              ['exact'],   # ?category=<id>
-        'serial':                ['icontains', 'exact'],
+        'consumable__name':          ['icontains', 'exact'],
+        'consumable__state':         ['exact'],
+        'consumable__is_active':     ['exact'],
+        'consumable__cuentadantes':  ['exact'],   # ?consumable__cuentadantes=<id>  (cuentadantes M2M)
+        'consumable__inventory':     ['exact'],   # ?consumable__inventory=<id>     (inventario)
+        'consumable__category':      ['exact'],   # ?consumable__category=<id>      (categoria compartida)
+        'serial':                    ['icontains', 'exact'],
     }
     search_fields   = ['consumable__name', 'consumable__description',
                        'consumable__sena_plate', 'serial', 'model']
@@ -172,19 +212,6 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
             return [HasPermission("edit_returnable")]
         from modules.permissions.permissions_drf import IsSuperUser
         return [IsSuperUser()]
-
-    @staticmethod
-    def validate_fixed_category(category_id, current_category_id=None):
-        if str(category_id) == str(current_category_id):
-            return
-
-        if not Category.objects.filter(
-            pk=category_id,
-            name__in=FIXED_RETURNABLE_CATEGORY_NAMES,
-        ).exists():
-            raise ValidationError({
-                "category_id": "Debe seleccionar una de las categorías fijas permitidas.",
-            })
 
     @action(detail=True, methods=["patch"])
     def toggle_active(self, request, pk=None):
@@ -234,8 +261,11 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         data = request.data
         files = request.FILES
+        # Las categorias ahora se gestionan via CRUD (CategoryViewSet).
+        # Cualquier category_id valido se acepta; si la categoria no existe
+        # la FK constraint del modelo lanzara IntegrityError, que cae en el
+        # bloque try/except de abajo.
         category_id = data.get("category_id")
-        self.validate_fixed_category(category_id)
 
         category = Category.objects.filter(pk=category_id).first()
         cat_name = category.name.strip().lower() if category else ""
@@ -271,6 +301,22 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
             raise ValidationError({"dimensions": "Las dimensiones son obligatorias para esta categoría."})
         dimensions = dimensions or None
 
+        # Cuentadantes: si vienen del cliente (cuentadante_ids) se usan;
+        # si no, por defecto se asigna al usuario que crea el material.
+        # QueryDict.getlist() funciona tanto para claves repetidas (cuentadante_ids=1&cuentadante_ids=2)
+        # como para el caso "no vino la clave" (devuelve []).
+        raw_cuentadante_ids = data.getlist('cuentadante_ids') if hasattr(data, 'getlist') else data.get('cuentadante_ids', [])
+        if isinstance(raw_cuentadante_ids, str):
+            raw_cuentadante_ids = [raw_cuentadante_ids]
+        # Filtra vacios / strings vacios para que el set() no se queje.
+        cleaned_cuentadante_ids = [uid for uid in raw_cuentadante_ids if uid not in (None, "", "null")]
+        if not cleaned_cuentadante_ids:
+            cleaned_cuentadante_ids = [request.user.id]
+        # Valida que existan y que sean usuarios unicos.
+        valid_users = User.objects.filter(pk__in=cleaned_cuentadante_ids)
+        if valid_users.count() != len(set(cleaned_cuentadante_ids)):
+            raise ValidationError({"cuentadante_ids": "Alguno de los cuentadantes indicados no existe."})
+
         try:
             with transaction.atomic():
                 consumable = ConsumableMaterial.objects.create(
@@ -278,6 +324,8 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
                     sena_plate=sena_plate,
                     state=data.get('state', 'Disponible'),
                     brand_id=data.get('brand_id') or None,
+                    inventory_id=data.get('inventory_id') or None,
+                    category_id=data.get('category_id') or None,
                     quantity=data.get('quantity') or None,
                     unit_price=data.get('unit_price', 0),
                     total_price=data.get('total_price', 0),
@@ -285,9 +333,11 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
                     purchase_date=data.get('purchase_date') or None,
                     location=data.get('location') or None,
                     is_active=True,
-                    user=request.user,
                     image=files.get('image', ''),
                 )
+
+                # M2M: asignar los cuentadantes seleccionados (o el default = creador).
+                consumable.cuentadantes.set(valid_users)
 
                 rm = ReturnableMaterial.objects.create(
                     consumable=consumable,
@@ -322,9 +372,9 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
         data = request.data
         files = request.FILES
 
+        # Las categorias ahora son administrables; cualquier category_id valido
+        # se acepta. La FK constraint al modelo valida la existencia.
         category_id = data.get('category_id', rm.category_id)
-        if 'category_id' in data:
-            self.validate_fixed_category(category_id, rm.category_id)
 
         category = Category.objects.filter(pk=category_id).first()
         cat_name = category.name.strip().lower() if category else ""
@@ -371,6 +421,8 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
             'name': 'name',
             'state': 'state',
             'brand_id': 'brand_id',
+            'inventory_id': 'inventory_id',
+            'category_id': 'category_id',
             'quantity': 'quantity',
             'unit_price': 'unit_price',
             'total_price': 'total_price',
@@ -378,7 +430,7 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
             'purchase_date': 'purchase_date',
             'location': 'location',
         }
-        nullable = {'brand_id', 'quantity', 'purchase_date', 'location'}
+        nullable = {'brand_id', 'inventory_id', 'category_id', 'quantity', 'purchase_date', 'location'}
 
         try:
             with transaction.atomic():
@@ -393,6 +445,21 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
                     consumable.image = files.get('image')
 
                 consumable.save()
+
+                # M2M: actualizar cuentadantes solo si la clave viene en el payload.
+                # Soporta tanto QueryDict (getlist) como dict plano (lista o string).
+                if hasattr(data, 'getlist'):
+                    raw_cuentadante_ids = data.getlist('cuentadante_ids')
+                else:
+                    raw_cuentadante_ids = data.get('cuentadante_ids', [])
+                if isinstance(raw_cuentadante_ids, str):
+                    raw_cuentadante_ids = [raw_cuentadante_ids]
+                cleaned_cuentadante_ids = [uid for uid in raw_cuentadante_ids if uid not in (None, "", "null")]
+                if cleaned_cuentadante_ids:
+                    valid_users = User.objects.filter(pk__in=cleaned_cuentadante_ids)
+                    if valid_users.count() != len(set(cleaned_cuentadante_ids)):
+                        raise ValidationError({"cuentadante_ids": "Alguno de los cuentadantes indicados no existe."})
+                    consumable.cuentadantes.set(valid_users)
 
                 if 'category_id' in data:
                     rm.category_id = category_id

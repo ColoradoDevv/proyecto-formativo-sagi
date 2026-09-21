@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button, IconButton, StatusBadge, showAlert, cancelAlert, FileInput } from "@/shared";
 import { Undo2, Pencil, ImageOff, FileText, Trash2, Plus } from "lucide-react";
 import useRm from "../../hooks/useRm";
-import { getBrands, getCategories, getStates, createBrand } from "../../services/selectServices";
+import { getBrands, getCategories, getStates, getUsers, getInventories, createBrand, createInventory, createCategory } from "@/shared/services/selectServices";
 import { rmEditSchema } from "../../schemas/rmSchema";
 import { updateRM, deleteTechnicalSheet } from "../../services/returnableService";
 import ReturnableForm from "../ReturnableForm";
@@ -20,14 +20,33 @@ export default function RmEditView() {
     const [categories, setCategories] = useState([]);
     const [brands,     setBrands]     = useState([]);
     const [states,     setStates]     = useState([]);
+    const [users,      setUsers]      = useState([]);
+    const [inventories, setInventories] = useState([]);
 
     useEffect(() => { getCategories().then(setCategories); }, []);
     useEffect(() => { getBrands().then(setBrands);         }, []);
     useEffect(() => { getStates().then(setStates);         }, []);
+    useEffect(() => { getUsers().then(setUsers).catch(() => setUsers([])); }, []);
+    useEffect(() => { getInventories().then(setInventories).catch(() => setInventories([])); }, []);
 
     const handleCreateBrand = async (name) => {
         const option = await createBrand(name);
         setBrands((prev) => [...prev, option]);
+        return option;
+    };
+    const handleCreateInventory = async (name) => {
+        const option = await createInventory(name);
+        setInventories((prev) => [...prev, option]);
+        return option;
+    };
+    const handleCreateCategory = async (name) => {
+        const option = await createCategory(name);
+        // Las categorias se gestionan via el CRUD de la pestana Categorias;
+        // este handler existe por simetria y para uso futuro via CreateOptionButton.
+        setCategories((prev) => {
+            if (prev.some((c) => String(c.id) === String(option.id))) return prev;
+            return [...prev, option];
+        });
         return option;
     };
 
@@ -40,11 +59,23 @@ export default function RmEditView() {
 
     if (error) return <p>Error al cargar material: {error.message}</p>;
 
-    return <RmEditForm RM={RM} categories={categories} brands={brands} states={states} onCreateBrand={handleCreateBrand} />;
+    return (
+        <RmEditForm
+            RM={RM}
+            categories={categories}
+            brands={brands}
+            states={states}
+            users={users}
+            inventories={inventories}
+            onCreateBrand={handleCreateBrand}
+            onCreateInventory={handleCreateInventory}
+            onCreateCategory={handleCreateCategory}
+        />
+    );
 }
 
 // ── Componente interno ────────────────────────────────────────────────────────
-function RmEditForm({ RM, categories, brands, states, onCreateBrand }) {
+function RmEditForm({ RM, categories, brands, states, users, inventories, onCreateBrand, onCreateInventory, onCreateCategory }) {
     const navigate      = useNavigate();
     const photoInputRef = useRef();
 
@@ -92,6 +123,8 @@ function RmEditForm({ RM, categories, brands, states, onCreateBrand }) {
         serial:       RM.serial ?? "",
         category:     RM.category?.id != null ? String(RM.category.id) : "",
         brand:        RM.brand?.id != null ? String(RM.brand.id) : "",
+        // Inventario: id como string. Vacio = sin asignar.
+        inventory:     RM.inventory?.id != null ? String(RM.inventory.id) : "",
         description:  RM.description ?? "",
         state:        RM.state ?? "",
         quantity:     RM.quantity != null ? String(RM.quantity) : "",
@@ -99,6 +132,11 @@ function RmEditForm({ RM, categories, brands, states, onCreateBrand }) {
         unitPrice:    RM.unit_price != null ? String(RM.unit_price) : "",
         totalPrice:   RM.total_price != null ? String(RM.total_price) : "",
         purchaseDate: RM.purchase_date ?? "",
+        // Cuentadantes (M2M): pre-cargar desde la lista del backend. Si el
+        // backend devolvio el compat `user` (singular), caemos a ese valor.
+        cuentadantes: Array.isArray(RM.cuentadantes)
+            ? RM.cuentadantes.map((u) => String(u.id))
+            : (RM.user?.id != null ? [String(RM.user.id)] : []),
         width:        dimensions.width,
         length:       dimensions.length,
         depth:        dimensions.depth,
@@ -201,7 +239,11 @@ function RmEditForm({ RM, categories, brands, states, onCreateBrand }) {
                     categories={getReturnableCategoryOptions(categories)}
                     brands={brands}
                     states={states}
+                    users={users}
+                    inventories={inventories}
                     onCreateBrand={onCreateBrand}
+                    onCreateInventory={onCreateInventory}
+                    onCreateCategory={onCreateCategory}
                     photoSlot={
                         <div className="flex flex-col items-center gap-3 w-full sm:w-36">
                             {/* Foto */}

@@ -1,6 +1,9 @@
 import { Switch } from "@/shared";
+import { joinCuentadantes } from "@/shared/utils/cuentadantes";
 import RmRowActions from "../components/list/RmRowActions";
 import { toggleRMActive } from "../services/returnableService";
+
+const EMPTY = "Sin cuentadante";
 
 export const RmColumns = (setRMs, setNotification) => [
     {
@@ -39,10 +42,22 @@ export const RmColumns = (setRMs, setNotification) => [
         meta: { filterVariant: "select" },
     },
     {
-        id: "user",
-        header: "Cuentadante",
-        accessorFn: (row) => row.user ? `${row.user.first_name} ${row.user.last_name}` : "Sin cuentadante",
+        id: "cuentadantes",
+        header: "Cuentadantes",
+        accessorFn: (row) => joinCuentadantes(row, { emptyPlaceholder: EMPTY }),
         meta: { filterVariant: "select" },
+        cell: ({ row }) => {
+            const text = joinCuentadantes(row.original, { emptyPlaceholder: EMPTY });
+            const isEmpty = text === EMPTY;
+            return (
+                <span
+                    className={`block max-w-xs truncate ${isEmpty ? "text-text-muted" : ""}`}
+                    title={text}
+                >
+                    {text}
+                </span>
+            );
+        },
     },
     {
         id: "brand",

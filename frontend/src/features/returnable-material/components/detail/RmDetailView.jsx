@@ -99,8 +99,13 @@ export default function RmDetailView() {
     // Valores de solo lectura (los selects de Editar se muestran como texto).
     const categoryLabel = material.category?.name ?? "Sin categoría";
     const brandLabel = material.brand?.name ?? "Sin marca";
-    const userLabel = material.user
-        ? `${material.user.first_name} ${material.user.last_name}`
+    // Cuentadantes: lista. Si el backend devolvio compat con `user`
+    // (singular) y no la lista, caemos a ese valor.
+    const cuentas = Array.isArray(material.cuentadantes)
+        ? material.cuentadantes
+        : (material.user ? [material.user] : []);
+    const cuentasLabel = cuentas.length
+        ? cuentas.map((u) => `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim()).join(", ")
         : "Sin responsable";
 
     return (
@@ -198,7 +203,25 @@ export default function RmDetailView() {
                             <Input label="Serial" value={material.serial ?? ""} disabled readOnly />
                             <Input label="Categoría" value={categoryLabel} disabled readOnly />
                             <Input label="Marca" value={brandLabel} disabled readOnly />
-                            <Input label="Responsable" value={userLabel} disabled readOnly />
+                            <Input
+                                label="Nombre de inventario"
+                                value={material.inventory?.name ?? "Sin inventario"}
+                                disabled
+                                readOnly
+                            />
+                            <Input
+                                label="Categoría"
+                                value={material.category?.name ?? "Sin categoría"}
+                                disabled
+                                readOnly
+                            />
+                            <Input
+                                label="Cuentadantes"
+                                value={cuentasLabel}
+                                disabled
+                                readOnly
+                                title={cuentasLabel}
+                            />
                             <div className="sm:col-span-2">
                                 <Input label="Descripción" value={material.description ?? ""} disabled readOnly />
                             </div>

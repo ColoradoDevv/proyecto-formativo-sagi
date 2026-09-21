@@ -1,55 +1,75 @@
 import { useState, useEffect } from "react";
-import { Button, DataTable } from "@/shared";
-import { Plus, CloudAlert, Download } from "lucide-react";
+import { Button, DataTable, usePermissions } from "@/shared";
+import { Plus, ListChecks, ClipboardList, CloudAlert, Download } from "lucide-react";
 import { TailChase } from "ldrs/react";
 import "ldrs/react/TailChase.css";
-import useTasks from "../hooks/useTasks";
-import { getUsers } from "../services/selectServices";
-import { taskColumns } from "../table/taskColumns";
-import TaskModal from "../components/TaskModal";
-import { tasksReportConfig } from "../reports/tasksReportConfig";
+import useTaskDefinitions from "../hooks/useTaskDefinitions";
+import useTaskAssignments from "../hooks/useTaskAssignments";
+import { getUsers, getGroups } from "../services/selectServices";
+import { assignmentColumns, definitionColumns } from "../table/taskColumns";
+import TaskDefinitionModal from "../components/TaskDefinitionModal";
+import TaskAssignmentModal from "../components/TaskAssignmentModal";
+import TaskAssignmentsPanel from "../components/TaskAssignmentsPanel";
+import { tasksAssignmentsReportConfig, tasksDefinitionsReportConfig } from "../reports/tasksReportConfig";
 
+// Pagina principal de tareas.
+// Toggle entre dos vistas:
+//   - "assignments": una fila por asignacion (usuario o grupo <-> tarea con su estado).
+//   - "definitions": una fila por definicion de tarea, con acceso al panel
+//     de asignaciones de esa definicion.
 export default function TaskListPage() {
-    const { tasks, setTasks, loading, error } = useTasks();
+    const { can } = usePermissions();
+    const canEditAssignment   = can("edit_task_assignment");
+    const canDeleteAssignment = can("delete_task_assignment");
+    const canDeleteDefinition = can("delete_task");
+
+    const [view, setView] = useState("assignments");
+
+    const { definitions, setDefinitions, loading: loadingDefs } = useTaskDefinitions();
+    const { assignments, setAssignments, loading: loadingAsg, error: errorAsg } =
+        useTaskAssignments();
+
     const [users, setUsers] = useState([]);
+    const [groups, setGroups] = useState([]);
 
-    // Estado del modal: abierto, tarea seleccionada y si es solo lectura.
-    const [modalOpen, setModalOpen] = useState(false);
-    const [editingTask, setEditingTask] = useState(null);
-    const [readOnly, setReadOnly] = useState(false);
+    // Modales de definicion
+    const [defModalOpen, setDefModalOpen] = useState(false);
+    const [editingDef, setEditingDef] = useState(null);
+    const [viewingDef, setViewingDef] = useState(null);
 
-    useEffect(() => { getUsers().then(setUsers).catch(() => setUsers([])); }, []);
+    // Modales de asignacion
+    const [asgModalOpen, setAsgModalOpen] = useState(false);
+    const [asgScope, setAsgScope] = useState(null); // 'user' | 'group' | null
+    const [editingAsg, setEditingAsg] = useState(null);
+    const [viewingAsg, setViewingAsg] = useState(null);
 
-    const openCreate = () => {
-        setEditingTask(null);
-        setReadOnly(false);
-        setModalOpen(true);
+    // Panel de asignaciones de una definicion
+    const [panelDef, setPanelDef] = useState(null);
+
+    useEffect(() => {
+        getUsers().then(setUsers).catch(() => setUsers([]));
+        getGroups().then(setGroups).catch(() => setGroups([]));
+    }, []);
+
+    // ---- Handlers de definicion ----
+    const onDefSaved = (saved, isEdit) => {
+        if (isEdit) setDefinitions((prev) => prev.map((d) => (d.id === saved.id ? saved : d)));
+        else setDefinitions((prev) => [...prev, saved]);
+    };
+    const onDefDeleted = (id) => {
+        setDefinitions((prev) => prev.filter((d) => d.id !== id));
     };
 
-    const openEdit = (task) => {
-        setEditingTask(task);
-        setReadOnly(false);
-        setModalOpen(true);
+    // ---- Handlers de asignacion ----
+    const onAsgSaved = (saved, isEdit) => {
+        if (isEdit) setAssignments((prev) => prev.map((a) => (a.id === saved.id ? saved : a)));
+        else setAssignments((prev) => [...prev, saved]);
+    };
+    const onAsgDeleted = (id) => {
+        setAssignments((prev) => prev.filter((a) => a.id !== id));
     };
 
-    const openView = (task) => {
-        setEditingTask(task);
-        setReadOnly(true);
-        setModalOpen(true);
-    };
-
-    // Tras crear/editar: refresca la fila en la lista sin recargar todo.
-    const handleSaved = (saved, isEdit) => {
-        setTasks((prev) =>
-            isEdit ? prev.map((t) => (t.id === saved.id ? saved : t)) : [...prev, saved]
-        );
-    };
-
-    const handleDeleted = (id) => {
-        setTasks((prev) => prev.filter((t) => t.id !== id));
-    };
-
-    const columns = taskColumns({ onView: openView, onEdit: openEdit, onDeleted: handleDeleted });
+    const loading = view === "assignments" ? loadingAsg : loadingDefs;
 
     if (loading)
         return (
@@ -58,32 +78,64 @@ export default function TaskListPage() {
             </div>
         );
 
-    if (error)
+    if (errorAsg)
         return (
             <div className="h-full flex items-center justify-center py-12">
                 <div className="flex items-center gap-3 bg-text-secondary border border-text-secondary text-text-inverse rounded-lg px-6 py-4 max-w-md">
                     <span className="text-h1"><CloudAlert /></span>
                     <div>
                         <p className="font-heading">Error al cargar Tareas</p>
-                        <p className="text-small">{error.message}</p>
+                        <p className="text-small">{errorAsg.message}</p>
                     </div>
                 </div>
             </div>
         );
 
+    // Columnas segun vista
+    const asgCols = assignmentColumns({
+        onView: setViewingAsg,
+        onEdit: setEditingAsg,
+        onDeleted: onAsgDeleted,
+        canEdit: canEditAssignment,
+        canDelete: canDeleteAssignment,
+    });
+
+    const defCols = definitionColumns({
+        onView: setViewingDef,
+        onEdit: setEditingDef,
+        onDeleted: onDefDeleted,
+        onManage: setPanelDef,
+        canDelete: canDeleteDefinition,
+    });
+
     return (
-        <div className="flex flex-col">
+        <div className="flex flex-col gap-4">
 
             {/* Encabezado */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <h2 className="text-primary font-heading">Tareas</h2>
                 <div className="flex gap-3">
-                    <Button className="flex gap-2" onClick={openCreate} variant="soft" icon={Plus}>
-                        Registrar Tarea
-                    </Button>
+                    {view === "assignments" ? (
+                        <>
+                            <Button className="flex gap-2" onClick={() => { setAsgScope("user"); setAsgModalOpen(true); }} variant="soft" icon={Plus}>
+                                Asignar a usuario
+                            </Button>
+                            <Button className="flex gap-2" onClick={() => { setAsgScope("group"); setAsgModalOpen(true); }} variant="soft" icon={Plus}>
+                                Asignar a grupo
+                            </Button>
+                        </>
+                    ) : (
+                        <Button className="flex gap-2" onClick={() => setDefModalOpen(true)} variant="soft" icon={Plus}>
+                            Crear tarea
+                        </Button>
+                    )}
                     <Button
-                        data={tasks}
-                        reportConfig={tasksReportConfig}
+                        data={view === "assignments" ? assignments : definitions}
+                        reportConfig={
+                            view === "assignments"
+                                ? tasksAssignmentsReportConfig
+                                : tasksDefinitionsReportConfig
+                        }
                         variant="primary"
                         icon={Download}
                     >
@@ -92,17 +144,107 @@ export default function TaskListPage() {
                 </div>
             </div>
 
-            {/* Tabla (incluye buscador y paginacion propios). Doble click = ver */}
-            <DataTable data={tasks} columns={columns} onRowDoubleClick={openView} />
+            {/* Toggle de vista */}
+            <div className="inline-flex self-start rounded-[var(--radius-lg)] border border-border overflow-hidden">
+                <button
+                    type="button"
+                    onClick={() => setView("assignments")}
+                    className={
+                        "px-4 py-2 text-small font-medium flex items-center gap-2 transition-colors " +
+                        (view === "assignments"
+                            ? "bg-brand text-text-inverse"
+                            : "bg-surface-base text-text-secondary hover:bg-surface-hover")
+                    }
+                >
+                    <ClipboardList size={14} />
+                    Asignaciones
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setView("definitions")}
+                    className={
+                        "px-4 py-2 text-small font-medium flex items-center gap-2 transition-colors border-l border-border " +
+                        (view === "definitions"
+                            ? "bg-brand text-text-inverse"
+                            : "bg-surface-base text-text-secondary hover:bg-surface-hover")
+                    }
+                >
+                    <ListChecks size={14} />
+                    Tareas (definiciones)
+                </button>
+            </div>
 
-            {/* Modal crear / editar / visualizar */}
-            <TaskModal
-                isOpen={modalOpen}
-                onClose={() => setModalOpen(false)}
-                onSaved={handleSaved}
+            {/* Tabla */}
+            {view === "assignments" ? (
+                <DataTable
+                    data={assignments}
+                    columns={asgCols}
+                    onRowDoubleClick={(row) => setViewingAsg(row)}
+                />
+            ) : (
+                <DataTable
+                    data={definitions}
+                    columns={defCols}
+                    onRowDoubleClick={(row) => setPanelDef(row)}
+                />
+            )}
+
+            {/* Modales de definicion */}
+            <TaskDefinitionModal
+                isOpen={defModalOpen}
+                onClose={() => setDefModalOpen(false)}
+                onSaved={onDefSaved}
+                definition={null}
+            />
+            <TaskDefinitionModal
+                isOpen={Boolean(editingDef)}
+                onClose={() => setEditingDef(null)}
+                onSaved={onDefSaved}
+                definition={editingDef}
+            />
+            <TaskDefinitionModal
+                isOpen={Boolean(viewingDef)}
+                onClose={() => setViewingDef(null)}
+                definition={viewingDef}
+                readOnly
+            />
+
+            {/* Modales de asignacion (lista general) */}
+            <TaskAssignmentModal
+                isOpen={asgModalOpen}
+                onClose={() => { setAsgModalOpen(false); setAsgScope(null); }}
+                onSaved={(saved) => { onAsgSaved(saved, false); setAsgModalOpen(false); setAsgScope(null); }}
+                definitions={definitions}
                 users={users}
-                task={editingTask}
-                readOnly={readOnly}
+                groups={groups}
+                prefillScope={asgScope}
+            />
+            <TaskAssignmentModal
+                isOpen={Boolean(editingAsg)}
+                onClose={() => setEditingAsg(null)}
+                onSaved={onAsgSaved}
+                assignment={editingAsg}
+                definitions={definitions}
+                users={users}
+                groups={groups}
+            />
+            <TaskAssignmentModal
+                isOpen={Boolean(viewingAsg)}
+                onClose={() => setViewingAsg(null)}
+                assignment={viewingAsg}
+                definitions={definitions}
+                users={users}
+                groups={groups}
+                readOnly
+            />
+
+            {/* Panel de asignaciones de una definicion */}
+            <TaskAssignmentsPanel
+                isOpen={Boolean(panelDef)}
+                onClose={() => setPanelDef(null)}
+                definition={panelDef}
+                users={users}
+                groups={groups}
             />
         </div>
     );
