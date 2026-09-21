@@ -39,6 +39,20 @@ export default function UserEditView() {
             );
     }, []);
 
+    // Lista de usuarios y grupos para los selectores de UserTasksModal.
+    const [usersList, setUsersList] = useState([]);
+    const [groupsList, setGroupsList] = useState([]);
+    useEffect(() => {
+        import("../../../tasks/services/selectServices").then(({ getUsers, getGroups }) => {
+            getUsers()
+                .then((list) => setUsersList(list.filter((u) => String(u.id) !== String(id))))
+                .catch(() => setUsersList([]));
+            getGroups()
+                .then(setGroupsList)
+                .catch(() => setGroupsList([]));
+        });
+    }, [id]);
+
     if (loading)
         return (
             <div className="h-full flex items-center justify-center">
@@ -55,11 +69,22 @@ export default function UserEditView() {
     // del formulario se inicialice limpio con los datos del nuevo usuario sin necesidad
     // de sincronizar manualmente los efectos. La consecuencia aceptada es que los
     // cambios no guardados se pierden al cambiar de usuario.
-    return <UserEditForm key={id} id={id} user={user} documentTypes={documentTypes} groups={availableGroups} allGroups={groups} />;
+    return (
+        <UserEditForm
+            key={id}
+            id={id}
+            user={user}
+            documentTypes={documentTypes}
+            groups={availableGroups}
+            allGroups={groups}
+            usersList={usersList}
+            groupsList={groupsList}
+        />
+    );
 }
 
 // Componente interno: recibe user ya cargado e inicializa el estado directamente
-function UserEditForm({ id, user, documentTypes, groups, allGroups }) {
+function UserEditForm({ id, user, documentTypes, groups, allGroups, usersList, groupsList }) {
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
@@ -327,6 +352,8 @@ function UserEditForm({ id, user, documentTypes, groups, allGroups }) {
                 isOpen={showTaskModal}
                 onClose={() => setShowTaskModal(false)}
                 userId={id}
+                users={usersList}
+                groups={groupsList}
             />
 
         </div>

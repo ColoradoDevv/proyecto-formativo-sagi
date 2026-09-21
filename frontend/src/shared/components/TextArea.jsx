@@ -1,5 +1,6 @@
 export default function TextArea({
     label,
+    labelAction,
     required,
     className = "w-full",
     error,
@@ -10,18 +11,20 @@ export default function TextArea({
     return(
         <div className={className}>
             {label && (
-                <label
-                    className={`
-                        block
-                        place-self-start
-                        text-small
-                        mb-1
-                        ${error ? "text-error" : "text-text-primary"}
-                    `}
-                >
-                    {label}
-                    {required && <span className="text-error ml-1">*</span>}
-                </label>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                    <label
+                        className={`
+                            block
+                            place-self-start
+                            text-small
+                            ${error ? "text-error" : "text-text-primary"}
+                        `}
+                    >
+                        {label}
+                        {required && <span className="text-error ml-1">*</span>}
+                    </label>
+                    {labelAction}
+                </div>
             )}
 
             <div className="relative flex items-center">

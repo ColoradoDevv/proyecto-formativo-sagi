@@ -37,7 +37,14 @@ export default function CmDetailView() {
         value != null ? `$${Number(value).toLocaleString("es-CO")}` : "-";
 
     const brandLabel = CM.brand?.name ?? "Sin marca";
-    const userLabel  = CM.user ? `${CM.user.first_name} ${CM.user.last_name}` : "Sin cuentadante";
+    // Cuentadantes: lista. Si el backend devolvio compat con `user` (singular)
+    // y no la lista, caemos a ese valor. La lista puede tener N elementos.
+    const cuentas = Array.isArray(CM.cuentadantes)
+        ? CM.cuentadantes
+        : (CM.user ? [CM.user] : []);
+    const cuentasLabel = cuentas.length
+        ? cuentas.map((u) => `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim()).join(", ")
+        : "Sin cuentadante";
 
     return (
         <div className="h-full p-3 sm:p-4 text-text-primary flex flex-col gap-3">
@@ -90,7 +97,25 @@ export default function CmDetailView() {
                             <Input label="Placa SENA" value={CM.sena_plate ?? "Sin placa"} disabled readOnly />
                             <Input label="Numero de serial" value={CM.serial ?? "Sin numero de serial"} disabled readOnly />
                             <Input label="Marca" value={brandLabel} disabled readOnly />
-                            <Input label="Cuentadante" value={userLabel} disabled readOnly />
+                            <Input
+                                label="Nombre de inventario"
+                                value={CM.inventory?.name ?? "Sin inventario"}
+                                disabled
+                                readOnly
+                            />
+                            <Input
+                                label="Categoría"
+                                value={CM.category?.name ?? "Sin categoría"}
+                                disabled
+                                readOnly
+                            />
+                            <Input
+                                label="Cuentadantes"
+                                value={cuentasLabel}
+                                disabled
+                                readOnly
+                                title={cuentasLabel}
+                            />
                             <div className="sm:col-span-2">
                                 <TextArea label="Descripción" value={CM.description ?? ""} disabled readOnly />
                             </div>

@@ -7,12 +7,14 @@ from .views import (
     BrandViewSet,
     CategoryViewSet,
     ConsumableMaterialViewSet,
+    InventoryViewSet,
     ReturnableMaterialViewSet,
     TechnicalSheetDeleteView,
 )
 
 router = DefaultRouter()
 router.register(r"brands",      BrandViewSet,              basename="brands")
+router.register(r"inventories", InventoryViewSet,           basename="inventories")
 router.register(r"categories",  CategoryViewSet,           basename="categories")
 router.register(r"consumables", ConsumableMaterialViewSet, basename="consumables")
 router.register(r"returnables", ReturnableMaterialViewSet, basename="returnables")

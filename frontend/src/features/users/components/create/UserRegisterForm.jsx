@@ -2,14 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getDocumentTypes } from "../../services/selectServices";
 import useUserGroups from "../../hooks/useUserGroups";
-import { Input, Button, StatusLabel, showAlert, cancelAlert, IconButton, usePermissions, AccordionItem } from "@/shared";
-import { UserTasksModal } from "@/features/tasks";
-import { createTask } from "@/features/tasks/services/taskService";
+import { Button, Input, StatusLabel, showAlert, cancelAlert, IconButton, usePermissions, AccordionItem } from "@/shared";
 import { userBaseSchema, userSchema } from "../../schemas/userSchema";
 import { createUser } from "../../services/userService";
 import { deriveRoleFlags } from "../../utils/userRoleUtils";
 import { UserPersonalCard, UserContactCard, UserSystemCard, UserDatesCard } from "../UserForm";
-import { ClipboardList, Undo2, User, Phone, Shield, CalendarDays, CheckCircle2 } from "lucide-react";
+import { Undo2, User, Phone, Shield, CalendarDays, CheckCircle2 } from "lucide-react";
 
 const PERSONAL_FIELDS = ["firstName", "lastName", "documentType", "documentNumber", "address"];
 const CONTACT_FIELDS = ["email", "confirmEmail", "institutionalEmail", "phone", "additionalPhone"];
@@ -55,12 +53,11 @@ const datesStepSchema = userBaseSchema.pick({
 export default function UserRegisterForm() {
 
     const navigate = useNavigate();
-    const [showTaskModal, setShowTaskModal] = useState(false);
     const [activeStep, setActiveStep] = useState(0);
     const [completedSteps, setCompletedSteps] = useState([false, false, false, false]);
 
     // Usa la misma convencion de nombres que el UserForm reutilizable.
-    // `confirmEmail` y `userTasks` son extras propios de la creacion.
+    // `confirmEmail` es extra propio de la creacion.
     const [formData, setFormData] = useState({
         firstName: "",
         lastName: "",
@@ -78,7 +75,6 @@ export default function UserRegisterForm() {
         address: "",
         isInstructorPlanta: false,
         isAccountable: false,
-        userTasks: [],
     });
 
     const [errors, setErrors] = useState({});
@@ -234,10 +230,6 @@ export default function UserRegisterForm() {
         setFormData((prev) => ({ ...prev, profilePicture: files }));
     };
 
-    const handleAddTask = (task) => {
-        setFormData((prev) => ({ ...prev, userTasks: [...prev.userTasks, task] }));
-    };
-
     async function handleCancel() {
         const result = await cancelAlert();
         if (result.isConfirmed) navigate(-1);
@@ -288,34 +280,9 @@ export default function UserRegisterForm() {
         try {
             const user = await createUser({
                 ...result.data,
-                // Fusionar campos que Zod puede omitir si son undefined/optional
-                // o que no están declarados en el schema (userTasks).
+                // Fusionar campos que Zod puede omitir si son undefined/optional.
                 profilePicture: formData.profilePicture,
-                userTasks: formData.userTasks,
             });
-
-            // Persistir las tareas agregadas, asignandolas al usuario recien creado.
-            // Se toman de formData (no de result.data) porque el schema de usuario
-            // no declara userTasks y Zod descartaria esas keys.
-            if (formData.userTasks.length) {
-                try {
-                    await Promise.all(
-                        formData.userTasks.map((task) =>
-                            createTask({ ...task, taskUser: String(user.id) })
-                        )
-                    );
-                } catch (_taskError) {
-                    // El usuario ya fue creado — notificar sin bloquear la navegación.
-                    await showAlert({
-                        icon: "warning",
-                        iconColor: "var(--color-warning)",
-                        title: "Usuario creado, pero las tareas no se guardaron",
-                        text: "El usuario fue creado correctamente. Puedes agregar las tareas manualmente desde su perfil.",
-                    });
-                    navigate("/usuarios");
-                    return;
-                }
-            }
 
             // Alerta de exito con auto-cierre (4s) + barra de progreso y boton
             // "Aceptar" para cerrar manualmente.
@@ -514,37 +481,6 @@ export default function UserRegisterForm() {
                                     singleGroupSelection
                                     isInstructorRole={isInstructorRole}
                                     includeDates={false}
-                                    systemExtraSlot={
-                                        <div className="flex flex-col gap-2">
-                                            <StatusLabel optional>Tareas</StatusLabel>
-                                            <Button
-                                                type="button"
-                                                variant="secondary"
-                                                size="md"
-                                                className="flex gap-2 justify-center"
-                                                onClick={() => setShowTaskModal(true)}
-                                            >
-                                                <ClipboardList size={16} />
-                                                Agregar tarea
-                                            </Button>
-                                            {formData.userTasks.map((task, i) => (
-                                                <span key={i} className="flex items-center gap-1.5 text-small text-text-primary bg-surface-muted border border-border rounded-[var(--radius-full)] px-3 py-1 w-fit">
-                                                    {task.taskName}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setFormData((prev) => ({
-                                                            ...prev,
-                                                            userTasks: prev.userTasks.filter((_, idx) => idx !== i),
-                                                        }))}
-                                                        className="text-text-muted hover:text-error transition-colors leading-none"
-                                                        aria-label={`Quitar tarea ${task.taskName}`}
-                                                    >
-                                                        ×
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    }
                                 />
                                 <div className="flex gap-3 justify-between">
                                     <Button type="button" variant="secondary" size="md" onClick={prevStep} disabled={submitting}>
@@ -597,19 +533,6 @@ export default function UserRegisterForm() {
                 </form>
 
             </div>
-
-            <UserTasksModal
-                isOpen={showTaskModal}
-                onClose={() => setShowTaskModal(false)}
-                pendingTasks={formData.userTasks}
-                onAddPending={handleAddTask}
-                onRemovePending={(idx) =>
-                    setFormData((prev) => ({
-                        ...prev,
-                        userTasks: prev.userTasks.filter((_, i) => i !== idx),
-                    }))
-                }
-            />
         </>
     );
 }

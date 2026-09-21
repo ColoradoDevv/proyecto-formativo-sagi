@@ -42,7 +42,6 @@ export default function Input({
                     >
                         {label}
                         {required && <span className="text-error ml-1">*</span>}
-                        {optional && <span className="text-text-muted ml-1">(opcional)</span>}
                     </label>
                     {labelAction}
                 </div>

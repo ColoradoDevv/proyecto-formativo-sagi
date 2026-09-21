@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getBrands, getStates, getCategories, createBrand } from "../../services/selectServices";
+import { getBrands, getStates, getCategories, getUsers, getInventories, createBrand, createInventory, createCategory } from "@/shared/services/selectServices";
 import { createRM } from "../../services/returnableService";
 import { FileInput, Button, showAlert, cancelAlert, ProfileFileInput, IconButton } from "@/shared";
 import { rmSchema } from "../../schemas/rmSchema";
@@ -14,6 +14,8 @@ export default function RmRegisterForm() {
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
     const [states, setStates] = useState([]);
+    const [users, setUsers] = useState([]);
+    const [inventories, setInventories] = useState([]);
     const [submitting, setSubmitting] = useState(false);
 
     // Convencion de nombres unificada con ReturnableForm y el edit.
@@ -24,6 +26,7 @@ export default function RmRegisterForm() {
         state: "",
         category: "",
         brand: "",
+        inventory: "",
         serial: "",
         quantity: "",
         location: "",
@@ -31,6 +34,9 @@ export default function RmRegisterForm() {
         totalPrice: "",
         description: "",
         purchaseDate: "",
+        // Cuentadantes (M2M): lista de IDs. Si se deja vacia, el backend
+        // asigna por defecto al usuario actual.
+        cuentadantes: [],
         technicalSheet: [],
         photo: [],
         width: "",
@@ -42,31 +48,50 @@ export default function RmRegisterForm() {
     useEffect(() => { getCategories().then(setCategories); }, []);
     useEffect(() => { getBrands().then(setBrands); }, []);
     useEffect(() => { getStates().then(setStates); }, []);
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData((prev) => {
-            const updated = { ...prev, [name]: value };
-            // Calcular total automaticamente
-            const quantity  = name === "quantity"  ? value : updated.quantity;
-            const unitPrice = name === "unitPrice" ? value : updated.unitPrice;
-            if (quantity && unitPrice) {
-                const total = (parseFloat(quantity) * parseFloat(unitPrice)).toFixed(2);
-                updated.totalPrice = isNaN(total) ? "" : total;
-            }
-            return updated;
-        });
-    };
-
-    const handleFileChange = (name) => (files) => {
-        setFormData((prev) => ({ ...prev, [name]: files }));
-    };
+    useEffect(() => { getUsers().then(setUsers).catch(() => setUsers([])); }, []);
+    useEffect(() => { getInventories().then(setInventories).catch(() => setInventories([])); }, []);
 
     // Crea una marca nueva, la agrega a las opciones y la devuelve al formulario.
     const handleCreateBrand = async (name) => {
         const option = await createBrand(name);
         setBrands((prev) => [...prev, option]);
         return option;
+    };
+    // Crea un nombre de inventario nuevo, lo agrega a las opciones y lo devuelve al form.
+    const handleCreateInventory = async (name) => {
+        const option = await createInventory(name);
+        setInventories((prev) => [...prev, option]);
+        return option;
+    };
+    // Crea una categoria nueva, la agrega a las opciones y la devuelve al form.
+    // No se usa directamente porque la categoria es requerida y existe
+    // siempre como FK; pero se expone por simetria con brand/inventory.
+    const handleCreateCategory = async (name) => {
+        const option = await createCategory(name);
+        setCategories((prev) => [...prev, option]);
+        return option;
+    };
+
+    const handleFileChange = (name) => (files) => {
+        setFormData((prev) => ({ ...prev, [name]: files }));
+    };
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+
+        setFormData((prev) => {
+            const updated = { ...prev, [name]: value };
+
+            // Calcular total automaticamente a partir de cantidad x valor unitario.
+            const quantity  = name === "quantity"  ? value : updated.quantity;
+            const unitPrice = name === "unitPrice" ? value : updated.unitPrice;
+            if (quantity && unitPrice) {
+                const total = (parseFloat(quantity) * parseFloat(unitPrice)).toFixed(2);
+                updated.totalPrice = isNaN(total) ? "" : total;
+            }
+
+            return updated;
+        });
     };
 
     async function handleCancel() {
@@ -96,7 +121,14 @@ export default function RmRegisterForm() {
         try {
             // Pasar los archivos directamente de formData (no de result.data) para
             // evitar que z.instanceof(File) los descarte silenciosamente en Vite.
-            await createRM({ ...result.data, photo: formData.photo, technicalSheet: formData.technicalSheet });
+            // Tambien pasamos `cuentadantes` (array) porque Zod lo descarta al
+            // no estar declarado en rmSchema (no es requerido a nivel de RM).
+            await createRM({
+                ...result.data,
+                photo: formData.photo,
+                technicalSheet: formData.technicalSheet,
+                cuentadantes: formData.cuentadantes,
+            });
             await showAlert({ icon: "success", iconColor: "var(--color-success)", title: "Material devolutivo creado exitosamente" });
             navigate("/devolutivos");
         } catch (err) {
@@ -128,7 +160,11 @@ export default function RmRegisterForm() {
                     categories={availableCategories}
                     brands={brands}
                     states={states}
+                    users={users}
+                    inventories={inventories}
                     onCreateBrand={handleCreateBrand}
+                    onCreateInventory={handleCreateInventory}
+                    onCreateCategory={handleCreateCategory}
                     photoSlot={
                         <div className="w-full sm:w-[var(--size-field-sm)] flex flex-col gap-4">
                             <ProfileFileInput

@@ -1,3 +1,5 @@
+import { joinCuentadantes } from "@/shared/utils/cuentadantes";
+
 export const consumablesReportConfig = {
     reportTitle: "Reporte de Materiales de Consumo",
     fileNamePrefix: "reporte-consumibles",
@@ -7,7 +9,7 @@ export const consumablesReportConfig = {
         { key: "description", label: "Descripción",      default: false },
         { key: "location",    label: "Ubicación",        default: false },
         { key: "sena_plate",  label: "Placa SENA",      default: true  },
-        { key: "user",        label: "Cuentadante",     default: true,  accessor: (row) => row.user ? `${row.user.first_name} ${row.user.last_name}` : "-" },
+        { key: "cuentadantes", label: "Cuentadantes",    default: true,  accessor: (row) => joinCuentadantes(row) },
         { key: "brand",       label: "Marca",            default: true,  accessor: (row) => row.brand?.name ?? "-" },
         { key: "state",       label: "Estado",           default: true  },
         { key: "quantity",    label: "Cantidad",         default: true  },

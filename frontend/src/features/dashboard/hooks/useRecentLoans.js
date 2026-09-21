@@ -1,12 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getLoans } from "@/features/loans/services/loanService";
 
-// Trae los prestamos y devuelve los mas recientes para el panel de inicio.
+// Trae los prestamos y devuelve los mas recientes para el panel de inicio
+// o cualquier vista que necesite un resumen reciente.
 // Si limit es 0 (usuario sin permiso) no hace ningún fetch.
+// Expone `reload()` para refrescar manualmente (p.ej. al abrir el panel de
+// notificaciones para mantener los datos "en tiempo real").
 function useRecentLoans(limit = 5) {
     const [loans, setLoans] = useState([]);
     const [loading, setLoading] = useState(limit > 0);
     const [error, setError] = useState(null);
+    // contador que se incrementa para forzar un nuevo fetch via useEffect.
+    const [reloadTick, setReloadTick] = useState(0);
+
+    const reload = useCallback(() => {
+        setReloadTick((t) => t + 1);
+    }, []);
 
     useEffect(() => {
         // No hacer fetch si no hay permiso (limit === 0)
@@ -17,8 +26,8 @@ function useRecentLoans(limit = 5) {
         }
 
         // AbortController cancela el fetch si el componente se desmonta o
-        // cambia limit, evitando que setState se llame sobre un componente
-        // ya desmontado.
+        // cambia limit/reloadTick, evitando que setState se llame sobre un
+        // componente ya desmontado.
         const controller = new AbortController();
 
         const fetchLoans = async () => {
@@ -30,6 +39,7 @@ function useRecentLoans(limit = 5) {
                     .sort((a, b) => new Date(b.loan_date) - new Date(a.loan_date))
                     .slice(0, limit);
                 setLoans(recent);
+                setError(null);
             } catch (err) {
                 // AbortError es cancelación intencional — no es un error real.
                 // Ignorar tambien errores de sesión expirada: el modal global ya los gestiona.
@@ -42,9 +52,9 @@ function useRecentLoans(limit = 5) {
         fetchLoans();
 
         return () => controller.abort();
-    }, [limit]);
+    }, [limit, reloadTick]);
 
-    return { loans, loading, error };
+    return { loans, loading, error, reload };
 }
 
 export default useRecentLoans;

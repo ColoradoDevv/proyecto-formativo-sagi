@@ -5,7 +5,16 @@ import { IconButton } from "@/shared";
 
 const MAX_SIZE_MB = 5;
 
+// Determina el tipo de un archivo para mostrar su icono/preview.
+// Acepta tanto `File`/`Blob` (recien subidos) como strings (URLs ya
+// persistidas, p.ej. "/media/materials/abc.png"). Sin esta rama, abrir
+// la edicion de un consumible con imagen provocaba TypeError porque
+// `stringUrl.type` es undefined y `.startsWith()` reventaba.
 const getFileKind = (file) => {
+    if (typeof file === "string") {
+        if (/\.(jpe?g|png|gif|webp|svg|bmp)(\?|$)/i.test(file)) return "image";
+        return "file";
+    }
     if (file.type.startsWith("image/")) return "image";
     if (file.type === "application/pdf") return "pdf";
     if (
@@ -42,14 +51,24 @@ export default function FileInput({
     const [localError, setLocalError] = useState(null);
 
     const previews = useMemo(
-        () => value.map((file) => (getFileKind(file) === "image" ? URL.createObjectURL(file) : null)),
+        () => value.map((file) => {
+            const kind = getFileKind(file);
+            if (kind !== "image") return null;
+            // Para File/Blob generamos una blob URL; para strings (URL ya
+            // persistida en backend) la devolvemos tal cual.
+            return typeof file === "string" ? file : URL.createObjectURL(file);
+        }),
         [value],
     );
 
     useEffect(() => {
         return () => {
             previews.forEach((url) => {
-                if (url) URL.revokeObjectURL(url);
+                // Solo revocamos las blob URLs que nosotros mismos creamos;
+                // las URLs remotas (string) no se revocan — algunos navegadores
+                // lanzan InvalidStateError si se llama revokeObjectURL sobre
+                // una URL no-blob.
+                if (url && url.startsWith("blob:")) URL.revokeObjectURL(url);
             });
         };
     }, [previews]);
@@ -112,7 +131,6 @@ export default function FileInput({
                     `}>
                         {label}
                         {required && <span className="text-error ml-1">*</span>}
-                        {optional && <span className="text-text-muted ml-1">(opcional)</span>}
                 </label>
             )}
 
@@ -151,7 +169,11 @@ export default function FileInput({
                                     <Icon size={20} className="text-brand shrink-0" />
                                     <div className="flex flex-col min-w-0 text-left">
                                         <span className="text-small font-medium text-brand">{meta.label}</span>
-                                        <span className="truncate text-small text-text-muted">{file.name}</span>
+                                        <span className="truncate text-small text-text-muted">
+                                            {typeof file === "string"
+                                                ? file.split("/").pop() || file
+                                                : file.name}
+                                        </span>
                                     </div>
                                 </div>
                             )}

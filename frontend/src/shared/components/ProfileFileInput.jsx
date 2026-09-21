@@ -84,7 +84,6 @@ export default function ProfileFileInput({
                 <label className={`block place-self-start text-small mb-1 ${displayError ? "text-error" : "text-text-primary"}`}>
                     {label}
                     {required && <span className="text-error ml-1">*</span>}
-                    {optional && <span className="text-text-muted ml-1">(opcional)</span>}
                 </label>
             )}
 

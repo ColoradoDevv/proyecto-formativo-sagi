@@ -8,6 +8,7 @@ const FIELD_MAP = {
     sena_plate: "senaPlate",
     state: "state",
     brand_id: "brand",
+    inventory_id: "inventory",
     category_id: "category",
     serial: "serial",
     unit_price: "unitPrice",
@@ -18,6 +19,9 @@ const FIELD_MAP = {
     location: "location",
     image: "photo",
     technical_sheet: "technicalSheet",
+    // Cuentadantes (M2M): errores bajo `cuentadante_ids` se mapean a
+    // `cuentadante` para el formulario.
+    cuentadante_ids: "cuentadante",
 };
 
 export async function getRMs(search = "") {
@@ -48,6 +52,9 @@ export async function createRM(rmData) {
     formData.append("description", rmData.description);
     formData.append("purchase_date", rmData.purchaseDate);
 
+    // Inventario: opcional. "" = no se manda.
+    if (rmData.inventory) formData.append("inventory_id", String(rmData.inventory));
+
     if (rmData.quantity)    formData.append("quantity", rmData.quantity);
     if (rmData.location)    formData.append("location", rmData.location);
     if (rmData.photo?.[0])  formData.append("image", rmData.photo[0]);
@@ -57,7 +64,16 @@ export async function createRM(rmData) {
             if (file instanceof File) formData.append(`technical_sheet_${i}`, file);
         });
     }
-    
+
+    // Cuentadantes (M2M): si el formulario trae la lista vacia/no la trae,
+    // el backend asigna por defecto al usuario actual. Si trae una lista,
+    // se envian como claves repetidas `cuentadante_ids`.
+    if (Array.isArray(rmData.cuentadantes) && rmData.cuentadantes.length > 0) {
+        rmData.cuentadantes.forEach((id) => {
+            if (id != null && id !== "") formData.append("cuentadante_ids", String(id));
+        });
+    }
+
     // Concatenar dimensiones si existen (formato: "30x50x20")
     if (rmData.width || rmData.length || rmData.depth) {
         const dimensions = `${rmData.width || ""}x${rmData.length || ""}x${rmData.depth || ""}`;
@@ -90,6 +106,9 @@ export async function updateRM(id, rmData) {
     formData.append("purchase_date", rmData.purchaseDate);
     formData.append("quantity", rmData.quantity);
 
+    // Inventario: opcional. "" = no se manda.
+    if (rmData.inventory) formData.append("inventory_id", String(rmData.inventory));
+
     if (rmData.location) formData.append("location", rmData.location);
     if (rmData.photo?.[0]) formData.append("image", rmData.photo[0]);
     // Fichas técnicas nuevas: se envían indexadas para que el backend las agregue
@@ -97,7 +116,16 @@ export async function updateRM(id, rmData) {
         rmData.technicalSheet.forEach((file, i) => {
             if (file instanceof File) formData.append(`technical_sheet_${i}`, file);
         });
-    }    
+    }
+
+    // M2M: solo se envia si el formulario lo incluye. Si llega un array vacio
+    // el backend interpretara "quitar todos los cuentadantes".
+    if (Array.isArray(rmData.cuentadantes)) {
+        rmData.cuentadantes.forEach((id) => {
+            if (id != null && id !== "") formData.append("cuentadante_ids", String(id));
+        });
+    }
+
     // Concatenar dimensiones si existen (formato: "30x50x20")
     if (rmData.width || rmData.length || rmData.depth) {
         const dimensions = `${rmData.width || ""}x${rmData.length || ""}x${rmData.depth || ""}`;

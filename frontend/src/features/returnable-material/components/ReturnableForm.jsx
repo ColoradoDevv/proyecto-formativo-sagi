@@ -1,13 +1,14 @@
-import { Input, Select, TextArea, EditCard, CreateOptionButton } from "@/shared";
+import { Input, Select, SelectMultiple, TextArea, EditCard, CreateOptionButton } from "@/shared";
 import { getReturnableCategoryRules } from "../utils/returnableCategoryRules";
 import { Plus } from "lucide-react";
 
 // Campos de material devolutivo, reutilizables entre crear y editar.
 // PRESENTACIONAL: recibe formData/errors/onChange, las opciones de selects
-// (categories, brands, states) y un slot para la seccion de foto/ficha
-// (distinta en crear vs editar).
+// (categories, brands, states, users, inventories) y un slot para la seccion
+// de foto/ficha (distinta en crear vs editar).
 // Convencion de nombres unificada: name, senaPlate, serial, category, brand,
-// description, state, quantity, location, purchaseDate, unitPrice, totalPrice.
+// description, state, quantity, location, purchaseDate, unitPrice, totalPrice,
+// cuentadantes, inventory.
 export default function ReturnableForm({
     formData,
     errors = {},
@@ -15,7 +16,11 @@ export default function ReturnableForm({
     categories = [],
     brands = [],
     states = [],
+    users = [],
+    inventories = [],
     onCreateBrand = null,
+    onCreateInventory = null,
+    onCreateCategory = null,
     photoSlot = null,
 }) {
     // Al crear una marca nueva, se selecciona automáticamente en el formulario.
@@ -26,6 +31,7 @@ export default function ReturnableForm({
     const categoryName = selectedCategory?.label ?? selectedCategory?.name ?? "";
     const categoryRules = getReturnableCategoryRules(categoryName);
     const shouldShowDimensions = categoryRules.requiresDimensions;
+    const cuentasValue = Array.isArray(formData.cuentadantes) ? formData.cuentadantes : [];
     return (
         <>
             {/* Información General — foto lateral + campos */}
@@ -83,8 +89,21 @@ export default function ReturnableForm({
                             onChange={onChange}
                             error={errors.category}
                             required
-                            labelAction={<CreateOptionButton variant="spacer" />}
-                        />    
+                            labelAction={
+                                <CreateOptionButton
+                                    onCreate={onCreateCategory}
+                                    onCreated={(option) =>
+                                        onChange({ target: { name: "category", value: String(option.id) } })
+                                    }
+                                    title="Nueva categoría"
+                                    inputLabel="Nombre de la categoría"
+                                    inputPlaceholder="Ej. Tornillería, Cables"
+                                    errorTitle="No se pudo crear la categoría"
+                                    ariaLabel="Agregar nueva categoría"
+                                    icon={Plus}
+                                />
+                            }
+                        />
                         <Input
                             label="S/N"
                             name="serial"
@@ -97,7 +116,7 @@ export default function ReturnableForm({
                             labelAction={<CreateOptionButton variant="spacer" />}
                         />
 
-                        
+
                         <Select
                                 label="Marca"
                                 name="brand"
@@ -119,16 +138,55 @@ export default function ReturnableForm({
                                     />
                                 }
                             />
-                            <TextArea
-                                label="Descripción"
-                                name="description"
-                                placeholder="Descripción del material"
-                                value={formData.description}
+                            <Select
+                                label="Nombre de inventario"
+                                name="inventory"
+                                options={inventories}
+                                value={formData.inventory}
                                 onChange={onChange}
-                                error={errors.description}
-                                required
-                                labelAction={<CreateOptionButton variant="spacer" />}
+                                error={errors.inventory}
+                                optional
+                                labelAction={
+                                    <CreateOptionButton
+                                        onCreate={onCreateInventory}
+                                        onCreated={(option) =>
+                                            onChange({ target: { name: "inventory", value: String(option.id) } })
+                                        }
+                                        title="Nuevo nombre de inventario"
+                                        inputLabel="Nombre del inventario"
+                                        inputPlaceholder="Ej. Almacén principal"
+                                        errorTitle="No se pudo crear el nombre de inventario"
+                                        ariaLabel="Agregar nuevo nombre de inventario"
+                                        icon={Plus}
+                                    />
+                                }
                             />
+                            <div className="sm:col-span-2">
+                                <SelectMultiple
+                                    label="Cuentadantes"
+                                    name="cuentadantes"
+                                    options={users}
+                                    value={cuentasValue}
+                                    onChange={onChange}
+                                    error={errors.cuentadantes}
+                                    required
+                                />
+                                <p className="text-small text-text-muted mt-1">
+                                    Un material puede tener varios cuentadantes.
+                                </p>
+                            </div>
+                            <div className="sm:col-span-2">
+                                <TextArea
+                                    label="Descripción"
+                                    name="description"
+                                    placeholder="Descripción del material"
+                                    value={formData.description}
+                                    onChange={onChange}
+                                    error={errors.description}
+                                    required
+                                    labelAction={<CreateOptionButton variant="spacer" />}
+                                />
+                            </div>
 
                         {shouldShowDimensions && (
                             <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">

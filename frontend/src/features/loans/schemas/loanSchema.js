@@ -59,13 +59,18 @@ export default function loanSchema(materials = [], { multipleMaterials = false, 
             ? { loanMaterialQuantities: z.record(z.string(), amountSchema) }
             : { loanAmount: amountSchema }),
 
+        // `loanGroup` (Numero de grupo o ficha) es OPCIONAL: si el usuario no
+        // lo llena, se envia string vacio y se guarda como tal. Si lo llena,
+        // validamos formato (solo digitos) y longitud maxima (10).
         loanGroup: z
             .string()
             .trim()
-            .min(1, "Debe ingresar el grupo")
-            .regex(/^\d+$/, "El grupo debe contener solo numeros")
             .max(10, "El grupo no puede tener mas de 10 caracteres")
-            .optional(),
+            .optional()
+            .refine(
+                (val) => !val || /^\d+$/.test(val),
+                { message: "El grupo debe contener solo numeros" }
+            ),
 
         loanType: z
             .string()

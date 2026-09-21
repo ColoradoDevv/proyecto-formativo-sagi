@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { getBrands, getUsers, createBrand } from "../../services/selectServices";
+import { getBrands, getUsers, getInventories, getCategories, createBrand, createInventory, createCategory } from "@/shared/services/selectServices";
 import { FileInput, Button, showAlert, cancelAlert, ProfileFileInput, IconButton, AccordionItem, EditCard } from "@/shared";
 import { cmBaseSchema, cmSchema } from "../../schemas/cmSchema";
 import { createCm } from "../../services/consumableService";
 import { ConsumableAccountableCard, ConsumableGeneralCard, ConsumableInventoryCard, ConsumableValuesCard } from "../ConsumableForm";
 import { Undo2, Package, Layers, BadgeDollarSign, UserCheck, Paperclip, CheckCircle2 } from "lucide-react";
 
-const GENERAL_FIELDS = ["name", "brand", "description"];
+const GENERAL_FIELDS = ["name", "brand", "inventory", "category", "description"];
 const INVENTORY_FIELDS = ["senaPlate", "quantity", "location", "state", "serial"];
 const VALUES_FIELDS = ["purchaseDate", "unitPrice", "totalPrice"];
-const SUPPORT_FIELDS = ["user", "photo", "technicalSheet"];
+const SUPPORT_FIELDS = ["cuentadantes", "photo", "technicalSheet"];
 
 const generalStepSchema = cmBaseSchema.pick({
     name: true,
@@ -63,7 +63,8 @@ const valuesStepSchema = cmBaseSchema.pick({
 });
 
 const supportStepSchema = cmBaseSchema.pick({
-    user: true,
+    user: false,
+    cuentadantes: true,
     photo: true,
     technicalSheet: true,
 });
@@ -73,6 +74,8 @@ export default function CmRegisterForm() {
     const navigate = useNavigate();
     const [brands, setBrands] = useState([]);
     const [users, setUsers] = useState([]);
+    const [inventories, setInventories] = useState([]);
+    const [categories, setCategories] = useState([]);
     const [errors, setErrors] = useState({});
     const [activeStep, setActiveStep] = useState(0);
     const [completedSteps, setCompletedSteps] = useState([false, false, false, false]);
@@ -86,10 +89,15 @@ export default function CmRegisterForm() {
         quantity: "",
         location: "",
         brand: "",
+        inventory: "",
+        category: "",
         state: "Disponible",
         unitPrice: "",
         totalPrice: "",
         user: "",
+        // Cuentadantes: array de IDs (M2M). Por defecto vacio, se llena con
+        // el multi-select del paso 4.
+        cuentadantes: [],
         purchaseDate: new Date().toISOString().split("T")[0],
         photo: [],
         technicalSheet: [],
@@ -109,6 +117,36 @@ export default function CmRegisterForm() {
         });
         return () => controller.abort();
     }, []);
+    useEffect(() => {
+        const controller = new AbortController();
+        getInventories(controller.signal).then(setInventories).catch(() => setInventories([]));
+        return () => controller.abort();
+    }, []);
+    useEffect(() => {
+        const controller = new AbortController();
+        getCategories(controller.signal).then(setCategories).catch(() => setCategories([]));
+        return () => controller.abort();
+    }, []);
+
+    // Crea una marca nueva, la agrega a las opciones y la devuelve al form.
+    const handleCreateBrand = async (name) => {
+        const option = await createBrand(name);
+        setBrands((prev) => [...prev, option]);
+        return option;
+    };
+
+    // Crea un nombre de inventario nuevo, lo agrega a las opciones y lo devuelve al form.
+    const handleCreateInventory = async (name) => {
+        const option = await createInventory(name);
+        setInventories((prev) => [...prev, option]);
+        return option;
+    };
+    // Crea una categoria nueva, la agrega a las opciones y la devuelve al form.
+    const handleCreateCategory = async (name) => {
+        const option = await createCategory(name);
+        setCategories((prev) => [...prev, option]);
+        return option;
+    };
 
     const clearErrorsForFields = (fields) => {
         setErrors((prev) => {
@@ -218,13 +256,6 @@ export default function CmRegisterForm() {
         setFormData((prev) => ({ ...prev, [name]: files }));
     };
 
-    // Crea una marca nueva, la agrega a las opciones y la devuelve al form.
-    const handleCreateBrand = async (name) => {
-        const option = await createBrand(name);
-        setBrands((prev) => [...prev, option]);
-        return option;
-    };
-
     async function handleCancel() {
         const result = await cancelAlert();
         if (result.isConfirmed) navigate(-1);
@@ -305,7 +336,11 @@ export default function CmRegisterForm() {
                                 errors={errors}
                                 onChange={handleChange}
                                 brands={brands}
+                                inventories={inventories}
+                                categories={categories}
                                 onCreateBrand={handleCreateBrand}
+                                onCreateInventory={handleCreateInventory}
+                                onCreateCategory={handleCreateCategory}
                             />
                             <div className="flex gap-3 justify-between">
                                 <Button type="button" variant="secondary" size="md" onClick={handleCancel}>

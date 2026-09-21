@@ -7,6 +7,7 @@ import {
     useState,
 } from "react"
 import { createPortal } from "react-dom"
+import { useClickOutside } from "@/shared/hooks/useClickOutside"
 
 // ─── Context ────────────────────────────────────────────────────────────────
 
@@ -42,25 +43,12 @@ export function Dropdown({
     const triggerRef = externalTriggerRef ?? internalTriggerRef
     const contentRef   = useRef(null)
 
-    useEffect(() => {
-        const handleClickOutside = (e) => {
-            const insideContainer = containerRef.current && containerRef.current.contains(e.target)
-            const insideContent   = contentRef.current && contentRef.current.contains(e.target)
-            if (!insideContainer && !insideContent) {
-                setOpen(false)
-            }
-        }
-        document.addEventListener("click", handleClickOutside)
-        return () => document.removeEventListener("click", handleClickOutside)
-    }, [setOpen])
-
-    useEffect(() => {
-        const handleEscape = (e) => {
-            if (e.key === "Escape") setOpen(false)
-        }
-        document.addEventListener("keydown", handleEscape)
-        return () => document.removeEventListener("keydown", handleEscape)
-    }, [setOpen])
+    useClickOutside({
+        containerRef,
+        contentRef,
+        isActive: open,
+        onClose: () => setOpen(false),
+    })
 
     return (
         <DropdownContext.Provider value={{ open, setOpen, triggerRef, contentRef }}>
