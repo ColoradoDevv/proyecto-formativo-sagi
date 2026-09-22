@@ -1,4 +1,5 @@
-import { Input, Select, SelectMultiple, TextArea, EditCard, CreateOptionButton, Checkbox } from "@/shared";
+import { Input, Select, TextArea, EditCard, CreateOptionButton, Checkbox, DataConsentCheckbox } from "@/shared";
+import MaterialPicker from "./MaterialPicker";
 
 // Campos de préstamo, reutilizables entre crear y editar.
 // PRESENTACIONAL: recibe formData/errors/onChange y las opciones de selects.
@@ -34,39 +35,20 @@ export default function LoanForm({
         <EditCard title="Información del Préstamo" cols={1}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 w-full">
                 {multipleMaterials ? (
-                    <>
-                        <div className="sm:col-span-2">
-                            <SelectMultiple
-                                label="Materiales"
-                                name="loanMaterial"
-                                options={materials}
-                                value={formData.loanMaterial}
-                                onChange={onChange}
-                                error={errors.loanMaterial}
-                                required
-                                labelAction={<CreateOptionButton variant="spacer" />}
-                
-                            />
-                        </div>
-                        {formData.loanMaterial.map((materialId) => {
-                            const material = materials.find((item) => String(item.id) === String(materialId));
-                            return (
-                                <Input
-                                    key={materialId}
-                                    label={`Cantidad: ${material?.label ?? "Material seleccionado"}`}
-                                    name={`loanMaterialQuantities.${materialId}`}
-                                    placeholder="Cantidad a prestar"
-                                    type="number"
-                                    min="1"
-                                    step="1"
-                                    value={formData.loanMaterialQuantities?.[materialId] ?? ""}
-                                    onChange={(event) => onMaterialQuantityChange?.(materialId, event.target.value)}
-                                    error={errors.loanMaterialQuantities?.[materialId]}
-                                    required
-                                />
-                            );
-                        })}
-                    </>
+                    <div className="sm:col-span-2">
+                        <MaterialPicker
+                            label="Materiales"
+                            name="loanMaterial"
+                            options={materials}
+                            value={formData.loanMaterial}
+                            quantities={formData.loanMaterialQuantities}
+                            error={errors.loanMaterial}
+                            quantityErrors={errors.loanMaterialQuantities}
+                            onChange={onChange}
+                            onQuantityChange={onMaterialQuantityChange}
+                            required
+                        />
+                    </div>
                 ) : (
                     <Select
                         label="Material"
@@ -151,6 +133,16 @@ export default function LoanForm({
                                     error={errors.receptorEmail}
                                     required
                                 />
+                                <div className="sm:col-span-2">
+                                    <DataConsentCheckbox
+                                        id="receptorDataConsent"
+                                        name="receptorDataConsent"
+                                        variant="tercero"
+                                        checked={formData.receptorDataConsent === true}
+                                        onChange={onChange}
+                                        error={errors.receptorDataConsent}
+                                    />
+                                </div>
                             </>
                         )}
                     </>
@@ -178,6 +170,7 @@ export default function LoanForm({
                     value={formData.loanGroup}
                     onChange={onChange}
                     error={errors.loanGroup}
+                    optional
                     labelAction={<CreateOptionButton variant="spacer" />}
                 />
                 <Input

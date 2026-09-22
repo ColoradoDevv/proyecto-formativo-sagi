@@ -50,6 +50,9 @@ export default function loanSchema(materials = [], { multipleMaterials = false, 
         receptorIsRegistered: z.boolean().default(true),
         receptorName: z.string().optional().default(""),
         receptorEmail: z.string().optional().default(""),
+        // Ley 1581 de 2012: si el receptor no está registrado, quien lo
+        // registra declara que el titular autorizó el uso de sus datos.
+        receptorDataConsent: z.boolean().default(false),
 
         loanMaterial: multipleMaterials
             ? z.array(z.string()).min(1, "Debe seleccionar al menos un material")
@@ -118,6 +121,13 @@ export default function loanSchema(materials = [], { multipleMaterials = false, 
                     code: z.ZodIssueCode.custom,
                     path: ["receptorEmail"],
                     message: "Debe ingresar un correo electrónico válido",
+                });
+            }
+            if (data.receptorDataConsent !== true) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ["receptorDataConsent"],
+                    message: "Se requiere la autorización de tratamiento de datos del receptor (Ley 1581 de 2012).",
                 });
             }
         }

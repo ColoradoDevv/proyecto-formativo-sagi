@@ -58,7 +58,7 @@ export default function LoanDetailView() {
     };
 
     return (
-        <div className="h-full p-3 sm:p-4 text-text-primary flex flex-col gap-3">
+        <div className="h-full text-text-primary flex flex-col gap-3">
 
             {/* Encabezado */}
             <div className="flex items-center gap-3">
@@ -66,7 +66,7 @@ export default function LoanDetailView() {
                     <Undo2 size={18}/>
                 </IconButton>
                 <div className="flex-1">
-                    <h2 className="text-primary">Visualizar Préstamo</h2>
+                    <h2 className="text-h2 text-text-primary font-heading">Visualizar Préstamo</h2>
                 </div>
                 <LoanStateBadge state={loan.state} />
             </div>

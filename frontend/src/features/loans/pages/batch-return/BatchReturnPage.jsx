@@ -186,7 +186,7 @@ export default function BatchReturnPage() {
     const doneRows    = rows.filter((r) =>  r.done);
 
     return (
-        <div className="h-full p-4 sm:p-6 text-text-primary flex flex-col gap-6">
+        <div className="h-full text-text-primary flex flex-col gap-6">
 
             {/* Header */}
             <div className="flex items-center gap-3">
@@ -194,7 +194,7 @@ export default function BatchReturnPage() {
                     <Undo2 size={20} />
                 </IconButton>
                 <div>
-                    <h2 className="text-primary">Devolución de Lote</h2>
+                    <h2 className="text-h2 text-text-primary font-heading">Devolución de Lote</h2>
                     <p className="text-small text-text-muted">
                         Grupo {batch?.apprentice_group} · {batch?.usuario_receptor} ·{" "}
                         {pendingRows.length} material(es) pendiente(s)
@@ -263,10 +263,11 @@ export default function BatchReturnPage() {
 
                                     {/* Observaciones */}
                                     <TextArea
-                                        label="Observaciones (opcional)"
+                                        label="Observaciones"
                                         placeholder="Estado del material…"
                                         value={row.observations}
                                         onChange={(e) => updateRow(row.loanId, "observations", e.target.value)}
+                                        optional
                                     />
                                 </div>
 

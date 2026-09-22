@@ -221,12 +221,13 @@ export default function ReturnLoanModal({ isOpen, onClose, loan, onReturned }) {
                 )}
 
                 <TextArea
-                    label="Observaciones (opcional)"
+                    label="Observaciones"
                     name="observations"
                     placeholder="Estado en que se devuelve el material…"
                     value={formData.observations}
                     onChange={handleChange}
                     error={errors.observations}
+                    optional
                 />
 
                 {/* Condición del material */}

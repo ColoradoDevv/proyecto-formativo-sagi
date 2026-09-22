@@ -44,6 +44,7 @@ export default function LoanRegisterForm() {
         receptorIsRegistered:    true,
         receptorName:            "",
         receptorEmail:           "",
+        receptorDataConsent:     false,
         loanMaterial:            [],
         loanMaterialQuantities:  {},
         loanGroup:               "",
@@ -177,7 +178,7 @@ export default function LoanRegisterForm() {
         );
 
         return (
-            <div className="h-full p-3 sm:p-4 flex items-center justify-center">
+            <div className="h-full flex items-center justify-center">
                 <div className="bg-surface-hover rounded-[var(--radius-3xl)] shadow-[var(--shadow-elevation-5)] px-6 sm:px-10 py-10 w-full max-w-md flex flex-col items-center gap-5 animate-slide-up">
 
                     <div className="flex flex-col items-center gap-1">
@@ -214,12 +215,12 @@ export default function LoanRegisterForm() {
 
     // ── Formulario ────────────────────────────────────────────────────────
     return (
-        <div className="h-full p-3 sm:p-4 text-text-primary flex flex-col gap-3">
+        <div className="h-full text-text-primary flex flex-col gap-3">
             <div className="flex items-center gap-3">
                 <IconButton onClick={() => navigate(-1)} variant="ghost">
                     <Undo2 size={20} />
                 </IconButton>
-                <h2 className="text-primary">Crear Préstamo</h2>
+                <h2 className="text-h2 text-text-primary font-heading">Crear Préstamo</h2>
             </div>
 
             <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-6 w-full">
