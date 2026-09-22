@@ -116,6 +116,11 @@ DATABASES = {
         'PASSWORD': os.getenv('DB_PASSWORD', ''),
         'HOST': os.getenv('DB_HOST', ''),
         'PORT': os.getenv('DB_PORT', ''),
+        # Supabase (Postgres + Pooler PgBouncer) exige SSL.
+        # Si ENGINE es postgres, agregamos sslmode=require.
+        'OPTIONS': {'sslmode': 'require'} if 'postgresql' in (os.getenv('DB_ENGINE') or '') else {},
+        # Con PgBouncer en modo transaccion (puerto 6543) no mantener conexiones persistentes.
+        'CONN_MAX_AGE': 0,
     }
 }
 
