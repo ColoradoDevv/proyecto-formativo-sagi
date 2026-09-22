@@ -25,13 +25,14 @@ export default function InventoryForm({
                 required
             />
             <TextArea
-                label="Descripción (opcional)"
+                label="Descripción"
                 name="inventoryDescription"
                 placeholder="Notas sobre el alcance o ubicación de este inventario"
                 value={descriptionValue}
                 onChange={descriptionOnChange}
                 error={descriptionError}
                 maxLength={255}
+                optional
             />
         </>
     );

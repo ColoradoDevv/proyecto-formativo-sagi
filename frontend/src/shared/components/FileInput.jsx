@@ -2,6 +2,7 @@ import { useRef, useState, useMemo, useEffect } from "react";
 import { Infinity as InfinityLoader } from "ldrs/react";
 import { Upload, X, Move, FileText, FileSpreadsheet, File as FileIcon } from "lucide-react";
 import { IconButton } from "@/shared";
+import { mediaUrl } from "@/shared/services/api";
 
 const MAX_SIZE_MB = 5;
 
@@ -102,11 +103,25 @@ export default function FileInput({
         if (inputRef.current) inputRef.current.value = "";
     };
 
-    const remove = (i) => {
+    const remove = (i, e) => {
+        e?.stopPropagation();
         setLocalError(null);
         const copy = [...value];
         copy.splice(i, 1);
         onChange(copy);
+    };
+
+    // Vista previa: abre el archivo en una pestaña nueva (PDF, imagen, etc.).
+    // Funciona tanto para URLs ya persistidas (string, con token via mediaUrl)
+    // como para archivos recién elegidos (File/Blob vía object URL temporal).
+    const previewFile = (file) => {
+        try {
+            if (typeof file === "string") {
+                window.open(mediaUrl(file), "_blank", "noopener,noreferrer");
+            } else if (file instanceof Blob) {
+                window.open(URL.createObjectURL(file), "_blank", "noopener,noreferrer");
+            }
+        } catch { /* popup bloqueado: no interrumpir el formulario */ }
     };
 
     const reorder = (from, to) => {
@@ -131,6 +146,9 @@ export default function FileInput({
                     `}>
                         {label}
                         {required && <span className="text-error ml-1">*</span>}
+                        {!required && optional && (
+                            <span className="ml-1.5 text-[11px] font-normal text-text-muted">(Opcional)</span>
+                        )}
                 </label>
             )}
 
@@ -147,6 +165,8 @@ export default function FileInput({
                             onDragStart={() => setDragIndex(i)}
                             onDragOver={(e) => e.preventDefault()}
                             onDrop={() => reorder(dragIndex, i)}
+                            onClick={() => previewFile(file)}
+                            title="Clic para previsualizar"
                             className={`
                                 relative
                                 border border-border
@@ -157,13 +177,13 @@ export default function FileInput({
                                 rounded-2xl
                                 duration-[var(--duration-base)]
                                 hover:shadow-elevation-2
-                                cursor-grab
+                                cursor-pointer
                                 active:cursor-grabbing
                                 ${className}
                             `}
                         >
                             {kind === "image" ? (
-                                <img src={previews[i]} className="w-full h-full object-cover" />
+                                <img src={typeof file === "string" ? mediaUrl(previews[i]) : previews[i]} className="w-full h-full object-cover" />
                             ) : (
                                 <div className="w-full h-full flex items-center gap-2 bg-surface-muted px-3 ">
                                     <Icon size={20} className="text-brand shrink-0" />
@@ -206,7 +226,7 @@ export default function FileInput({
                                 <button
                                     type="button"
                                     aria-label="Eliminar archivo"
-                                    onClick={() => remove(i)}
+                                    onClick={(e) => remove(i, e)}
                                     className="
                                         w-[var(--size-icon-sm)] h-[var(--size-icon-sm)]
                                         flex items-center justify-center

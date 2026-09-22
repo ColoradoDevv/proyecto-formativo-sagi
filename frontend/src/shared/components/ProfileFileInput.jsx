@@ -2,6 +2,7 @@ import { useRef, useState, useMemo, useEffect } from "react";
 import { Infinity as InfinityLoader } from "ldrs/react";
 import { Upload, Pencil, X } from "lucide-react";
 import { IconButton } from "@/shared";
+import { mediaUrl } from "@/shared/services/api";
 
 const MAX_SIZE_MB = 2;
 
@@ -84,6 +85,9 @@ export default function ProfileFileInput({
                 <label className={`block place-self-start text-small mb-1 ${displayError ? "text-error" : "text-text-primary"}`}>
                     {label}
                     {required && <span className="text-error ml-1">*</span>}
+                    {!required && optional && (
+                        <span className="ml-1.5 text-[11px] font-normal text-text-muted">(Opcional)</span>
+                    )}
                 </label>
             )}
 
@@ -109,7 +113,7 @@ export default function ProfileFileInput({
                     </div>
                 ) : preview ? (
                     <>
-                        <img src={preview} className="w-full h-full object-contain" />
+                        <img src={mediaUrl(preview)} className="w-full h-full object-contain" />
                         <div
                             className="
                                 absolute inset-0

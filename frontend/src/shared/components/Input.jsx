@@ -33,6 +33,7 @@ export default function Input({
             {label && (
                 <div className="flex items-center justify-between gap-2 mb-1">
                     <label
+                        htmlFor={props.id ?? props.name}
                         className={`
                             block
                             place-self-start
@@ -42,6 +43,9 @@ export default function Input({
                     >
                         {label}
                         {required && <span className="text-error ml-1">*</span>}
+                        {!required && optional && (
+                            <span className="ml-1.5 text-[11px] font-normal text-text-muted">(Opcional)</span>
+                        )}
                     </label>
                     {labelAction}
                 </div>
@@ -49,8 +53,16 @@ export default function Input({
 
             <div className={`relative flex items-center ${variant === "auth" ? "h-[var(--size-control-lg)]" : "h-[var(--size-control-md)]"}`}>
                 <input
+                    id={props.id ?? props.name}
+                    name={props.name}
                     type={type}
                     required={required}
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={
+                        error ? `${props.id ?? props.name ?? "field"}-error`
+                        : hint ? `${props.id ?? props.name ?? "field"}-hint`
+                        : undefined
+                    }
                     className={`
                         relative
                         w-full
@@ -82,13 +94,13 @@ export default function Input({
             </div>
 
             {error && (
-                <p className={`text-error text-small place-self-start mt-1 ${variant === "auth" ? "pl-1" : ""}`}>
+                <p id={`${props.id ?? props.name ?? "field"}-error`} role="alert" className={`text-error text-small place-self-start mt-1 ${variant === "auth" ? "pl-1" : ""}`}>
                     {error}
                 </p>
             )}
 
             {!error && hint && (
-                <p className="text-text-muted text-small place-self-start mt-1">
+                <p id={`${props.id ?? props.name ?? "field"}-hint`} className="text-text-muted text-small place-self-start mt-1">
                     {hint}
                 </p>
             )}

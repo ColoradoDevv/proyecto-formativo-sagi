@@ -25,13 +25,14 @@ export default function CategoryForm({
                 required
             />
             <TextArea
-                label="Descripcion (opcional)"
+                label="Descripcion"
                 name="categoryDescription"
                 placeholder="Notas sobre el alcance o uso de esta categoria"
                 value={descriptionValue}
                 onChange={descriptionOnChange}
                 error={descriptionError}
                 maxLength={255}
+                optional
             />
         </>
     );

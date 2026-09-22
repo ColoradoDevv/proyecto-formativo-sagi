@@ -220,7 +220,7 @@ function UserEditForm({ id, user, documentTypes, groups, allGroups, usersList, g
     }
 
     return (
-        <div className="h-full p-3 sm:p-4 text-text-primary flex flex-col gap-3">
+        <div className="h-full text-text-primary flex flex-col gap-3">
 
             {/* Encabezado */}
             <div className="flex items-center gap-3">
@@ -228,7 +228,7 @@ function UserEditForm({ id, user, documentTypes, groups, allGroups, usersList, g
                     <Undo2 size={20}/>
                 </IconButton>
                 <div>
-                    <h2 className="text-primary">Editar Usuario</h2>
+                    <h2 className="text-h2 text-text-primary font-heading">Editar Usuario</h2>
                 </div>
             </div>
 
@@ -279,6 +279,7 @@ function UserEditForm({ id, user, documentTypes, groups, allGroups, usersList, g
                             value={formData.additionalPhone}
                             onChange={handleChange}
                             error={errors.additionalPhone}
+                            optional
                         />
                     }
                     emailInst={

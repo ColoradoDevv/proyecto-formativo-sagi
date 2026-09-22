@@ -7,6 +7,7 @@ import { TailChase } from 'ldrs/react'
 import 'ldrs/react/TailChase.css'
 import { Undo2, Mail, Download } from "lucide-react";
 import { generateUserProfileReport } from "@/shared/reports/generateUserProfileReport";
+import { mediaUrl } from "@/shared/services/api";
 
 export default function UserDetailView() {
     const navigate = useNavigate();
@@ -88,7 +89,7 @@ export default function UserDetailView() {
     };
 
     return (
-        <div className="h-full p-3 sm:p-4 text-text-primary flex flex-col gap-3">
+        <div className="h-full text-text-primary flex flex-col gap-3">
 
             {/* Encabezado */}
             <div className="flex items-center gap-3">
@@ -96,7 +97,7 @@ export default function UserDetailView() {
                     <Undo2 size={20}/>
                 </IconButton>
                 <div>
-                    <h2 className="text-primary">Visualizar Usuario</h2>
+                    <h2 className="text-h2 text-text-primary font-heading">Visualizar Usuario</h2>
                 </div>
             </div>
 
@@ -114,7 +115,7 @@ export default function UserDetailView() {
                                     // En dev, Vite proxea /media → http://127.0.0.1:8000 (vite.config.js).
                                     // En producción se asume same-origin; si backend y frontend van en
                                     // dominios distintos habrá que prefijar con la URL base del backend.
-                                    ? <img src={user.profile_picture} alt={user.first_name} className="w-full h-full object-cover" />
+                                    ? <img src={mediaUrl(user.profile_picture)} alt={user.first_name} className="w-full h-full object-cover" />
                                     : <span className="text-h1 font-heading text-text-muted">{(user.first_name ?? "?")[0].toUpperCase()}</span>
                                 }
                             </div>

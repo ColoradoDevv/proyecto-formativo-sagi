@@ -87,7 +87,7 @@ export default function CategoryListPage() {
     };
 
     return (
-        <div className="h-full p-4 sm:p-6 text-text-primary flex flex-col gap-6">
+        <div className="h-full text-text-primary flex flex-col gap-6">
 
             {/* Encabezado */}
             <div className="flex flex-col gap-2">

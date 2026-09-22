@@ -14,7 +14,7 @@ export function generateExcelReport({
     }).format(generatedAt);
 
     const sheetData = [
-        ["SGI - Sistema de Gestión de Inventario"],
+        ["SENA · SAGI — Sistema Administrativo de Gestión de Inventarios"],
         [reportTitle],
         [`Generado por: ${generatedBy}`],
         [`Fecha y hora: ${dateTime}`],

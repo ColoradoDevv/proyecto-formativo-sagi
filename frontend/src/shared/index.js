@@ -18,6 +18,7 @@ export { default as ReportModal } from "./components/ReportModal"
 export { default as ActiveSwitch } from "./components/ActiveSwitch"
 export { default as StatusLabel } from "./components/StatusLabel"
 export { default as StatusBadge } from "./components/StatusBadge"
+export { default as DataConsentCheckbox } from "./components/DataConsentCheckbox"
 // export { default as TmHomePage } from "./components/"
 
 

@@ -99,7 +99,7 @@ export default function AccessPage() {
   }
 
   return (
-    <div className="min-h-full p-4 sm:p-6 flex flex-col gap-6 text-text-primary animate-fade-in">
+    <div className="min-h-full flex flex-col gap-6 text-text-primary animate-fade-in">
       <header className="flex flex-col gap-2">
         <p className="text-medium text-text-primary uppercase tracking-widest font-medium">
           Administración / Seguridad

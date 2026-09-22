@@ -53,6 +53,7 @@ export default function SelectMultiple({
             {label && (
             <div className="flex items-center justify-between gap-2">
                 <label
+                    htmlFor={name ? `${name}-trigger` : undefined}
                     className={`
                         flex items-center
                         text-small leading-none
@@ -61,6 +62,9 @@ export default function SelectMultiple({
                 >
                     {label}
                     {required && <span className="text-error ml-1">*</span>}
+                    {!required && optional && (
+                        <span className="ml-1.5 text-[11px] font-normal text-text-muted">(Opcional)</span>
+                    )}
                 </label>
                 {labelAction}
             </div>
@@ -68,6 +72,9 @@ export default function SelectMultiple({
 
             <Dropdown className="block w-full">
                 <DropdownTrigger
+                    id={name ? `${name}-trigger` : undefined}
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={error && name ? `${name}-error` : undefined}
                     className={`
                         w-full
                         justify-between
@@ -113,7 +120,7 @@ export default function SelectMultiple({
             </Dropdown>
 
             {error && (
-                <p className="text-error text-small place-self-start mt-1">
+                <p id={name ? `${name}-error` : undefined} role="alert" className="text-error text-small place-self-start mt-1">
                     {error}
                 </p>
             )}

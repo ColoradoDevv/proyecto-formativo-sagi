@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { House, Users, Wrench, Truck, Scroll, Settings, LogOut, X, ClipboardList } from "lucide-react";
+import { House, Users, Wrench, Truck, Scroll, Settings, LogOut, X, ClipboardList, FileText, ListChecks, Boxes } from "lucide-react";
 import { logout } from "@/features/auth/services/authService";
 import { cancelAlert } from "@/shared";
 import { usePermissions } from "@/shared/hooks/usePermissions";
@@ -48,6 +48,27 @@ const NAV_MODULES = [
         icon: <Truck size={20} />,
         label: "Préstamos",
         requiredPerms: ["view_loan", "create_loan", "edit_loan", "list_loans"],
+    },
+    {
+        to: "/cotizaciones",
+        icon: <FileText size={20} />,
+        label: "Cotizaciones",
+        requiredPerms: ["view_quotation", "create_quotation", "edit_quotation", "delete_quotation"],
+    },
+    {
+        to: "/tareas",
+        icon: <ListChecks size={20} />,
+        label: "Tareas",
+        requiredPerms: [
+            "view_task", "create_task", "edit_task", "delete_task",
+            "view_task_assignment", "create_task_assignment", "edit_task_assignment", "delete_task_assignment",
+        ],
+    },
+    {
+        to: "/inventarios",
+        icon: <Boxes size={20} />,
+        label: "Inventarios",
+        requiredPerms: ["view_inventory", "create_inventory", "edit_inventory", "delete_inventory"],
     },
 ];
 

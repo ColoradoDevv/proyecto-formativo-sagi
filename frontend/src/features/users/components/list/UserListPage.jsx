@@ -41,9 +41,9 @@ export default function ListUserPage() {
     )
 
     return (
-        <div className="h-full p-6 text-text-primary">
+        <div className="h-full text-text-primary">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <h2 className="text-h3">
+                <h2 className="text-h2 text-text-primary font-heading">
                     Listado de Usuarios
                 </h2>
 

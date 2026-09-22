@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { PDF_COLORS as C } from "./pdfColors";
+import { getSenaLogoVerde } from "./senaLogo";
 
 /**
  * Genera un PDF protegido contra modificaciones.
@@ -23,7 +24,7 @@ function _ownerPassword() {
     return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-export function generatePdfReport({
+export async function generatePdfReport({
     headers,
     rows,
     reportTitle,
@@ -49,7 +50,19 @@ export function generatePdfReport({
 
     doc.setFontSize(11);
     doc.setTextColor(...C.navy);
-    doc.text("SGI - Sistema de Gestión de Inventario", 14, 14);
+    doc.text("SENA · SAGI — Sistema Administrativo de Gestión de Inventarios", 32, 12);
+
+    doc.setFontSize(8);
+    doc.setTextColor(...C.muted);
+    doc.text("Servicio Nacional de Aprendizaje", 32, 17);
+
+    // Logosímbolo oficial (si no carga, el encabezado de texto sigue válido).
+    const logo = await getSenaLogoVerde();
+    if (logo) {
+        try {
+            doc.addImage(logo, "PNG", 12, 5, 15, 15);
+        } catch { /* logo corrupto: continuar sin él */ }
+    }
 
     doc.setFontSize(16);
     doc.setTextColor(...C.navy);

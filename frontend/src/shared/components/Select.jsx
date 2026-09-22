@@ -25,6 +25,7 @@ export default function Select({
             {label && (
                 <div className="flex items-center justify-between gap-2 mb-1">
                     <label
+                        htmlFor={name ?? "field"}
                         className={`
                             block
                             place-self-center
@@ -34,17 +35,23 @@ export default function Select({
                     >
                         {label}
                         {required && <span className="text-error ml-1">*</span>}
+                        {!required && optional && (
+                            <span className="ml-1.5 text-[11px] font-normal text-text-muted">(Opcional)</span>
+                        )}
                     </label>
                     {labelAction}
                 </div>
             )}
 
             <select
+                id={name ?? "field"}
                 name={name}
                 value={value}
                 onChange={onChange}
                 required={required}
                 disabled={disabled}
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? `${name ?? "field"}-error` : undefined}
                 className={`
                     relative
                     w-full
@@ -87,7 +94,7 @@ export default function Select({
             </select>
 
             {error && (
-                <p className="text-error text-small place-self-start mt-1">
+                <p id={`${name ?? "field"}-error`} role="alert" className="text-error text-small place-self-start mt-1">
                     {error}
                 </p>
             )}

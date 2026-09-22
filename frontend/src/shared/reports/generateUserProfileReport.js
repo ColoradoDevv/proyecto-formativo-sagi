@@ -1,7 +1,8 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { getStoredUser } from "@/shared/services/api";
+import { getStoredUser, getToken } from "@/shared/services/api";
 import { PDF_COLORS as C } from "./pdfColors";
+import { getSenaLogoBlanco } from "./senaLogo";
 
 // ── Contraseña de propietario aleatoria (RC4-128) ──────────────────────────
 function _ownerPassword() {
@@ -11,9 +12,13 @@ function _ownerPassword() {
 }
 
 // ── Carga una imagen desde URL como dataURL (para foto de perfil) ──────────
+// /media/* exige sesión: se manda el JWT en el header (fetch sí puede).
 async function _loadImageAsDataUrl(url) {
     try {
-        const res = await fetch(url);
+        const headers = {};
+        const token = getToken();
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        const res = await fetch(url, { headers });
         if (!res.ok) return null;
         const blob = await res.blob();
         return new Promise((resolve) => {
@@ -119,13 +124,23 @@ export async function generateUserProfileReport(user) {
     doc.setFillColor(...C.navy);
     doc.rect(0, 0, 210, 28, "F");
 
+    // Logosímbolo oficial en blanco sobre la banda (si falla, sigue el texto).
+    const senaLogo = await getSenaLogoBlanco();
+    const headerX = 14;
+    if (senaLogo) {
+        try {
+            doc.addImage(senaLogo, "PNG", headerX, 5, 18, 18);
+        } catch { /* continuar sin logo */ }
+    }
+    const textX = senaLogo ? headerX + 21 : headerX;
+
     doc.setFontSize(10);
     doc.setTextColor(...C.white);
     doc.setFont(undefined, "bold");
-    doc.text("SGI — Sistema de Gestión de Inventario", 14, 10);
+    doc.text("SENA · SAGI — Sistema Administrativo de Gestión de Inventarios", textX, 10);
 
     doc.setFontSize(15);
-    doc.text("Ficha Individual de Usuario", 14, 19);
+    doc.text("Ficha Individual de Usuario", textX, 19);
 
     // Fecha en esquina superior derecha
     doc.setFontSize(7.5);
@@ -231,7 +246,7 @@ export async function generateUserProfileReport(user) {
     doc.setTextColor(...C.muted);
     doc.setFont(undefined, "normal");
     doc.text(
-        "Documento generado automáticamente por SGI. No válido sin firma electrónica del administrador.",
+        "Documento generado automáticamente por SAGI. No válido sin firma electrónica del administrador.",
         14,
         pageH - 8,
     );
