@@ -1,4 +1,4 @@
-import { useEffect, useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { IconButton } from "./IconButton";
@@ -62,6 +62,41 @@ export default function Modal({
         return () => { document.body.style.overflow = previous; };
     }, [isOpen]);
 
+    // Trampa de foco (WCAG 2.4.3): al abrir, enfocar el primer elemento
+    // interactivo; Tab/Shift+Tab ciclan dentro del diálogo.
+    const cardRef = useRef(null);
+    useEffect(() => {
+        if (!isOpen || !cardRef.current) return;
+        const card = cardRef.current;
+        const focusables = () =>
+            Array.from(
+                card.querySelectorAll(
+                    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                )
+            );
+        // Foco inicial diferido un frame para que el portal ya esté pintado.
+        const frame = requestAnimationFrame(() => focusables()[0]?.focus?.());
+        const onKeyDown = (e) => {
+            if (e.key !== "Tab") return;
+            const items = focusables();
+            if (items.length === 0) return;
+            const first = items[0];
+            const last = items[items.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        };
+        document.addEventListener("keydown", onKeyDown);
+        return () => {
+            cancelAnimationFrame(frame);
+            document.removeEventListener("keydown", onKeyDown);
+        };
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     const styles = VARIANTS[variant] ?? VARIANTS.glass;
@@ -78,6 +113,7 @@ export default function Modal({
 
             {/* Tarjeta */}
             <div
+                ref={cardRef}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={title ? titleId : undefined}

@@ -115,6 +115,19 @@ class User(AbstractBaseUser, PermissionsMixin):
         help_text="Si es True, el usuario debe cambiar su contraseña antes de usar el sistema.",
     )
 
+    # Autorización de tratamiento de datos personales (Ley 1581 de 2012,
+    # Protección de Datos Personales). Se exige al crear el usuario y queda
+    # registrada con fecha para auditoría. No se puede modificar por la API.
+    data_consent = models.BooleanField(
+        default=False,
+        help_text="El titular autorizó el tratamiento de sus datos personales (Ley 1581 de 2012).",
+    )
+    data_consent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha y hora en que se otorgó la autorización.",
+    )
+
     # --- Campos que Django necesita para el control de acceso ---
     is_deleted = models.BooleanField(default=False)  # si esta en True, no puede entrar y se oculta de la lista
     deleted_at = models.DateTimeField(null=True, blank=True)  # fecha de eliminacion logica

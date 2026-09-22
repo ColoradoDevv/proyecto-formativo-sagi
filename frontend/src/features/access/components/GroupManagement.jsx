@@ -187,7 +187,7 @@ export default function GroupManagement({ onChanged }) {
     return (
         <div className="flex flex-col">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <h2 className="text-primary font-heading">Grupos</h2>
+                <h2 className="text-h2 text-text-primary font-heading">Grupos</h2>
                 <Button className="flex gap-2" onClick={openCreate} variant="soft">
                     <Plus size={18} />
                     Registrar Grupo

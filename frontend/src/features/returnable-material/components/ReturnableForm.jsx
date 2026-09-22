@@ -263,12 +263,13 @@ export default function ReturnableForm({
                         required
                     />
                     <Input
-                        label="Ubicación (opcional)"
+                        label="Ubicación"
                         name="location"
                         placeholder="Ubicación del material"
                         value={formData.location}
                         onChange={onChange}
                         error={errors.location}
+                        optional
                         labelAction={<CreateOptionButton variant="spacer" />}
                     />
                     <Input
@@ -278,6 +279,16 @@ export default function ReturnableForm({
                         value={formData.purchaseDate}
                         onChange={onChange}
                         error={errors.purchaseDate}
+                        labelAction={<CreateOptionButton variant="spacer" />}
+                        required
+                    />
+                    <Input
+                        label="Fecha de ingreso"
+                        name="entryDate"
+                        type="date"
+                        value={formData.entryDate}
+                        onChange={onChange}
+                        error={errors.entryDate}
                         labelAction={<CreateOptionButton variant="spacer" />}
                         required
                     />

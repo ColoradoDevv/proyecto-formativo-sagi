@@ -87,13 +87,10 @@ export default function InventoryListPage() {
     };
 
     return (
-        <div className="h-full p-4 sm:p-6 text-text-primary flex flex-col gap-6">
+        <div className="h-full text-text-primary flex flex-col gap-6">
 
             {/* Encabezado */}
             <div className="flex flex-col gap-2">
-                <p className="text-medium text-text-primary uppercase tracking-widest font-medium">
-                    Catalogo
-                </p>
                 <h2 className="text-h2 text-text-primary font-heading">
                     Nombres de Inventario
                 </h2>

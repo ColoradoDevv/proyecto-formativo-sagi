@@ -2,9 +2,7 @@ import { Tab } from '@headlessui/react';
 import  TmHomePage  from "../../features/trademarks/pages/TmHomePage";
 import {AccessPage} from "@/features/access"
 import GroupManagement from "../../features/access/components/GroupManagement";
-import { TaskHomePage } from "@/features/tasks"
 import { ProfileEditPage } from "@/features/users";
-import { InventoryHomePage } from "@/features/inventories";
 import { CategoryHomePage } from "@/features/categories";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 
@@ -13,54 +11,46 @@ function classNames(...classes) {
 }
 
 // Pestanas que cualquier usuario autenticado puede ver.
+// Tareas e Inventarios viven ahora en el sidebar con rutas propias.
 const BASE_TABS = [
     { id: "profile",  label: "Editar Perfil",     panel: <ProfileEditPage /> },
     { id: "brands",   label: "Marcas",            panel: <TmHomePage />        },
     { id: "access",   label: "Roles y Permisos",  panel: <AccessPage />        },
     { id: "groups",   label: "Grupos",            panel: <GroupManagement />   },
-    { id: "tasks",    label: "Tareas",            panel: <TaskHomePage />      },
 ];
 
-// Pestanas adicionales reservadas a administradores / usuarios con permiso
-// explicito (codenames `view_inventory`, `view_category`).
-const INVENTORY_TAB = {
-    id: "inventories",
-    label: "Inventarios",
-    panel: <InventoryHomePage />,
-};
+// Pestana adicional reservada a administradores / usuarios con permiso
+// explicito (codename `view_category`).
 const CATEGORY_TAB = {
     id: "categories",
     label: "Categorias",
     panel: <CategoryHomePage />,
 };
 
-// Construye la lista de tabs visibles segun permisos:
-//   - Inventarios y Categorias cuelgan de Marcas (solo si tienen permiso).
-function buildTabs(canSeeInventories, canSeeCategories) {
-    const extras = [];
-    if (canSeeInventories) extras.push(INVENTORY_TAB);
-    if (canSeeCategories) extras.push(CATEGORY_TAB);
-    // BASE_TABS tiene 5 items (indices 0..4). Inyectamos los extras
+// Construye la lista de tabs visibles segun permisos.
+function buildTabs(canSeeCategories) {
+    // BASE_TABS tiene 4 items (indices 0..3). Inyectamos Categorias
     // despues del tab "brands" (indice 1) para mantener un orden logico.
-    return [...BASE_TABS.slice(0, 2), ...extras, ...BASE_TABS.slice(2)];
+    return canSeeCategories
+        ? [...BASE_TABS.slice(0, 2), CATEGORY_TAB, ...BASE_TABS.slice(2)]
+        : [...BASE_TABS];
 }
 
 export default function TabBar() {
     const { isSuper, can } = usePermissions();
-    const canSeeInventories = isSuper || can("view_inventory");
     const canSeeCategories  = isSuper || can("view_category");
 
-    const tabs = buildTabs(canSeeInventories, canSeeCategories);
+    const tabs = buildTabs(canSeeCategories);
 
     // El grid se ajusta dinamicamente al numero de tabs visibles para que
-    // el ancho se reparta de forma pareja (5, 6 o 7 columnas).
+    // el ancho se reparta de forma pareja (4 o 5 columnas).
     const cols = tabs.length;
 
     return (
-        <div className="w-full pt-4 sm:pt-6">
+        <div className="w-full">
             <Tab.Group>
                 <Tab.List
-                    className={`grid border-b border-border px-4 sm:px-6`}
+                    className={`grid border-b border-border`}
                     style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
                 >
                     {tabs.map((tab) => (
@@ -80,7 +70,7 @@ export default function TabBar() {
                     ))}
                 </Tab.List>
 
-                <Tab.Panels className="mt-6 px-4 sm:px-6">
+                <Tab.Panels className="mt-6">
                     {tabs.map((tab) => (
                         <Tab.Panel key={tab.id}>{tab.panel}</Tab.Panel>
                     ))}

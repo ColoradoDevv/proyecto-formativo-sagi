@@ -50,6 +50,19 @@ export function Dropdown({
         onClose: () => setOpen(false),
     })
 
+    // Cierre con Escape + devolver el foco al trigger (WCAG 2.1.1).
+    useEffect(() => {
+        if (!open) return
+        const onKeyDown = (e) => {
+            if (e.key === "Escape") {
+                setOpen(false)
+                triggerRef.current?.focus?.()
+            }
+        }
+        document.addEventListener("keydown", onKeyDown)
+        return () => document.removeEventListener("keydown", onKeyDown)
+    }, [open, setOpen, triggerRef, contentRef])
+
     return (
         <DropdownContext.Provider value={{ open, setOpen, triggerRef, contentRef }}>
             <div
@@ -64,7 +77,7 @@ export function Dropdown({
 
 // ─── DropdownTrigger ─────────────────────────────────────────────────────────
 
-export function DropdownTrigger({ children, className = "" }) {
+export function DropdownTrigger({ children, className = "", ...rest }) {
     const { open, setOpen, triggerRef } = useContext(DropdownContext)
 
     return (
@@ -75,6 +88,7 @@ export function DropdownTrigger({ children, className = "" }) {
             aria-expanded={open}
             aria-haspopup="menu"
             className={`flex items-center gap-1 cursor-pointer ${className}`}
+            {...rest}
         >
             {children}
         </button>

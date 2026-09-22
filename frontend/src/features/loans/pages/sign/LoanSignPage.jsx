@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { CircleCheck, CircleX, Loader, ShieldCheck, RefreshCw } from "lucide-react";
-import { requestSignOtp, signLoan, requestDraftSignOtp, signLoanDraft } from "../../services/loanService";
+import { requestSignOtp, signLoan, requestDraftSignOtp, signLoanDraft, requestExternalDraftSignOtp, signExternalDraft } from "../../services/loanService";
 import { Button, Input } from "@/shared";
 
 // ── Estados del flujo ─────────────────────────────────────────────────────
@@ -30,6 +30,23 @@ function isDraftToken(raw) {
     }
 }
 
+/**
+ * Lee el payload del token JWT (sin verificar firma) para saber si es un
+ * enlace de receptor externo (`external: true`). El backend es quien valida
+ * la firma de verdad; aquí solo se usa para ajustar la UI (sin sesión,
+ * textos y enlaces distintos).
+ */
+function isExternalToken(raw) {
+    try {
+        const parts = raw.split(".");
+        if (parts.length < 2) return false;
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+        return payload.external === true;
+    } catch {
+        return false;
+    }
+}
+
 export default function LoanSignPage() {
     const [searchParams] = useSearchParams();
     const token           = searchParams.get("token");
@@ -43,10 +60,12 @@ export default function LoanSignPage() {
     const [expiresMin, setExpiresMin] = useState(10);
     const timerRef = useRef(null);
 
-    // Determinar el flujo una sola vez — draft o préstamo existente.
+    // Determinar el flujo una sola vez — draft o préstamo existente, y si el
+    // firmante es externo (sin cuenta, llega por /prestamos/firmar-externo).
     const isDraft     = token ? isDraftToken(token) : false;
-    const requestOtp  = isDraft ? requestDraftSignOtp : requestSignOtp;
-    const confirmSign = isDraft ? signLoanDraft       : signLoan;
+    const isExternal  = token ? isExternalToken(token) : false;
+    const requestOtp  = isExternal ? requestExternalDraftSignOtp : isDraft ? requestDraftSignOtp : requestSignOtp;
+    const confirmSign = isExternal ? signExternalDraft : isDraft ? signLoanDraft : signLoan;
 
     useEffect(() => () => clearInterval(timerRef.current), []);
 
@@ -125,8 +144,8 @@ export default function LoanSignPage() {
                     <>
                         <ShieldCheck size={48} className="text-brand" />
                         <p className="text-center text-small text-text-secondary">
-                            Te enviamos un código de verificación de 6 dígitos a tu correo
-                            registrado. Válido por <strong>{expiresMin} minutos</strong>.
+                            Te enviamos un código de verificación de 6 dígitos {isExternal ? "al correo indicado en la solicitud" : "a tu correo registrado"}.
+                            Válido por <strong>{expiresMin} minutos</strong>.
                         </p>
 
                         <form onSubmit={handleConfirm} className="flex flex-col gap-3 w-full" noValidate>
@@ -170,7 +189,7 @@ export default function LoanSignPage() {
                 )}
 
                 {/* ── Éxito ── */}
-                {step === STEP.SUCCESS && (
+                {step === STEP.SUCCESS && !isExternal && (
                     <>
                         <CircleCheck size={52} className="text-success" />
                         <p className="text-center text-body text-text-primary font-medium">
@@ -195,9 +214,36 @@ export default function LoanSignPage() {
                         </Link>
                     </>
                 )}
+                {step === STEP.SUCCESS && isExternal && (
+                    <>
+                        <CircleCheck size={52} className="text-success" />
+                        <p className="text-center text-body text-text-primary font-medium">
+                            {message}
+                        </p>
+                        <p className="text-center text-small text-text-secondary">
+                            Tu firma quedó registrada. Ya puedes cerrar esta ventana.
+                        </p>
+                    </>
+                )}
 
-                {/* ── Error ── */}
-                {step === STEP.ERROR && (
+                {/* ── Error (externo, sin sesión) ── */}
+                {step === STEP.ERROR && isExternal && (
+                    <>
+                        <CircleX size={52} className="text-error" />
+                        <p className="text-center text-body text-text-primary font-medium">
+                            No se pudo procesar la firma
+                        </p>
+                        <p className="text-center text-small text-text-secondary">
+                            {message}
+                        </p>
+                        <p className="text-center text-small text-text-muted mt-2">
+                            Si el problema persiste, pide al responsable que te reenvíe el enlace.
+                        </p>
+                    </>
+                )}
+
+                {/* ── Error (usuario registrado) ── */}
+                {step === STEP.ERROR && !isExternal && (
                     <>
                         <CircleX size={52} className="text-error" />
                         <p className="text-center text-body text-text-primary font-medium">

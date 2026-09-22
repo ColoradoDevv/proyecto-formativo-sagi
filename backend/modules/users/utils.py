@@ -38,10 +38,11 @@ def send_password_change_otp_email(user, otp_code):
     de contraseña iniciado desde su perfil.
     """
     send_mail(
-        subject="Código de verificación - Cambio de contraseña SGI",
+        subject="Código de verificación - Cambio de contraseña SAGI",
         message=(
+            "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
             f"Hola {user.first_name},\n\n"
-            "Recibimos una solicitud para cambiar la contraseña de tu cuenta en SGI.\n\n"
+            "Recibimos una solicitud para cambiar la contraseña de tu cuenta en SAGI.\n\n"
             f"Tu código de verificación es:\n\n"
             f"    {otp_code}\n\n"
             "Este código es válido por 10 minutos y solo puede usarse una vez.\n\n"
@@ -60,10 +61,11 @@ def send_password_changed_confirmation_email(user):
     Si no fue él, le indica cómo actuar.
     """
     send_mail(
-        subject="Tu contraseña fue cambiada - SGI",
+        subject="Tu contraseña fue cambiada - SAGI",
         message=(
+            "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
             f"Hola {user.first_name},\n\n"
-            "Te confirmamos que la contraseña de tu cuenta en SGI fue cambiada exitosamente.\n\n"
+            "Te confirmamos que la contraseña de tu cuenta en SAGI fue cambiada exitosamente.\n\n"
             "Si no realizaste este cambio, contacta al administrador del sistema "
             "de inmediato para proteger tu cuenta.\n\n"
             f"Puedes iniciar sesión aquí: {settings.FRONTEND_URL}/login"
@@ -80,10 +82,11 @@ def send_welcome_email(user, plain_password):
     Se usa la misma configuracion SMTP (Gmail) ya definida en settings.
     """
     send_mail(
-        subject="Bienvenido a SGI - Tus credenciales de acceso",
+        subject="Bienvenido a SAGI - Tus credenciales de acceso",
         message=(
+            "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
             f"Hola {user.first_name},\n\n"
-            "Se ha creado una cuenta para ti en el sistema SGI.\n"
+            "Se ha creado una cuenta para ti en el sistema SAGI.\n"
             "Estas son tus credenciales de acceso:\n\n"
             f"Correo: {user.email}\n"
             f"Contraseña: {plain_password}\n\n"

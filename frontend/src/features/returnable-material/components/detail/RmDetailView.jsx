@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Undo2, FileText, ImageOff, Search } from "lucide-react";
 import { Button, IconButton, Input, StatusBadge, EditCard } from "@/shared";
+import { mediaUrl } from "@/shared/services/api";
 import useRm from "../../hooks/useRm";
 import { getRMById, getRMs } from "../../services/returnableService";
 import { TailChase } from "ldrs/react";
@@ -109,7 +110,7 @@ export default function RmDetailView() {
         : "Sin responsable";
 
     return (
-        <div className="h-full p-3 sm:p-4 text-text-primary flex flex-col gap-3">
+        <div className="h-full text-text-primary flex flex-col gap-3">
 
             {/* Encabezado */}
             <div className="flex items-center gap-3">
@@ -117,7 +118,7 @@ export default function RmDetailView() {
                     <Undo2 size={18}/>
                 </IconButton>
                 <div>
-                    <h2 className="text-primary">Visualizar Material Devolutivo</h2>
+                    <h2 className="text-h2 text-text-primary font-heading">Visualizar Material Devolutivo</h2>
                 </div>
             </div>
 
@@ -166,7 +167,7 @@ export default function RmDetailView() {
                         <div className="flex flex-col items-center gap-2 shrink-0 w-full sm:w-36">
                             <div className="size-24 rounded-[var(--radius-xl)] overflow-hidden border border-border bg-surface-muted flex items-center justify-center">
                                 {material.image
-                                    ? <img src={material.image} alt={material.name} className="w-full h-full object-contain" />
+                                    ? <img src={mediaUrl(material.image)} alt={material.name} className="w-full h-full object-contain" />
                                     : <ImageOff size={40} className="text-text-muted" />
                                 }
                             </div>
@@ -178,7 +179,7 @@ export default function RmDetailView() {
                                     {material.technical_sheets.map((sheet, i) => (
                                         <a
                                             key={sheet.id}
-                                            href={sheet.url}
+                                            href={mediaUrl(sheet.url)}
                                             target="_blank"
                                             rel="noreferrer"
                                             className="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-full)] border border-brand/40 bg-brand/8 text-brand text-small font-medium hover:bg-brand/15 transition-colors"
@@ -193,6 +194,24 @@ export default function RmDetailView() {
                                     Sin ficha
                                   </span>
                             }
+
+                            {/* Lista de cotizaciones */}
+                            {material.quotations?.length > 0 && (
+                                <div className="flex flex-col gap-1.5 w-full">
+                                    {material.quotations.map((quote, i) => (
+                                        <a
+                                            key={quote.id}
+                                            href={mediaUrl(quote.url)}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-full)] border border-brand/40 bg-brand/8 text-brand text-small font-medium hover:bg-brand/15 transition-colors"
+                                        >
+                                            <FileText size={13} className="shrink-0" />
+                                            <span className="truncate">Cotización {i + 1}</span>
+                                        </a>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* Campos generales */}
@@ -237,6 +256,7 @@ export default function RmDetailView() {
                         <Input label="Cantidad" value={material.quantity ?? "Sin cantidad"} disabled readOnly />
                         <Input label="Ubicación" value={material.location ?? "Sin ubicación"} disabled readOnly />
                         <Input label="Fecha de compra" value={material.purchase_date ?? ""} disabled readOnly />
+                        <Input label="Fecha de ingreso" value={material.entry_date ?? ""} disabled readOnly />
                     </EditCard>
 
                     <EditCard title="Valores">

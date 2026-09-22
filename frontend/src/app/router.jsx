@@ -1,10 +1,11 @@
 // Imports
 
 // Rutas
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 
 // Imports Auth
-import { LoginPage, ProtectedRoute, ForgotPasswordPage, ResetPasswordPage } from "@/features/auth"
+import { LoginPage, ProtectedRoute, ForgotPasswordPage, ResetPasswordPage, PrivacyNoticePage } from "@/features/auth"
 
 // Imports Inicio
 import { DashboardPage } from "@/features/dashboard";
@@ -21,6 +22,15 @@ import { RmHomePage, RmCreatePage, RmDetailPage, RmEditPage } from "@/features/r
 // Imports de Prestamos
 import { LoansHomePage, LoansCreatePage, LoansEditPage, LoansDetailPage, LoanSignPage, BatchReturnPage } from "@/features/loans";
 
+// Imports de Tareas
+import { TaskHomePage } from "@/features/tasks";
+
+// Imports de Inventarios (catálogo de nombres de inventario)
+import { InventoryHomePage } from "@/features/inventories";
+
+// Imports de Cotizaciones
+import { QuotationsPage } from "@/features/quotations";
+
 // Imports de Auditoría
 import { AuditLogPage } from "@/features/audit";
 
@@ -29,11 +39,18 @@ import { ConfigLayout, MainLayout } from "@/shared";
 
 export default function AppRouter() {
     return (
-        <Routes>
+        <>
+            <PageTitle />
+            <Routes>
             {/* ───────── Rutas PUBLICAS ───────── */}
             <Route path="/iniciar-sesion" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/aviso-privacidad" element={<PrivacyNoticePage />} />
+
+            {/* Firma externa — receptor NO registrado, sin sesión.
+                El backend envía este enlace por correo con token + OTP. */}
+            <Route path="/prestamos/firmar-externo" element={<LoanSignPage />} />
 
             {/* ───────── Rutas PRIVADAS (requieren sesion) ───────── */}
             <Route element={<ProtectedRoute />}>
@@ -80,6 +97,21 @@ export default function AppRouter() {
                 {/* Firma electrónica de préstamo — requiere sesión */}
                 <Route path="/prestamos/firmar" element={<LoanSignPage />} />
 
+                {/* CRUD de Cotizaciones (biblioteca de PDFs) */}
+                <Route path="/cotizaciones" element={<MainLayout />}>
+                    <Route index element={<QuotationsPage />} />
+                </Route>
+
+                {/* Tareas (asignaciones y definiciones) */}
+                <Route path="/tareas" element={<MainLayout />}>
+                    <Route index element={<TaskHomePage />} />
+                </Route>
+
+                {/* Inventarios (catálogo de nombres de inventario) */}
+                <Route path="/inventarios" element={<MainLayout />}>
+                    <Route index element={<InventoryHomePage />} />
+                </Route>
+
                 {/* Marcas: se gestionan desde la pestaña de configuración (modales) */}
                 <Route path="/marcas" element={<MainLayout />}>
                     <Route index element={<Navigate to="/configuracion" replace />} />
@@ -95,6 +127,43 @@ export default function AppRouter() {
                 </Route>
 
             </Route>
-        </Routes>
+            </Routes>
+        </>
     );
+}
+
+// Título del documento por ruta (WCAG 2.4.2: cada vista identifica su
+// propósito). Vive aquí para no tocar las ~20 páginas una por una.
+function PageTitle() {
+    const { pathname } = useLocation();
+
+    useEffect(() => {
+        const routes = [
+            ["/iniciar-sesion", "Iniciar sesión"],
+            ["/forgot-password", "Recuperar contraseña"],
+            ["/reset-password", "Restablecer contraseña"],
+            ["/aviso-privacidad", "Aviso de privacidad"],
+            ["/prestamos/firmar-externo", "Firma de préstamo"],
+            ["/prestamos/firmar", "Firma de préstamo"],
+            ["/prestamos/crear", "Crear préstamo"],
+            ["/prestamos/lote", "Detalle de préstamo"],
+            ["/prestamos", "Préstamos"],
+            ["/usuarios/crear", "Crear usuario"],
+            ["/usuarios", "Usuarios"],
+            ["/consumibles", "Material consumible"],
+            ["/devolutivos", "Material devolutivo"],
+            ["/cotizaciones", "Cotizaciones"],
+            ["/tareas", "Tareas"],
+            ["/inventarios", "Inventarios"],
+            ["/configuracion", "Configuración"],
+            ["/auditoria", "Auditoría"],
+            ["/marcas", "Marcas"],
+        ];
+        const match = routes.find(([prefix]) =>
+            prefix === "/" ? pathname === "/" : pathname.startsWith(prefix)
+        );
+        document.title = match ? `SAGI · ${match[1]} — SENA` : "SAGI — SENA";
+    }, [pathname]);
+
+    return null;
 }

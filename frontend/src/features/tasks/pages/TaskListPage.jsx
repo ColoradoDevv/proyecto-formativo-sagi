@@ -113,7 +113,7 @@ export default function TaskListPage() {
 
             {/* Encabezado */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <h2 className="text-primary font-heading">Tareas</h2>
+                <h2 className="text-h2 text-text-primary font-heading">Tareas</h2>
                 <div className="flex gap-3">
                     {view === "assignments" ? (
                         <>

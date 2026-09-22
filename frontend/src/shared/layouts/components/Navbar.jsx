@@ -1,8 +1,11 @@
-import { Archive, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePermissions } from "@/shared/hooks/usePermissions";
+import { mediaUrl } from "@/shared/services/api";
 import ThemeToggle from "@/shared/components/ThemeToggle";
 import NotificationsBell from "./NotificationsBell";
+import senaLogoVerde from "@/assets/images/sena/logo-sena-verde.svg";
+import senaLogoBlanco from "@/assets/images/sena/logo-sena-blanco.svg";
 
 
 export default function Navbar({ onToggleSidebar }) {
@@ -35,15 +38,29 @@ export default function Navbar({ onToggleSidebar }) {
                 </button>
             )}
 
-            {/* Icono de inventario dentro de círculo */}
-            <div className="bg-brand text-text-inverse rounded-full w-10 h-10 flex items-center justify-center shrink-0">
-                <Archive size={18} strokeWidth={2.25} />
-            </div>
+            {/* Marca institucional: logosímbolo oficial SENA + línea + nombre del sistema */}
+            <img
+                src={senaLogoVerde}
+                alt="Logo SENA"
+                className="h-9 w-auto object-contain shrink-0 dark:hidden"
+            />
+            <img
+                src={senaLogoBlanco}
+                alt=""
+                aria-hidden="true"
+                className="h-9 w-auto object-contain shrink-0 hidden dark:block"
+            />
+            <span aria-hidden="true" className="w-px self-stretch my-1 bg-border shrink-0" />
 
             {/* Título */}
-            <h1 className="text-h3 font-heading flex-1 truncate uppercase tracking-wide">
-                SGI / Inventario
-            </h1>
+            <div className="flex-1 min-w-0 leading-tight">
+                <h1 className="text-h1 font-heading truncate uppercase tracking-wide">
+                    SAGI
+                </h1>
+                <p className="hidden sm:block text-[11px] text-text-muted truncate">
+                    Sistema Administrativo de Gestión de Inventarios
+                </p>
+            </div>
 
             {/* Campana de notificaciones (loans para admin, tareas para usuarios). */}
             <NotificationsBell />
@@ -61,7 +78,7 @@ export default function Navbar({ onToggleSidebar }) {
                 <span className="hidden sm:inline text-text-primary">{userName}</span>
                 {user?.profile_picture ? (
                     <img
-                        src={user.profile_picture}
+                        src={mediaUrl(user.profile_picture)}
                         alt={userName}
                         className="w-10 h-10 rounded-full object-cover shrink-0"
                     />

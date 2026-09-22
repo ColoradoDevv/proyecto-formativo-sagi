@@ -14,12 +14,14 @@ const FIELD_MAP = {
   unit_price: "unitPrice",
   total_price: "totalPrice",
   purchase_date: "purchaseDate",
+  entry_date: "entryDate",
   sena_plate: "senaPlate",
   serial: "serial",
   quantity: "quantity",
   location: "location",
   image: "photo",
   technical_sheet: "technicalSheet",
+  quotations: "quotations",
   // El backend acepta una lista de IDs bajo `cuentadante_ids`. Si el backend
   // devuelve un error de validacion con esa clave, lo mostramos en el campo
   // "cuentadante" del formulario.
@@ -51,6 +53,7 @@ export async function createCm(cmData) {
   formData.append("unit_price", cmData.unitPrice);
   formData.append("total_price", cmData.totalPrice);
   formData.append("purchase_date", cmData.purchaseDate);
+  formData.append("entry_date", cmData.entryDate);
   formData.append("is_active", "true");
 
   // Inventario: opcional. Si llega "", no se manda (backend lo trata como null).
@@ -79,6 +82,12 @@ export async function createCm(cmData) {
     formData.append("image", cmData.photo[0]);
   if (cmData.technicalSheet?.[0])
     formData.append("technical_sheet", cmData.technicalSheet[0]);
+  // Cotizaciones: IDs elegidos de la biblioteca (quotation_ids repetidos).
+  if (Array.isArray(cmData.quotations)) {
+    cmData.quotations.forEach((id) => {
+      if (id != null && id !== "") formData.append("quotation_ids", String(id));
+    });
+  }
 
   const response = await apiFetch("/api/products/consumables/", {
     method: "POST",
@@ -100,6 +109,7 @@ export async function updateCm(id, cmData) {
   formData.append("unit_price", cmData.unitPrice);
   formData.append("total_price", cmData.totalPrice);
   formData.append("purchase_date", cmData.purchaseDate);
+  formData.append("entry_date", cmData.entryDate);
 
   // Inventario: opcional. "" = no se manda (backend interpreta como null).
   if (cmData.inventory) formData.append("inventory_id", String(cmData.inventory));
@@ -133,6 +143,15 @@ export async function updateCm(id, cmData) {
     formData.append("image", cmData.photo);
   if (cmData.technicalSheet instanceof File || cmData.technicalSheet === "")
     formData.append("technical_sheet", cmData.technicalSheet);
+  // Cotizaciones: conciliación total por IDs (los no listados se liberan).
+  // Si la lista quedó vacía se manda una llave vacía para que el backend
+  // distinga "quitar todas" de "no se tocó el campo".
+  if (Array.isArray(cmData.quotations)) {
+    if (cmData.quotations.length === 0) formData.append("quotation_ids", "");
+    cmData.quotations.forEach((id) => {
+      if (id != null && id !== "") formData.append("quotation_ids", String(id));
+    });
+  }
 
   const response = await apiFetch(`/api/products/consumables/${id}/`, {
     method: "PATCH",

@@ -5,6 +5,7 @@
 
 from rest_framework import serializers
 from django.db import transaction
+from sia_api.file_validation import validate_image_file
 
 from .models import User
 from .models import Role
@@ -40,7 +41,12 @@ class UserSerializer(serializers.ModelSerializer):
     groups = serializers.SerializerMethodField()
 
     def get_groups(self, obj):
-        memberships = obj.user_groups.exclude(group__name__iexact=SYSTEM_GROUP_NAME).select_related('group')
+        # Filtra SADMIN en Python (no con .exclude(), que descartaría el
+        # prefetch de la vista de listado y reventaría en N+1).
+        memberships = [
+            m for m in obj.user_groups.all()
+            if (m.group.name or "").upper() != SYSTEM_GROUP_NAME.upper()
+        ]
         return UserGroupSerializer(memberships, many=True).data
     
     # URL absoluta para la foto de perfil (devuelve /media/... para que el proxy de Vite la redirija).
@@ -49,7 +55,8 @@ class UserSerializer(serializers.ModelSerializer):
     # que DRF no lo sobreescriba con el SerializerMethodField (que es read-only).
     profile_picture = serializers.SerializerMethodField()
     profile_picture_upload = serializers.ImageField(
-        write_only=True, required=False, source="profile_picture"
+        write_only=True, required=False, source="profile_picture",
+        validators=[validate_image_file],
     )
 
     # Para escribir - acepta solo el ID en POST
@@ -99,7 +106,33 @@ class UserSerializer(serializers.ModelSerializer):
             # frontend lo necesita escribir; bloquearlo evita que un usuario
             # con edit_user se autoconceda (o le conceda a otro) ese acceso.
             "is_staff": {"read_only": True},
+            # Ley 1581 de 2012: el default=False del modelo haría que DRF lo
+            # diera por válido sin enviarlo. Se exige explícito en creación
+            # (create() lo valida y lo sella con fecha; update() lo ignora).
+            "data_consent": {"required": True},
+            "data_consent_at": {"read_only": True},
         }
+
+    def validate_first_name(self, value):
+        return self._validate_person_name(value, "nombre")
+
+    def validate_last_name(self, value):
+        return self._validate_person_name(value, "apellido")
+
+    @staticmethod
+    def _validate_person_name(value, field_label):
+        # Misma regla que el frontend (solo letras y espacios): bloquea
+        # inyección de cabeceras de correo (\n), HTML/JS y basura. Sin esto,
+        # la API aceptaba cualquier string (el nombre viaja en correos).
+        import re
+        if value is None:
+            return value
+        text = value.strip()
+        if not re.fullmatch(r"[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+", text):
+            raise serializers.ValidationError(
+                f"El {field_label} solo puede contener letras y espacios."
+            )
+        return text
 
     def validate_document_number(self, value):
         if value is None:
@@ -165,12 +198,28 @@ class UserSerializer(serializers.ModelSerializer):
         # Ignoramos cualquier password que llegue del frontend: siempre se genera
         # automaticamente y se envia por correo, nunca la define el usuario.
         validated_data.pop("password", None)
+        # Normalizar email a minúsculas: el login es iexact y así se evita
+        # que Admin@x y admin@x coexistan como cuentas distintas.
+        if validated_data.get("email"):
+            validated_data["email"] = validated_data["email"].lower()
+
+        # Ley 1581 de 2012: sin autorización expresa no se pueden tratar los
+        # datos personales. El frontend envía data_consent=true con el checkbox
+        # "Autorizo". Queda registrada con fecha para auditoría.
+        consent = validated_data.pop("data_consent", False)
+        if consent is not True:
+            raise serializers.ValidationError(
+                {"data_consent": "Se requiere la autorización de tratamiento de datos personales (Ley 1581 de 2012)."}
+            )
+        from django.utils import timezone
         plain_password = generate_secure_password()
 
         with transaction.atomic():
             user = User(**validated_data)
             user.set_password(plain_password)
             user.must_change_password = True
+            user.data_consent = True
+            user.data_consent_at = timezone.now()
             user.save()
 
             try:
@@ -189,6 +238,11 @@ class UserSerializer(serializers.ModelSerializer):
         # El flujo de edicion no cambia: aqui si se respeta una password
         # si el admin decide asignarla manualmente al editar.
         password = validated_data.pop("password", None)
+        # La autorización de datos es histórica: no se puede modificar ni
+        # revocar por esta vía (la revocación la ejerce el titular por los
+        # canales del SENA, no editando el registro).
+        validated_data.pop("data_consent", None)
+        validated_data.pop("data_consent_at", None)
         if password:
             # Import local para evitar un ciclo de imports (views.py ya
             # importa este modulo). Reutiliza la misma politica de

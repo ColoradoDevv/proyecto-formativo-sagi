@@ -131,12 +131,12 @@ export default function AuditLogPage() {
     }
 
     return (
-        <div className="h-full p-4 sm:p-6 text-text-primary flex flex-col gap-4">
+        <div className="h-full text-text-primary flex flex-col gap-4">
 
             {/* Encabezado */}
             <div className="flex items-center gap-3">
                 <div>
-                    <h2 className="text-h3">Historial de Auditoría</h2>
+                    <h2 className="text-h2 text-text-primary font-heading">Historial de Auditoría</h2>
                     <p className="text-small text-text-secondary">
                         Registro de todas las acciones del sistema. Solo visible para el superadministrador.
                     </p>

@@ -12,7 +12,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models.functions import Lower
 from django.db.models import Count
 
-from .models import Brand, Category, ConsumableMaterial, Inventory, ReturnableMaterial
+from .models import Brand, Category, ConsumableMaterial, Inventory, Quotation, ReturnableMaterial
 
 from .serializers import (
     BrandSerializer,
@@ -20,6 +20,11 @@ from .serializers import (
     ConsumableMaterialSerializer,
     InventorySerializer,
     ReturnableMaterialSerializer,
+    QuotationSerializer,
+    save_quotations,
+    assign_quotations,
+    _quotation_id_list,
+    lent_subquery,
 )
 from modules.permissions.permissions_drf import HasPermission
 from modules.audit.mixins import AuditMixin
@@ -27,6 +32,7 @@ from modules.audit.utils import log as audit_log
 from modules.audit.models import AuditLog
 from modules.audit.signals import audit_toggle_active
 from modules.users.models import User
+from sia_api.file_validation import validate_image_upload, validate_sheet_upload
 
 
 FIXED_RETURNABLE_CATEGORY_NAMES = (
@@ -103,7 +109,7 @@ class CategoryViewSet(AuditMixin, viewsets.ModelViewSet):
 
 class ConsumableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
     # CRUD de materiales consumibles.
-    queryset = ConsumableMaterial.objects.prefetch_related('cuentadantes').all().order_by(Lower("name"))
+    queryset = ConsumableMaterial.objects.all().order_by(Lower("name"))
     serializer_class = ConsumableMaterialSerializer
     filter_backends  = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = {
@@ -117,6 +123,19 @@ class ConsumableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
     }
     search_fields   = ['name', 'description', 'sena_plate', 'location']
     ordering_fields = ['name', 'state', 'is_active', 'purchase_date', 'id']
+
+    def get_queryset(self):
+        # Un solo round-trip para el listado completo:
+        # - select_related: brand/inventory/category (antes: 1 query por fila c/u)
+        # - prefetch: cuentadantes y cotizaciones
+        # - _lent_total anotado: stock reservado (antes: 2 aggregates por fila)
+        return (
+            ConsumableMaterial.objects
+            .select_related("brand", "inventory", "category")
+            .prefetch_related("cuentadantes", "quotations")
+            .annotate(_lent_total=lent_subquery("pk"))
+            .order_by(Lower("name"))
+        )
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
@@ -183,11 +202,7 @@ class ConsumableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
 
 
 class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
-    queryset = ReturnableMaterial.objects.select_related(
-        'consumable', 'consumable__brand', 'consumable__inventory', 'category'
-    ).prefetch_related(
-        'consumable__cuentadantes'
-    ).all().order_by(Lower("consumable__name"))
+    queryset = ReturnableMaterial.objects.all().order_by(Lower("consumable__name"))
     serializer_class = ReturnableMaterialSerializer
     filter_backends  = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = {
@@ -202,6 +217,21 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
     search_fields   = ['consumable__name', 'consumable__description',
                        'consumable__sena_plate', 'serial', 'model']
     ordering_fields = ['consumable__name', 'consumable__state', 'consumable_id']
+
+    def get_queryset(self):
+        # Un solo round-trip para el listado completo:
+        # - _lent_total anotado (antes: refresh + 2 aggregates por fila)
+        # - prefetch de fichas y cotizaciones (antes: 1 query por fila c/u)
+        return (
+            ReturnableMaterial.objects.select_related(
+                'consumable', 'consumable__brand', 'consumable__inventory', 'category'
+            ).prefetch_related(
+                'consumable__cuentadantes',
+                'consumable__technical_sheets',
+                'consumable__quotations',
+            ).annotate(_lent_total=lent_subquery("consumable_id"))
+            .order_by(Lower("consumable__name"))
+        )
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
@@ -261,6 +291,12 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         data = request.data
         files = request.FILES
+        # Validación server-side de archivos (el frontend ya valida, pero eso
+        # se burla con un curl): foto 2MB JPG/PNG, fichas 3MB PDF/XLSX/PNG.
+        validate_image_upload(files.get('image'), field="image")
+        for key in sorted(files.keys()):
+            if key == 'technical_sheet' or key.startswith('technical_sheet_'):
+                validate_sheet_upload(files[key], field=key)
         # Las categorias ahora se gestionan via CRUD (CategoryViewSet).
         # Cualquier category_id valido se acepta; si la categoria no existe
         # la FK constraint del modelo lanzara IntegrityError, que cae en el
@@ -285,6 +321,10 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
 
         if serial and ReturnableMaterial.objects.filter(serial__iexact=serial).exists():
             raise ValidationError({"serial": "Ya existe un material devolutivo con este número de serie."})
+
+        entry_date = data.get("entry_date")
+        if not entry_date:
+            raise ValidationError({"entry_date": "La fecha de ingreso es obligatoria."})
 
         sena_plate = data.get("sena_plate")
         if sena_plate:
@@ -331,6 +371,7 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
                     total_price=data.get('total_price', 0),
                     description=data.get('description', data.get('name', '')),
                     purchase_date=data.get('purchase_date') or None,
+                    entry_date=entry_date,
                     location=data.get('location') or None,
                     is_active=True,
                     image=files.get('image', ''),
@@ -352,6 +393,19 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
                 for key in sorted(files.keys()):
                     if key == 'technical_sheet' or key.startswith('technical_sheet_'):
                         TechnicalSheet.objects.create(material=consumable, file=files[key])
+
+                # Guardar cotizaciones: archivos nuevos (quotation_N) y/o IDs de
+                # la biblioteca (quotation_ids). Obligatorio al menos uno.
+                quote_ids = _quotation_id_list(data)
+                has_quote_files = any(
+                    key == 'quotation' or key.startswith('quotation_')
+                    for key in files.keys()
+                )
+                if not has_quote_files and not quote_ids:
+                    raise ValidationError({"quotations": "Debe elegir al menos una cotización."})
+                created_ids = save_quotations(consumable, files, require_min=not quote_ids)
+                if quote_ids or created_ids:
+                    assign_quotations(consumable, quote_ids + [str(pk) for pk in created_ids])
         except IntegrityError as exc:
             err_msg = str(exc)
             if "serial" in err_msg:
@@ -371,6 +425,11 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
         consumable = rm.consumable
         data = request.data
         files = request.FILES
+        # Validación server-side de archivos (ver create()).
+        validate_image_upload(files.get('image'), field="image")
+        for key in sorted(files.keys()):
+            if key == 'technical_sheet' or key.startswith('technical_sheet_'):
+                validate_sheet_upload(files[key], field=key)
 
         # Las categorias ahora son administrables; cualquier category_id valido
         # se acepta. La FK constraint al modelo valida la existencia.
@@ -428,6 +487,7 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
             'total_price': 'total_price',
             'description': 'description',
             'purchase_date': 'purchase_date',
+            'entry_date': 'entry_date',
             'location': 'location',
         }
         nullable = {'brand_id', 'inventory_id', 'category_id', 'quantity', 'purchase_date', 'location'}
@@ -470,6 +530,19 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
                     if key == 'technical_sheet' or key.startswith('technical_sheet_'):
                         TS.objects.create(material=consumable, file=files[key])
 
+                # Cotizaciones nuevas en el PATCH (se agregan a las existentes),
+                # o conciliación total si viene quotation_ids.
+                quote_ids = _quotation_id_list(data)
+                has_quote_files = any(
+                    key == 'quotation' or key.startswith('quotation_')
+                    for key in files.keys()
+                )
+                has_quote_ids = 'quotation_ids' in data
+                if has_quote_files or has_quote_ids:
+                    created_ids = save_quotations(consumable, files, require_min=False)
+                    if has_quote_ids:
+                        assign_quotations(consumable, quote_ids + [str(pk) for pk in created_ids])
+
                 rm.save()
         except IntegrityError as exc:
             err_msg = str(exc)
@@ -508,3 +581,58 @@ class TechnicalSheetDeleteView(_APIView):
         sheet.file.delete(save=False)   # borra el archivo del disco
         sheet.delete()
         return _Resp(status=status.HTTP_204_NO_CONTENT)
+
+
+class QuotationViewSet(AuditMixin, viewsets.ModelViewSet):
+    """Biblioteca de cotizaciones (módulo independiente).
+
+    - GET /api/products/quotations/?unassigned=1 → solo disponibles.
+    - POST multipart {file, title?} → sube un PDF (queda sin asignar).
+    - PATCH {material, title} → asigna/libera o renombra.
+    - DELETE → elimina el archivo (bloqueado si está asignada).
+    """
+    queryset = Quotation.objects.select_related("material").all().order_by("-uploaded_at")
+    serializer_class = QuotationSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = {
+        "material": ["exact", "isnull"],
+        "title": ["icontains"],
+    }
+    search_fields = ["title", "file"]
+    ordering_fields = ["uploaded_at", "title", "id"]
+    http_method_names = ["get", "post", "patch", "delete"]
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [HasPermission("view_quotation")]
+        if self.action == "create":
+            return [HasPermission("create_quotation")]
+        if self.action in ("update", "partial_update"):
+            return [HasPermission("edit_quotation")]
+        if self.action == "destroy":
+            return [HasPermission("delete_quotation")]
+        return [HasPermission("view_quotation")]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.query_params.get("unassigned") in ("1", "true"):
+            qs = qs.filter(material__isnull=True)
+        return qs
+
+    def perform_create(self, serializer):
+        upload = self.request.FILES.get("file")
+        title = (self.request.data.get("title") or "").strip()
+        if not title and upload:
+            title = getattr(upload, "name", "") or ""
+        serializer.save(title=title)
+
+    def perform_destroy(self, instance):
+        if instance.material_id is not None:
+            raise ValidationError(
+                {"detail": "La cotización está asignada a un material. Desasígnela primero."}
+            )
+        instance.file.delete(save=False)
+        instance.delete()
+
+
+# (Eliminada: el CRUD vive en QuotationViewSet — DELETE /api/products/quotations/<pk>/)

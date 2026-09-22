@@ -10,9 +10,17 @@ const FIELD_MAP = {
     return_date: "loanReturnDate",
 };
 
-export async function getLoans(signal) {
-    const response = await apiFetch("/api/loans/", { signal });
+export async function getLoans(signal, { limit } = {}) {
+    const query = Number.isFinite(limit) && limit > 0 ? `?limit=${Math.min(limit, 50)}` : "";
+    const response = await apiFetch(`/api/loans/${query}`, { signal });
     if (!response.ok) await throwApiError(response, FIELD_MAP);
+    return response.json();
+}
+
+/** Contadores del dashboard en una sola petición (en vez de 4 listados). */
+export async function getDashboardSummary(signal) {
+    const response = await apiFetch("/api/dashboard/summary/", { signal });
+    if (!response.ok) await throwApiError(response);
     return response.json();
 }
 
@@ -158,6 +166,35 @@ export async function signLoanDraft(token, otpCode) {
         throw error;
     }
     return response.json();
+}
+
+// ── Firma externa (receptor NO registrado, sin sesión) ─────────────────────
+// Usa fetch nativo: sin header Authorization y sin disparar el modal global
+// de sesión expirada (apiFetch limpia la sesión ante un 401, lo cual no
+// aplica a alguien que firma sin cuenta).
+async function publicPost(url, body) {
+    const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        const error = new Error(data.error || "No se pudo procesar la solicitud.");
+        error.status = response.status;
+        throw error;
+    }
+    return response.json();
+}
+
+/** Solicita el OTP para firmar un borrador como receptor externo (sin sesión). */
+export function requestExternalDraftSignOtp(token) {
+    return publicPost("/api/loans/draft/sign/request-otp/", { token });
+}
+
+/** Confirma la firma del borrador como receptor externo (sin sesión). */
+export function signExternalDraft(token, otpCode) {
+    return publicPost("/api/loans/draft/sign/", { token, otp_code: otpCode });
 }
 
 /** Consulta el estado de firmas de un borrador (para polling). */

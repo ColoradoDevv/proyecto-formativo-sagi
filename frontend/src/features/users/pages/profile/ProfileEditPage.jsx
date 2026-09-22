@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
-import { KeyRound, Save, UserRound } from "lucide-react";
+import { KeyRound, Save, UserRound, Pencil, X } from "lucide-react";
 import { TailChase } from "ldrs/react";
 import { Button, EditCard, Input, ProfileFileInput, showAlert } from "@/shared";
 import { updateStoredUser } from "@/shared/services/api";
-import { getMyProfile, updateUserProfilePicture } from "../../services/userService";
+import { getMyProfile, updateMyProfile, updateUserProfilePicture } from "../../services/userService";
 import ChangePasswordModal from "../../components/ChangePasswordModal";
 
 const readOnlyValue = (value) => value || "No registrado";
+
+// Ley 1581 de 2012 (actualización/rectificación): el titular edita sus
+// propios datos básicos. Nombres de campo del backend.
+const EDITABLE_FIELDS = ["first_name", "last_name", "phone_number", "second_phone_number", "address"];
 
 export default function ProfileEditPage() {
     const [user, setUser] = useState(null);
@@ -15,6 +19,10 @@ export default function ProfileEditPage() {
     const [profilePicture, setProfilePicture] = useState([]);
     const [savingPicture, setSavingPicture] = useState(false);
     const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+    const [editing, setEditing] = useState(false);
+    const [editForm, setEditForm] = useState({});
+    const [editErrors, setEditErrors] = useState({});
+    const [savingData, setSavingData] = useState(false);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -84,11 +92,64 @@ export default function ProfileEditPage() {
 
     const groupNames = user.groups?.map((group) => group.name).filter(Boolean).join(", ");
 
+    const startEdit = () => {
+        setEditForm({
+            first_name: user.first_name ?? "",
+            last_name: user.last_name ?? "",
+            phone_number: user.phone_number ?? "",
+            second_phone_number: user.second_phone_number ?? "",
+            address: user.address ?? "",
+        });
+        setEditErrors({});
+        setEditing(true);
+    };
+
+    const handleEditChange = (e) => {
+        const { name, value } = e.target;
+        setEditForm((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleSaveData = async () => {
+        const errs = {};
+        if (!editForm.first_name.trim() || !editForm.last_name.trim()) {
+            errs.first_name = !editForm.first_name.trim() ? "El nombre es obligatorio." : undefined;
+            errs.last_name = !editForm.last_name.trim() ? "El apellido es obligatorio." : undefined;
+        }
+        for (const key of ["phone_number", "second_phone_number"]) {
+            const v = (editForm[key] ?? "").trim();
+            if (v && !/^\d+$/.test(v)) errs[key] = "Solo se permiten números.";
+            else if (v && (v.length < 7 || v.length > 15)) errs[key] = "Debe tener entre 7 y 15 dígitos.";
+        }
+        const addr = (editForm.address ?? "").trim();
+        if (addr && addr.length < 10) errs.address = "La dirección debe tener mínimo 10 caracteres.";
+        setEditErrors(errs);
+        if (Object.values(errs).some(Boolean)) return;
+
+        setSavingData(true);
+        try {
+            const updated = await updateMyProfile({ fields: editForm });
+            setUser(updated);
+            updateStoredUser({ first_name: updated.first_name, last_name: updated.last_name });
+            setEditing(false);
+            await showAlert({
+                icon: "success",
+                iconColor: "var(--color-success)",
+                title: "Datos actualizados",
+                text: "Tus datos personales fueron actualizados correctamente.",
+            });
+        } catch (requestError) {
+            if (requestError.fieldErrors) setEditErrors(requestError.fieldErrors);
+            else await showAlert({ icon: "error", iconColor: "var(--color-error)", title: "No se pudieron guardar los cambios", text: requestError.message });
+        } finally {
+            setSavingData(false);
+        }
+    };
+
     return (
-        <div className="p-3 sm:p-4 text-text-primary flex flex-col gap-3">
+        <div className="text-text-primary flex flex-col gap-3">
             <div className="flex items-center gap-3">
                 <div>
-                    <h2 className="text-primary">Mi perfil</h2>
+                    <h2 className="text-h2 text-text-primary font-heading">Mi perfil</h2>
                 </div>
             </div>
 
@@ -110,11 +171,36 @@ export default function ProfileEditPage() {
                 </EditCard>
 
                 <EditCard title="Información personal" className="flex-1">
-                    <Input label="Nombres" value={readOnlyValue(user.first_name)} readOnly disabled/>
-                    <Input label="Apellidos" value={readOnlyValue(user.last_name)} readOnly disabled/>
-                    <Input label="Tipo de documento" value={readOnlyValue(user.document_type?.name)} readOnly disabled />
-                    <Input label="Número de documento" value={readOnlyValue(user.document_number)} readOnly disabled />
-                    <div className="sm:col-span-2"><Input label="Dirección" value={readOnlyValue(user.address)} readOnly disabled /></div>
+                    {!editing ? (
+                        <>
+                            <Input label="Nombres" value={readOnlyValue(user.first_name)} readOnly disabled/>
+                            <Input label="Apellidos" value={readOnlyValue(user.last_name)} readOnly disabled/>
+                            <Input label="Tipo de documento" value={readOnlyValue(user.document_type?.name)} readOnly disabled />
+                            <Input label="Número de documento" value={readOnlyValue(user.document_number)} readOnly disabled />
+                            <div className="sm:col-span-2"><Input label="Dirección" value={readOnlyValue(user.address)} readOnly disabled /></div>
+                            <div className="sm:col-span-2 flex justify-end">
+                                <Button variant="secondary" onClick={startEdit}>
+                                    <Pencil size={16} /> Editar mis datos
+                                </Button>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <Input label="Nombres" name="first_name" value={editForm.first_name} onChange={handleEditChange} error={editErrors.first_name} required />
+                            <Input label="Apellidos" name="last_name" value={editForm.last_name} onChange={handleEditChange} error={editErrors.last_name} required />
+                            <Input label="Tipo de documento" value={readOnlyValue(user.document_type?.name)} readOnly disabled />
+                            <Input label="Número de documento" value={readOnlyValue(user.document_number)} readOnly disabled />
+                            <div className="sm:col-span-2"><Input label="Dirección" name="address" value={editForm.address} onChange={handleEditChange} error={editErrors.address} optional /></div>
+                            <div className="sm:col-span-2 flex gap-2 justify-end">
+                                <Button variant="secondary" onClick={() => setEditing(false)} disabled={savingData}>
+                                    <X size={16} /> Cancelar
+                                </Button>
+                                <Button onClick={handleSaveData} disabled={savingData}>
+                                    <Save size={16} /> {savingData ? "Guardando..." : "Guardar"}
+                                </Button>
+                            </div>
+                        </>
+                    )}
                 </EditCard>
             </div>
 
@@ -122,8 +208,17 @@ export default function ProfileEditPage() {
                 <EditCard title="Información de contacto" cols={1}>
                     <Input label="Correo electrónico" value={readOnlyValue(user.email)} readOnly disabled />
                     <Input label="Correo institucional" value={readOnlyValue(user.institutional_email)} readOnly disabled />
-                    <Input label="Teléfono" value={readOnlyValue(user.phone_number)} readOnly disabled />
-                    <Input label="Teléfono adicional" value={readOnlyValue(user.second_phone_number)} readOnly disabled />
+                    {editing ? (
+                        <>
+                            <Input label="Teléfono" name="phone_number" value={editForm.phone_number} onChange={handleEditChange} error={editErrors.phone_number} required />
+                            <Input label="Teléfono adicional" name="second_phone_number" value={editForm.second_phone_number} onChange={handleEditChange} error={editErrors.second_phone_number} optional />
+                        </>
+                    ) : (
+                        <>
+                            <Input label="Teléfono" value={readOnlyValue(user.phone_number)} readOnly disabled />
+                            <Input label="Teléfono adicional" value={readOnlyValue(user.second_phone_number)} readOnly disabled />
+                        </>
+                    )}
                 </EditCard>
                 <div className="grid grid-cols gap-3">
                     <EditCard title="Información del sistema" cols={1}>

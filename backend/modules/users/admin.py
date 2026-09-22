@@ -65,11 +65,20 @@ class UserAdmin(admin.ModelAdmin):
                 'is_accountable',
             )
         }),
+        ('Protección de Datos (Ley 1581 de 2012)', {
+            'description': 'Autorización otorgada al crear el usuario. Es histórica y no editable.',
+            'fields': ('data_consent', 'data_consent_at')
+        }),
         ('Permisos y Roles', {
             'description': 'Los permisos se heredan automáticamente del grupo asignado abajo.',
             'fields': ('is_superuser', 'is_staff')
         }),
     )
+
+    def get_readonly_fields(self, request, obj=None):
+        # El consentimiento es histórico: visible pero nunca editable.
+        base = list(super().get_readonly_fields(request, obj))
+        return base + ['data_consent', 'data_consent_at']
 
     def get_groups(self, obj):
         """Muestra los grupos del usuario en el listado"""

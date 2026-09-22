@@ -38,9 +38,9 @@ export default function RmListPage() {
         );
 
     return (
-        <div className="h-full p-4 sm:p-6 text-text-primary">
+        <div className="h-full text-text-primary">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <h2 className="text-h3 font-heading">
+                <h2 className="text-h2 text-text-primary font-heading">
                     Listado de Materiales Devolutivos
                 </h2>
                 {notification && (

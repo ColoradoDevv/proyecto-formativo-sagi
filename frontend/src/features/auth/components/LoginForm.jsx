@@ -116,6 +116,15 @@ export default function LoginForm() {
                 >
                     {loading ? "Entrando..." : "Entrar"}
                 </Button>
+
+                {/* Aviso de privacidad (Ley 1581 de 2012) */}
+                <p className="text-center text-small text-text-muted">
+                    Al ingresar aceptas el{" "}
+                    <Link to="/aviso-privacidad" className="underline underline-offset-2 hover:text-text-secondary transition-colors">
+                        aviso de privacidad
+                    </Link>
+                    .
+                </p>
             </form>
         </div>
     );

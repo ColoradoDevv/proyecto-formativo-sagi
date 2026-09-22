@@ -104,6 +104,14 @@ export const userBaseSchema = z.object({
         .boolean()
         .optional(),
 
+    // Ley 1581 de 2012: autorización expresa del titular. Obligatoria para
+    // crear el usuario; queda registrada en el backend con fecha.
+    dataConsent: z
+        .boolean()
+        .refine((v) => v === true, {
+            message: "Debes autorizar el tratamiento de datos personales (Ley 1581 de 2012).",
+        }),
+
 } );
 
 export const userSchema = userBaseSchema

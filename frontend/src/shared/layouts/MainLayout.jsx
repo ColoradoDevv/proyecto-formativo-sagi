@@ -35,10 +35,16 @@ export default function MainLayout({ children }) {
 
     return (
         <div className="h-screen flex flex-col bg-background overflow-hidden max-w-full">
+            <a
+                href="#contenido-principal"
+                className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-2 focus:left-2 focus:rounded-[var(--radius-md)] focus:bg-text-primary focus:text-background focus:px-4 focus:py-2 focus:text-small"
+            >
+                Saltar al contenido principal
+            </a>
             <Navbar onToggleSidebar={() => setSidebarOpen(prev => !prev)}/>
             <div className="flex flex-1 overflow-hidden min-w-0">
                 <Sidenav isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-                <main className="flex-1 min-w-0 bg-background/70 text-text-primary overflow-y-auto overflow-x-clip">
+                <main id="contenido-principal" tabIndex={-1} className="flex-1 min-w-0 bg-background/70 text-text-primary overflow-y-auto overflow-x-clip p-4 sm:p-6">
                     {children ?? <Outlet />}
                 </main>
             </div>

@@ -52,7 +52,7 @@
     --color-quaternary-950: #50E5F9;
 
     /* Error color */
-    --color-error: #E53935;
+    --color-error: #D32F2F;  /* 4.98:1 sobre blanco — cumple WCAG AA (antes #E53935: 4.23:1) */
     --color-error-soft: #FDE7E7;   /* fondo suave para estados de error/inactivo */
 
     /* Warning color */

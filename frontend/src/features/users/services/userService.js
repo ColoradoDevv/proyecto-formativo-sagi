@@ -15,6 +15,7 @@ const FIELD_MAP = {
     start_date: "startDate",
     end_date: "endDate",
     is_accountable: "isAccountable",
+    data_consent: "dataConsent",
 };
 
 // METODO GET (obtener lista de usuarios)
@@ -53,6 +54,8 @@ export async function createUser(userData) {
 
     formData.append("is_instructor_planta", userData.isInstructorPlanta === true);
     formData.append("is_accountable", userData.isAccountable === true);
+    // Ley 1581 de 2012: el backend exige data_consent=true y lo registra con fecha.
+    formData.append("data_consent", userData.dataConsent === true);
 
     if (userData.profilePicture?.[0])
         formData.append("profile_picture_upload", userData.profilePicture[0]);
@@ -98,6 +101,31 @@ export async function createUser(userData) {
     }
 
     return user;
+}
+
+// METODO PATCH (perfil propio: foto + datos básicos rectificables).
+// El backend solo acepta una lista cerrada (Ley 1581: actualización/rectificación).
+export async function updateMyProfile({ picture, fields = {} }) {
+    const formData = new FormData();
+    if (picture instanceof File) formData.append("profile_picture", picture);
+    for (const [key, value] of Object.entries(fields)) {
+        if (value !== undefined) formData.append(key, value ?? "");
+    }
+    const response = await apiFetch("/api/users/me/", {
+        method: "PATCH",
+        body: formData,
+    });
+    if (!response.ok) {
+        await throwApiError(response, {
+            first_name: "firstName",
+            last_name: "lastName",
+            phone_number: "phone",
+            second_phone_number: "additionalPhone",
+            address: "address",
+            profile_picture_upload: "profilePicture",
+        });
+    }
+    return response.json();
 }
 
 // METODO PATCH (editar un usuario existente).

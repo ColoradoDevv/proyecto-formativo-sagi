@@ -22,6 +22,7 @@ export const returnablesReportConfig = {
         { key: "unit_price",   label: "Valor unitario", default: false },
         { key: "total_price",  label: "Valor total",    default: false },
         { key: "purchase_date",label: "Fecha compra",   default: false },
+        { key: "entry_date",   label: "Fecha ingreso",  default: false },
         { key: "is_active",    label: "Activo",         default: false },
     ],
 };

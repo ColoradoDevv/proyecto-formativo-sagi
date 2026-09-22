@@ -54,7 +54,7 @@ export default function ReportModal({
         );
     };
 
-    const handleGenerate = () => {
+    const handleGenerate = async () => {
         if (selectedFields.length === 0) return;
 
         const { headers, rows } = buildReportDataset({
@@ -88,7 +88,7 @@ export default function ReportModal({
                 fileName,
             });
         } else {
-            generatePdfReport({
+            await generatePdfReport({
                 headers,
                 rows,
                 reportTitle,

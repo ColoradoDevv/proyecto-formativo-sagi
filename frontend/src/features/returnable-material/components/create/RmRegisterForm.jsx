@@ -5,6 +5,7 @@ import { createRM } from "../../services/returnableService";
 import { FileInput, Button, showAlert, cancelAlert, ProfileFileInput, IconButton } from "@/shared";
 import { rmSchema } from "../../schemas/rmSchema";
 import ReturnableForm from "../ReturnableForm";
+import { QuotationPicker } from "@/features/quotations";
 import { getReturnableCategoryOptions } from "../../utils/returnableCategoryRules";
 import { Undo2 } from "lucide-react";
 
@@ -34,10 +35,12 @@ export default function RmRegisterForm() {
         totalPrice: "",
         description: "",
         purchaseDate: "",
+        entryDate: "",
         // Cuentadantes (M2M): lista de IDs. Si se deja vacia, el backend
         // asigna por defecto al usuario actual.
         cuentadantes: [],
         technicalSheet: [],
+        quotations: [],
         photo: [],
         width: "",
         length: "",
@@ -127,6 +130,7 @@ export default function RmRegisterForm() {
                 ...result.data,
                 photo: formData.photo,
                 technicalSheet: formData.technicalSheet,
+                quotations: formData.quotations,
                 cuentadantes: formData.cuentadantes,
             });
             await showAlert({ icon: "success", iconColor: "var(--color-success)", title: "Material devolutivo creado exitosamente" });
@@ -142,13 +146,13 @@ export default function RmRegisterForm() {
     const availableCategories = getReturnableCategoryOptions(categories);
 
     return (
-        <div className="h-full p-3 sm:p-4 text-text-primary flex flex-col gap-3">
+        <div className="h-full text-text-primary flex flex-col gap-3">
 
             <div className="flex items-center gap-3">
                 <IconButton onClick={() => navigate(-1)} variant="ghost">
                     <Undo2 size={20}/>
                 </IconButton>
-                <h2 className="text-primary">Crear Material Devolutivo</h2>
+                <h2 className="text-h2 text-text-primary font-heading">Crear Material Devolutivo</h2>
             </div>
 
             <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -191,7 +195,15 @@ export default function RmRegisterForm() {
                                 maxFiles={3}
                                 maxSizeMB={3}
                                 className="w-full h-14 rounded-2xl"
-                            />                        </div>
+                            />
+                            <QuotationPicker
+                                name="quotations"
+                                value={formData.quotations}
+                                onChange={handleChange}
+                                error={errors.quotations}
+                                required
+                            />
+                        </div>
                     }
                 />
 

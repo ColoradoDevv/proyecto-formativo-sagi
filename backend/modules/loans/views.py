@@ -3,6 +3,7 @@
 
 import datetime
 import hashlib
+import os
 import random
 import string
 import uuid
@@ -47,9 +48,23 @@ _SIGN_RL_MSG    = "Demasiados intentos de firma. Intenta nuevamente en 15 minuto
 # Helpers de rate limiting
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _client_ip(request) -> str:
+    # Igual que en users/views.py: X-Forwarded-For lo escribe cualquiera,
+    # así que solo vale si la conexión viene de un proxy en TRUSTED_PROXIES
+    # (tomando la ÚLTIMA IP, la que agregó el proxy). Si no: REMOTE_ADDR.
+    remote = (request.META.get("REMOTE_ADDR") or "unknown").split(",")[0].strip()
+    xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if xff:
+        trusted = [p.strip() for p in os.getenv("TRUSTED_PROXIES", "").split(",") if p.strip()]
+        if remote in trusted:
+            parts = [p.strip() for p in xff.split(",") if p.strip()]
+            if parts:
+                return parts[-1]
+    return remote
+
+
 def _rl_key(request, prefix: str) -> str:
-    ip = request.META.get("HTTP_X_FORWARDED_FOR", request.META.get("REMOTE_ADDR", "unknown"))
-    return f"{prefix}_{ip.split(',')[0].strip()}"
+    return f"{prefix}_{_client_ip(request)}"
 
 def _check_rl(request, prefix, max_attempts, msg):
     if cache.get(_rl_key(request, prefix), 0) >= max_attempts:
@@ -114,8 +129,9 @@ def _send_sign_email(user, loans_in_batch: list, role: str, token: str) -> None:
     )
 
     send_mail(
-        subject="Firma requerida — Préstamo de material SGI",
+        subject="Firma requerida — Préstamo de material SAGI",
         message=(
+            "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
             f"Hola {user.first_name},\n\n"
             f"Se ha registrado un préstamo en el que figuras como {role_label}.\n"
             f"Para confirmar la entrega, firma haciendo clic en el siguiente enlace "
@@ -141,8 +157,9 @@ def _send_otp_email(user, code: str, loans_in_batch: list) -> None:
         for l in loans_in_batch
     )
     send_mail(
-        subject="Tu código de verificación de firma — SGI",
+        subject="Tu código de verificación de firma — SAGI",
         message=(
+            "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
             f"Hola {user.first_name},\n\n"
             f"Tu código de verificación para firmar el siguiente préstamo es:\n\n"
             f"    {code}\n\n"
@@ -196,6 +213,7 @@ class LoanViewSet(AuditMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         base_qs = Loans.objects.select_related(
             'id_responsable_user', 'id_receptor_user', 'id_material',
+            'id_material__returnablematerial',
             'signed_by_responsable', 'signed_by_receptor',
         ).order_by('id_loan')
         if self._user_is_admin():
@@ -211,6 +229,24 @@ class LoanViewSet(AuditMixin, viewsets.ModelViewSet):
         if self.action in ("update", "partial_update"):
             return [HasPermission("edit_loan")]
         return [IsSuperUser()]
+
+    def list(self, request, *args, **kwargs):
+        # ?limit=N — para vistas de "recientes" (campana de notificaciones):
+        # trae solo los N últimos sin transferir la tabla completa.
+        limit = request.query_params.get("limit")
+        if limit is not None:
+            try:
+                n = max(1, min(int(limit), 50))
+            except (TypeError, ValueError):
+                n = None
+            if n:
+                qs = (
+                    self.filter_queryset(self.get_queryset())
+                    .order_by("-loan_date", "-id_loan")[:n]
+                )
+                serializer = self.get_serializer(qs, many=True)
+                return Response(serializer.data)
+        return super().list(request, *args, **kwargs)
 
     # ── create ────────────────────────────────────────────────────────────
 
@@ -439,7 +475,10 @@ def _verify_all_pending(loans):
 def _verify_identity(request, loans, role):
     """Devuelve error_response si el usuario autenticado no es quien debe firmar."""
     expected_user = loans[0].id_responsable_user if role == "responsable" else loans[0].id_receptor_user
-    if request.user.id != expected_user.id:
+    # Un receptor externo no tiene User: el flujo legado (con sesion
+    # obligatoria) no puede atenderlo — debe firmar por el flujo draft
+    # (/api/loans/draft/sign/) con token + OTP. Sin este guard habria un 500.
+    if expected_user is None or request.user.id != expected_user.id:
         return Response(
             {"error": "No tienes permiso para firmar este préstamo."},
             status=status.HTTP_403_FORBIDDEN,
@@ -782,6 +821,29 @@ def _decode_draft_sign_token(raw_token):
     return payload, None
 
 
+def _check_draft_token_user(payload, request, drafts):
+    """Valida que quien llama sea el destinatario del token de firma draft.
+
+    - Token externo (receptor no registrado, sin cuenta): no hay sesion que
+      comparar. Basta con que el rol sea receptor y que el borrador tenga
+      realmente receptor externo. Devuelve None si OK o un Response de error.
+    - Token interno: el user_id del JWT debe coincidir con la sesion activa.
+    """
+    if payload.get("external"):
+        if payload.get("role") != "receptor" or not drafts[0].is_receptor_external:
+            return Response(
+                {"error": "El enlace de firma no es válido para esta solicitud."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return None
+    if payload.get("user_id") != request.user.id:
+        return Response(
+            {"error": "El enlace de firma corresponde a otro usuario."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    return None
+
+
 def _get_draft_batch(batch_id_str):
     """Devuelve (drafts, error_response) para un batch_id dado."""
     try:
@@ -816,8 +878,9 @@ def _send_draft_sign_email(name: str, email: str, drafts: list, role: str, token
         f"  • {d.id_material.name} — cantidad: {d.amount_lent}" for d in drafts
     )
     send_mail(
-        subject="Firma requerida — Préstamo de material SGI",
+        subject="Firma requerida — Préstamo de material SAGI",
         message=(
+            "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
             f"Hola {name},\n\n"
             f"Se ha registrado una solicitud de préstamo en la que figuras como {role_label}.\n"
             f"El préstamo quedará registrado definitivamente una vez que ambas partes firmen.\n\n"
@@ -843,8 +906,9 @@ def _send_draft_otp_email(name: str, email: str, code: str, drafts: list) -> Non
         f"  • {d.id_material.name} — cantidad: {d.amount_lent}" for d in drafts
     )
     send_mail(
-        subject="Tu código de verificación de firma — SGI",
+        subject="Tu código de verificación de firma — SAGI",
         message=(
+            "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
             f"Hola {name},\n\n"
             f"Tu código de verificación para firmar la solicitud de préstamo es:\n\n"
             f"    {code}\n\n"
@@ -919,8 +983,10 @@ class LoanDraftStatusView(APIView):
         if not draft:
             return Response({"error": "No se encontró el borrador."}, status=status.HTTP_404_NOT_FOUND)
 
-        signed_responsable = draft.signed_by_responsable_id is not None
-        signed_receptor    = draft.signed_by_receptor_id is not None
+        # Se usa signed_at_* y no signed_by_*: un receptor externo no tiene
+        # User (signed_by_receptor queda None) pero si deja signed_at_receptor.
+        signed_responsable = draft.signed_at_responsable is not None
+        signed_receptor    = draft.signed_at_receptor is not None
         signatures         = int(signed_responsable) + int(signed_receptor)
 
         return Response({
@@ -1158,7 +1224,7 @@ class LoanDraftSignRequestOTPView(APIView):
             _record_rl(request, "draft_otp_req", _OTP_RL_WINDOW)
             return err
 
-        if payload.get("user_id") != request.user.id:
+        if payload.get("user_id") != request.user.id and not payload.get("external"):
             return Response(
                 {"error": "El enlace de firma corresponde a otro usuario."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -1175,6 +1241,12 @@ class LoanDraftSignRequestOTPView(APIView):
             return Response({"error": "El enlace no es válido."}, status=status.HTTP_400_BAD_REQUEST)
 
         drafts, err = _get_draft_batch(batch_id)
+        if err:
+            return err
+
+        # El token dice a quien pertenece el enlace: externo (sin cuenta,
+        # solo token + OTP) o interno (user_id == sesion). Ver helper.
+        err = _check_draft_token_user(payload, request, drafts)
         if err:
             return err
 
@@ -1196,10 +1268,11 @@ class LoanDraftSignRequestOTPView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Verificar que este rol no haya firmado ya
+        # Verificar que este rol no haya firmado ya (por timestamp: un
+        # receptor externo nunca tiene signed_by_* poblado).
         already_signed = (
-            drafts[0].signed_by_responsable_id is not None if role == "responsable"
-            else drafts[0].signed_by_receptor_id is not None
+            drafts[0].signed_at_responsable is not None if role == "responsable"
+            else drafts[0].signed_at_receptor is not None
         )
         if already_signed:
             return Response(
@@ -1303,7 +1376,7 @@ class LoanDraftSignView(APIView):
             _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
             return err
 
-        if payload.get("user_id") != request.user.id:
+        if payload.get("user_id") != request.user.id and not payload.get("external"):
             _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
             return Response(
                 {"error": "El enlace de firma corresponde a otro usuario."},
@@ -1324,6 +1397,13 @@ class LoanDraftSignView(APIView):
         if err:
             return err
 
+        # El token dice a quien pertenece el enlace: externo (sin cuenta,
+        # solo token + OTP) o interno (user_id == sesion). Ver helper.
+        err = _check_draft_token_user(payload, request, drafts)
+        if err:
+            _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
+            return err
+
         if drafts[0].is_expired:
             LoanDraft.objects.filter(batch_id=uuid.UUID(batch_id)).update(state=LoanDraft.STATE_EXPIRED)
             return Response(
@@ -1339,10 +1419,11 @@ class LoanDraftSignView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Verificar que este rol no haya firmado ya
+        # Verificar que este rol no haya firmado ya (por timestamp: un
+        # receptor externo nunca tiene signed_by_* poblado).
         already_signed = (
-            drafts[0].signed_by_responsable_id is not None if role == "responsable"
-            else drafts[0].signed_by_receptor_id is not None
+            drafts[0].signed_at_responsable is not None if role == "responsable"
+            else drafts[0].signed_at_receptor is not None
         )
         if already_signed:
             return Response(
@@ -1405,7 +1486,10 @@ class LoanDraftSignView(APIView):
         # request.user es AnonymousUser cuando el receptor es externo — no es
         # una instancia real de User, así que no se puede asignar a la FK
         # signed_by_*. Su firma queda igualmente probada por signed_at_*.
-        signer = request.user if request.user.is_authenticated else None
+        # Un token externo nunca atribuye firma a una sesion (aunque alguien
+        # logueado abra el enlace): el firmante es el dueño del correo.
+        is_external = bool(payload.get("external"))
+        signer = None if is_external else (request.user if request.user.is_authenticated else None)
 
         sign_fields = {}
         if role == "responsable":
@@ -1569,6 +1653,7 @@ class LoanBatchListView(APIView):
     def get(self, request):
         qs = Loans.objects.select_related(
             'id_responsable_user', 'id_receptor_user', 'id_material',
+            'id_material__returnablematerial',
         ).order_by('batch_id', 'id_loan')
 
         if not self._user_is_admin(request):

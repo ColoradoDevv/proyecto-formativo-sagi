@@ -1,4 +1,5 @@
 # Vistas del CRUD de usuarios.
+import os
 import jwt
 import hashlib
 import secrets
@@ -16,6 +17,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models.functions import Lower
+from django.db.models import Prefetch
 
 from .models import User, Role, DocumentType, BlacklistedToken, PasswordChangeOTP
 from modules.permissions.models import UserGroup as PermUserGroup
@@ -36,14 +38,43 @@ from modules.audit.mixins import AuditMixin
 _RATE_LIMIT_MAX      = 5          # intentos fallidos antes de bloquear
 _RATE_LIMIT_WINDOW   = 60 * 15   # segundos de bloqueo (15 minutos)
 _TOO_MANY_MSG        = "Demasiados intentos fallidos. Intenta nuevamente en 15 minutos."
+# Hash fijo para el anti-oráculo de tiempo del login (ver LoginView).
+# Generado una vez con make_password(); nunca corresponde a una clave real.
+DUMMY_PASSWORD_HASH  = "pbkdf2_sha256$1200000$bTEhh04iCvEK3ojtVtZBnJ$2e4FPQgHlUXBZedwUabkPvVgl38RKgY522wZwOTKQ0E="
+# Tope global por IP (anti-spray distribuido tras una NAT compartida como la
+# de una sede SENA: 100 fallos/15min es inalcanzable por uso legítimo).
+_GLOBAL_IP_MAX       = 100
+
+
+def _client_ip(request) -> str:
+    """IP real del cliente para rate limiting.
+
+    X-Forwarded-For lo puede escribir cualquiera en el request, así que
+    JAMÁS se confía en él por defecto: se usa REMOTE_ADDR (la IP de la
+    conexión TCP, no falsificable). Solo si la conexión directa viene de un
+    proxy declarado en TRUSTED_PROXIES se toma la ÚLTIMA IP de la lista XFF
+    (la que agregó nuestro proxy; la primera la pudo falsificar el cliente).
+    """
+    remote = (request.META.get("REMOTE_ADDR") or "unknown").split(",")[0].strip()
+    xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if xff:
+        trusted = [p.strip() for p in os.getenv("TRUSTED_PROXIES", "").split(",") if p.strip()]
+        if remote in trusted:
+            parts = [p.strip() for p in xff.split(",") if p.strip()]
+            if parts:
+                return parts[-1]
+    return remote
 
 
 def _rate_limit_key(request, prefix: str) -> str:
     """Genera la clave de caché para el contador de la IP del cliente."""
-    ip = request.META.get("HTTP_X_FORWARDED_FOR", request.META.get("REMOTE_ADDR", "unknown"))
-    # HTTP_X_FORWARDED_FOR puede contener una lista "ip1, ip2, ..."; tomamos la primera.
-    ip = ip.split(",")[0].strip()
-    return f"{prefix}_{ip}"
+    return f"{prefix}_{_client_ip(request)}"
+
+
+def _account_key(prefix: str, email) -> str:
+    """Bucket GLOBAL por cuenta (sin IP): resiste rotación de IP/proxy y no
+    castiga a otros usuarios tras la misma NAT al bloquearse una cuenta."""
+    return f"{prefix}_acct_{(email or '').strip().lower()}"
 
 
 def _check_rate_limit(request, prefix: str):
@@ -78,6 +109,45 @@ def _reset_rate_limit(request, prefix: str) -> None:
     cache.delete(_rate_limit_key(request, prefix))
 
 
+def _check_account_limit(prefix: str, email) -> "Response | None":
+    """429 si la CUENTA superó 5 fallos/15min (global, resiste rotación de IP)."""
+    if cache.get(_account_key(prefix, email), 0) >= _RATE_LIMIT_MAX:
+        return Response(
+            {"error": _TOO_MANY_MSG},
+            status=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+    return None
+
+
+def _record_account_attempt(prefix: str, email) -> None:
+    cache.add(_account_key(prefix, email), 0, timeout=_RATE_LIMIT_WINDOW)
+    cache.incr(_account_key(prefix, email))
+
+
+def _reset_account(prefix: str, email) -> None:
+    cache.delete(_account_key(prefix, email))
+
+
+def _check_global_ip(request, prefix: str):
+    """Backstop anti-spray: 100 fallos/15min por IP (tolerante a NAT)."""
+    if cache.get(f"{prefix}_ip_{_client_ip(request)}", 0) >= _GLOBAL_IP_MAX:
+        return Response(
+            {"error": _TOO_MANY_MSG},
+            status=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+    return None
+
+
+def _record_global_ip(request, prefix: str) -> None:
+    key = f"{prefix}_ip_{_client_ip(request)}"
+    cache.add(key, 0, timeout=_RATE_LIMIT_WINDOW)
+    cache.incr(key)
+
+
+def _reset_global_ip(request, prefix: str) -> None:
+    cache.delete(f"{prefix}_ip_{_client_ip(request)}")
+
+
 # ---------------------------------------------------------------------------
 
 class MyProfileView(APIView):
@@ -87,17 +157,27 @@ class MyProfileView(APIView):
         return Response(UserSerializer(request.user).data)
 
     def patch(self, request):
-        # Por ahora el perfil personal solo permite actualizar la foto. Los
-        # demás campos siguen gestionándose desde el módulo de usuarios.
-        if "profile_picture" not in request.FILES:
+        # Ley 1581 de 2012 (derechos de actualización/rectificación): el
+        # titular puede corregir sus propios datos básicos. Solo se acepta
+        # una lista cerrada de campos — nada de roles, estados ni fechas.
+        SELF_EDITABLE = {
+            "first_name", "last_name", "phone_number",
+            "second_phone_number", "address",
+        }
+        data = {}
+        if "profile_picture" in request.FILES:
+            # El SerializerMethodField solo lee; el campo de escritura se llama
+            # profile_picture_upload (mismo source="profile_picture" en el modelo).
+            data["profile_picture_upload"] = request.FILES["profile_picture"]
+        for field in SELF_EDITABLE:
+            if field in request.data:
+                data[field] = request.data.get(field)
+
+        if not data:
             return Response(
-                {"profile_picture": ["Debes seleccionar una imagen."]},
+                {"detail": ["No se recibió ningún dato para actualizar."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        # El SerializerMethodField solo lee; el campo de escritura se llama
-        # profile_picture_upload (mismo source="profile_picture" en el modelo).
-        data = {"profile_picture_upload": request.FILES["profile_picture"]}
 
         serializer = UserSerializer(
             request.user,
@@ -107,6 +187,49 @@ class MyProfileView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class DataConsentView(APIView):
+    """Registra la autorización de tratamiento de datos personales (Ley 1581
+    de 2012) del usuario autenticado.
+
+    POST /api/users/me/consent/  (sin body)
+    Regulariza cuentas creadas antes de exigir el consentimiento: si ya está
+    registrado, responde 200 sin cambios (idempotente). El consentimiento es
+    histórico y no se puede revertir por esta vía.
+    """
+
+    def post(self, request):
+        user = request.user
+        if user.data_consent and user.data_consent_at:
+            return Response(
+                {
+                    "data_consent": True,
+                    "data_consent_at": user.data_consent_at,
+                    "message": "La autorización ya estaba registrada.",
+                },
+                status=status.HTTP_200_OK,
+            )
+        user.data_consent = True
+        user.data_consent_at = timezone.now()
+        user.save(update_fields=["data_consent", "data_consent_at"])
+        audit_log(
+            actor=user,
+            module=AuditLog.MODULE_AUTH,
+            action=AuditLog.ACTION_UPDATE,
+            target_id=user.pk,
+            target_repr=f"{user.first_name} {user.last_name} <{user.email}>",
+            detail="Autorización de tratamiento de datos personales (Ley 1581 de 2012).",
+            request=request,
+        )
+        return Response(
+            {
+                "data_consent": True,
+                "data_consent_at": user.data_consent_at,
+                "message": "Autorización registrada correctamente.",
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class RequestPasswordChangeOTPView(APIView):
@@ -367,54 +490,72 @@ class LoginView(APIView):
         email = request.data.get("email")
         password = request.data.get("password")
 
-        # 1. Verificar si la IP está bloqueada por exceso de intentos fallidos
-        blocked = _check_rate_limit(request, "login_attempts")
-        if blocked:
-            return blocked
-
-        # 2. Validar que llegaron los dos datos
+        # 1. Validar que llegaron los dos datos (antes de contar intentos).
         if not email or not password:
             return Response(
                 {"error": "Email y contraseña son obligatorios"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # 3. Buscar el usuario por email.
-        # all_objects incluye eliminados para dar un mensaje apropiado en cada caso.
-        try:
-            user = User.all_objects.get(email=email)
-        except User.DoesNotExist:
-            _record_failed_attempt(request, "login_attempts")
+        # 1b. Tope anti-DoS: hashear entradas gigantes (MBs) quema segundos
+        # de CPU por intento sin autenticar. 128 caracteres sobran para una
+        # contraseña real (la política exige 10-72; bcrypt trunca en 72).
+        if len(password) > 128:
             return Response(
                 {"error": "Credenciales inválidas"},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
+
+        # 2. Límites: por cuenta (5/15min, resiste rotación de IP/proxy) +
+        #    global por IP (100/15min, tolerante a NAT compartida).
+        for blocked in (
+            _check_account_limit("login_attempts", email),
+            _check_global_ip(request, "login_attempts"),
+            _check_rate_limit(request, "login_attempts"),
+        ):
+            if blocked:
+                return blocked
+
+        def _fail():
+            _record_failed_attempt(request, "login_attempts")
+            _record_account_attempt("login_attempts", email)
+            _record_global_ip(request, "login_attempts")
+            return Response(
+                {"error": "Credenciales inválidas"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        # 3. Buscar el usuario por email (insensible a mayúsculas: evita
+        # cuentas duplicadas tipo Admin@x vs admin@x y errores al tipear).
+        # all_objects incluye eliminados para dar un mensaje apropiado en cada caso.
+        try:
+            user = User.all_objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            # Anti-oráculo de tiempo: hashear igual aunque no exista, para
+            # que "no existe" tarde lo mismo que "clave incorrecta" (~1.3s
+            # de diferencia medidos sin esto). Práctica oficial de Django.
+            check_password(password, DUMMY_PASSWORD_HASH)
+            return _fail()
+        except User.MultipleObjectsReturned:
+            # Defensa ante duplicados históricos por mayúsculas: no revelar
+            # nada y tratarlo como fallo genérico.
+            check_password(password, DUMMY_PASSWORD_HASH)
+            return _fail()
 
         # 4. Verificar la contraseña contra el hash guardado
         if not check_password(password, user.password):
-            _record_failed_attempt(request, "login_attempts")
-            return Response(
-                {"error": "Credenciales inválidas"},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
+            return _fail()
 
-        # 5. Verificar que la cuenta no esté eliminada ni desactivada
-        if user.is_deleted:
-            _record_failed_attempt(request, "login_attempts")
-            return Response(
-                {"error": "Esta cuenta ha sido eliminada"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        # 5. Verificar que la cuenta no esté eliminada ni desactivada.
+        # Mensaje genérico a propósito: distinguir el motivo permitiría
+        # enumerar cuentas (probar emails y deducir cuáles existen).
+        if user.is_deleted or not user.is_active:
+            return _fail()
 
-        if not user.is_active:
-            _record_failed_attempt(request, "login_attempts")
-            return Response(
-                {"error": "La cuenta está desactivada"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        # 6. Login exitoso — resetear contador de intentos fallidos
+        # 6. Login exitoso — resetear contadores de intentos fallidos
         _reset_rate_limit(request, "login_attempts")
+        _reset_account("login_attempts", email)
+        _reset_global_ip(request, "login_attempts")
 
         # Auditar inicio de sesión exitoso
         audit_log(
@@ -452,6 +593,7 @@ class LoginView(APIView):
                 "is_superuser": user.is_superuser,  # Para que el frontend pueda usar usePermissions()
                 "is_primary_admin": user.is_primary_admin,  # Protección del superadmin primigenio en UI
                 "must_change_password": user.must_change_password,
+                "data_consent": user.data_consent,
                 "role": primary_group,  # Devuelve el nombre del grupo principal
                 "groups": [g.group.name for g in user_groups],  # Lista todos los grupos
                 # Misma ruta que UserSerializer.get_profile_picture — sin esto,
@@ -534,17 +676,21 @@ class ForgetPasswordView(APIView):
     def post(self, request):
         email = request.data.get("email")
 
-        # 1. Verificar si la IP está bloqueada por exceso de solicitudes
-        blocked = _check_rate_limit(request, "forgot_attempts")
-        if blocked:
-            return blocked
-
-        # 2. Validar que llego el email
+        # 1. Validar que llego el email (antes de contar intentos).
         if not email:
             return Response(
                 {"error": "El email es obligatorio"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        # 2. Límites: por cuenta (resiste rotación de IP/proxy) + global por IP.
+        for blocked in (
+            _check_account_limit("forgot_attempts", email),
+            _check_global_ip(request, "forgot_attempts"),
+            _check_rate_limit(request, "forgot_attempts"),
+        ):
+            if blocked:
+                return blocked
 
         # 3. Respuesta generica: NO revelamos si el email existe o no.
         # Asi evitamos que alguien use este endpoint para descubrir cuentas.
@@ -553,13 +699,18 @@ class ForgetPasswordView(APIView):
             status=status.HTTP_200_OK,
         )
 
+        def _fail():
+            _record_failed_attempt(request, "forgot_attempts")
+            _record_account_attempt("forgot_attempts", email)
+            _record_global_ip(request, "forgot_attempts")
+            return generic_response
+
         # 4. Buscar el usuario. Si no existe (o esta inactivo), registramos el
         # intento (evita enumerar correos por timing) y respondemos igual.
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            _record_failed_attempt(request, "forgot_attempts")
-            return generic_response
+            return _fail()
 
         if not user.is_active:
             return generic_response
@@ -581,8 +732,9 @@ class ForgetPasswordView(APIView):
         # 6. Enviar el correo. fail_silently=False para que un fallo real
         # se vea en los logs durante el desarrollo.
         send_mail(
-            subject="Restablece tu contraseña - SGI",
+            subject="Restablece tu contraseña - SAGI",
             message=(
+                "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
                 f"Hola {user.first_name},\n\n"
                 "Recibimos una solicitud para restablecer tu contraseña.\n"
                 f"Haz clic en el siguiente enlace para crear una nueva (válido por 15 minutos):\n\n"
@@ -594,8 +746,10 @@ class ForgetPasswordView(APIView):
             fail_silently=False,
         )
 
-        # 7. Solicitud legítima completada — resetear el contador de la IP
+        # 7. Solicitud legítima completada — resetear los contadores
         _reset_rate_limit(request, "forgot_attempts")
+        _reset_account("forgot_attempts", email)
+        _reset_global_ip(request, "forgot_attempts")
 
         return generic_response
 
@@ -720,6 +874,9 @@ class ResetPasswordView(APIView):
     @staticmethod
     def _password_is_valid(password):
         import re
+        # Tope anti-DoS (ver LoginView): hashear entradas gigantes quema CPU.
+        if not password or len(password) > 128:
+            return False
         return (
             len(password) >= 10
             and re.search(r"[A-Z]", password)
@@ -754,7 +911,19 @@ class UserFilter(django_filters.FilterSet):
 
 class UserListCreateView(AuditMixin, generics.ListCreateAPIView):
     # Lista y crea usuarios.
-    queryset = User.objects.all().order_by(Lower("first_name"))
+    # Prefetch/select para no hacer N+1 por fila (12 usuarios = 26 queries
+    # contra el pooler antes de esto): tipo de documento y grupos con grupo.
+    queryset = (
+        User.objects
+        .select_related("document_type")
+        .prefetch_related(
+            Prefetch(
+                "user_groups",
+                queryset=PermUserGroup.objects.select_related("group"),
+            )
+        )
+        .order_by(Lower("first_name"))
+    )
     serializer_class = UserSerializer
     filter_backends  = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class  = UserFilter

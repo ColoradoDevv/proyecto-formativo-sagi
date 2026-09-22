@@ -78,19 +78,21 @@ La aplicación quedará disponible en `http://localhost:5173`.
 
 ## Variables de entorno
 
-Crea el archivo `backend/.env` con las siguientes variables:
+El backend usa **Supabase (Postgres)**. Cada contribuidor crea su propio `backend/.env` (nunca se comparte el archivo, está en `.gitignore`):
 
-```env
-SECRET_KEY=tu_secret_key_de_django
-DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
+```bash
+cd backend
+cp .env.example .env   # Windows: copy .env.example .env
+```
 
-# Base de datos (PostgreSQL en producción)
-DB_NAME=sia_db
-DB_USER=postgres
-DB_PASSWORD=tu_password
-DB_HOST=localhost
-DB_PORT=5432
+Luego rellena los `<COMPLETAR>` del `.env` (las instrucciones están dentro del propio archivo):
+- `SECRET_KEY`: genera una propia, no reuses la de otro.
+- `DB_PASSWORD` y `DB_USER`: pídelas por canal privado al dueño del proyecto Supabase, o crea tu propio proyecto gratis en `supabase.com`.
+- Sin configurar correo no pasa nada: los mails se imprimen en consola.
+
+```bash
+python manage.py migrate
+python manage.py runserver
 ```
 
 ## Scripts del frontend

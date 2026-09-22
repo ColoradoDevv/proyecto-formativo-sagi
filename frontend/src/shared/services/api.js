@@ -54,6 +54,20 @@ export function isAuthenticated() {
     return Boolean(getToken());
 }
 
+// Construye la URL de un archivo de /media/ con el token de sesión.
+// Los <img> y <a> no pueden enviar el header Authorization, así que el
+// backend acepta el JWT por query (?auth=). Idempotente: si ya lo trae,
+// no lo duplica. Las URLs que no son de /media/ se devuelven intactas.
+export function mediaUrl(url) {
+    if (!url || typeof url !== "string") return url;
+    if (!url.startsWith("/media/")) return url;
+    if (url.includes("auth=")) return url;
+    const token = getToken();
+    if (!token) return url;
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}auth=${encodeURIComponent(token)}`;
+}
+
 // --- Wrapper de fetch que adjunta el token automaticamente ---
 
 // --- Manejo centralizado de errores HTTP ---

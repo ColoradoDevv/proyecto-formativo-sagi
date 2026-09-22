@@ -1,11 +1,13 @@
 import { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, IconButton, StatusBadge, showAlert, cancelAlert, FileInput } from "@/shared";
+import { mediaUrl } from "@/shared/services/api";
 import { Undo2, Pencil, ImageOff, FileText, Trash2, Plus } from "lucide-react";
 import useRm from "../../hooks/useRm";
 import { getBrands, getCategories, getStates, getUsers, getInventories, createBrand, createInventory, createCategory } from "@/shared/services/selectServices";
 import { rmEditSchema } from "../../schemas/rmSchema";
 import { updateRM, deleteTechnicalSheet } from "../../services/returnableService";
+import { QuotationPicker } from "@/features/quotations";
 import ReturnableForm from "../ReturnableForm";
 import { getReturnableCategoryOptions } from "../../utils/returnableCategoryRules";
 import { TailChase } from "ldrs/react";
@@ -132,6 +134,9 @@ function RmEditForm({ RM, categories, brands, states, users, inventories, onCrea
         unitPrice:    RM.unit_price != null ? String(RM.unit_price) : "",
         totalPrice:   RM.total_price != null ? String(RM.total_price) : "",
         purchaseDate: RM.purchase_date ?? "",
+        entryDate: RM.entry_date ?? "",
+        // Cotizaciones asignadas (IDs de la biblioteca; desmarcar libera).
+        quotations: Array.isArray(RM.quotations) ? RM.quotations.map((q) => String(q.id)) : [],
         // Cuentadantes (M2M): pre-cargar desde la lista del backend. Si el
         // backend devolvio el compat `user` (singular), caemos a ese valor.
         cuentadantes: Array.isArray(RM.cuentadantes)
@@ -225,10 +230,10 @@ function RmEditForm({ RM, categories, brands, states, users, inventories, onCrea
     }
 
     return (
-        <div className="h-full p-3 sm:p-4 text-text-primary flex flex-col gap-3">
+        <div className="h-full text-text-primary flex flex-col gap-3">
             <div className="flex items-center gap-3">
                 <IconButton onClick={() => navigate(-1)} variant="ghost"><Undo2 size={18} /></IconButton>
-                <h2 className="text-primary">Editar Material Devolutivo</h2>
+                <h2 className="text-h2 text-text-primary font-heading">Editar Material Devolutivo</h2>
             </div>
 
             <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -272,7 +277,7 @@ function RmEditForm({ RM, categories, brands, states, users, inventories, onCrea
                                 {existingSheets.map((sheet, i) => (
                                     <div key={sheet.id} className="flex items-center gap-1">
                                         <a
-                                            href={sheet.url}
+                                            href={mediaUrl(sheet.url)}
                                             target="_blank"
                                             rel="noreferrer"
                                             className="flex-1 flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-full)] border border-brand/40 bg-brand/8 text-brand text-small font-medium hover:bg-brand/15 transition-colors min-w-0"
@@ -332,6 +337,14 @@ function RmEditForm({ RM, categories, brands, states, users, inventories, onCrea
                                     <p className="text-small text-text-muted italic">Máximo 3 fichas</p>
                                 )}
                             </div>
+
+                            {/* Cotizaciones asignadas (biblioteca) */}
+                            <QuotationPicker
+                                name="quotations"
+                                value={formData.quotations}
+                                onChange={handleChange}
+                                error={errors.quotations}
+                            />
                         </div>
                     }
                 />
