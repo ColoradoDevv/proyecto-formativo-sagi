@@ -125,3 +125,22 @@ export async function changePasswordFirstLogin({ currentPassword, newPassword, c
     updateStoredUser({ must_change_password: false });
     return data;
 }
+
+// Autorización de tratamiento de datos personales (Ley 1581 de 2012).
+// Regulariza cuentas creadas antes de exigir el consentimiento.
+export async function acceptDataConsent() {
+    const { apiFetch, updateStoredUser } = await import("@/shared/services/api");
+
+    const response = await apiFetch("/api/users/me/consent/", { method: "POST" });
+
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        const error = new Error(data.error || data.detail || "No se pudo registrar la autorización.");
+        error.status = response.status;
+        throw error;
+    }
+
+    const data = await response.json();
+    updateStoredUser({ data_consent: true });
+    return data;
+}

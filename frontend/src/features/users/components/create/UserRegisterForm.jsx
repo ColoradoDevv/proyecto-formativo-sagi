@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getDocumentTypes } from "../../services/selectServices";
 import useUserGroups from "../../hooks/useUserGroups";
-import { Button, Input, StatusLabel, showAlert, cancelAlert, IconButton, usePermissions, AccordionItem } from "@/shared";
+import { Button, Input, StatusLabel, DataConsentCheckbox, showAlert, cancelAlert, IconButton, usePermissions, AccordionItem } from "@/shared";
 import { userBaseSchema, userSchema } from "../../schemas/userSchema";
 import { createUser } from "../../services/userService";
 import { deriveRoleFlags } from "../../utils/userRoleUtils";
@@ -75,6 +75,7 @@ export default function UserRegisterForm() {
         address: "",
         isInstructorPlanta: false,
         isAccountable: false,
+        dataConsent: false,
     });
 
     const [errors, setErrors] = useState({});
@@ -319,13 +320,13 @@ export default function UserRegisterForm() {
 
     return (
         <>
-            <div className="h-full p-3 sm:p-4 text-text-primary flex flex-col gap-3">
+            <div className="h-full text-text-primary flex flex-col gap-3">
 
                 <div className="flex items-center gap-3">
                     <IconButton onClick={() => navigate(-1)} variant="ghost">
                         <Undo2 size={20}/>
                     </IconButton>
-                    <h2 className="text-primary">Registro de Usuarios</h2>
+                    <h2 className="text-h2 text-text-primary font-heading">Registro de Usuarios</h2>
                 </div>
 
                 <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -513,6 +514,13 @@ export default function UserRegisterForm() {
                                     formData={formData}
                                     errors={errors}
                                     onChange={handleChange}
+                                />
+                                <DataConsentCheckbox
+                                    id="dataConsent"
+                                    name="dataConsent"
+                                    checked={formData.dataConsent === true}
+                                    onChange={handleChange}
+                                    error={errors.dataConsent}
                                 />
                                 <div className="flex gap-3 justify-between">
                                     <Button type="button" variant="secondary" size="md" onClick={prevStep} disabled={submitting}>
