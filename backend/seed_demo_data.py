@@ -151,6 +151,6 @@ for name, price, brand_name, inv, cat_name, model, plate, serial in RETURNABLES:
     print(f"{'[OK]' if created else '[--]'} Devolutivo '{name}' {'creado' if created else 'ya existe'}")
 
 print("\nResumen:")
-print(f"  Usuarios (activos): {User.objects.count()}  | clave temporal: {TEMP_PASSWORD}")
+print(f"  Usuarios (activos): {User.objects.count()}  | clave temporal: [definida en TEMP_PASSWORD del script]")
 print(f"  Consumibles base:   {ConsumableMaterial.objects.count()}")
 print(f"  Devolutivos:        {ReturnableMaterial.objects.count()}")

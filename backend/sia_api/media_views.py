@@ -46,7 +46,15 @@ class AuthenticatedMediaView(APIView):
     def get(self, request, path):
         base = Path(settings.MEDIA_ROOT).resolve()
         try:
-            target = (base / unquote(path)).resolve()
+            # Defensa en profundidad (además del resolve+contención de abajo,
+            # que ya bloqueaba el traversal): rechazar de entrada rutas
+            # absolutas o con segmentos "..".
+            raw_path = unquote(path)
+            relative_path = Path(raw_path)
+            if relative_path.is_absolute() or ".." in relative_path.parts:
+                raise Http404()
+            target = (base / relative_path).resolve()
+            target.relative_to(base)
         except (ValueError, RuntimeError):
             raise Http404()
         if target != base and base not in target.parents:
