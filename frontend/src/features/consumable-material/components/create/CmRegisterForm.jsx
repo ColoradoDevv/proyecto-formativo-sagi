@@ -6,12 +6,13 @@ import { FileInput, Button, showAlert, cancelAlert, ProfileFileInput, IconButton
 import { cmBaseSchema, cmSchema } from "../../schemas/cmSchema";
 import { createCm } from "../../services/consumableService";
 import { ConsumableAccountableCard, ConsumableGeneralCard, ConsumableInventoryCard, ConsumableValuesCard } from "../ConsumableForm";
+import { QuotationPicker } from "@/features/quotations";
 import { Undo2, Package, Layers, BadgeDollarSign, UserCheck, Paperclip, CheckCircle2 } from "lucide-react";
 
 const GENERAL_FIELDS = ["name", "brand", "inventory", "category", "description"];
 const INVENTORY_FIELDS = ["senaPlate", "quantity", "location", "state", "serial"];
-const VALUES_FIELDS = ["purchaseDate", "unitPrice", "totalPrice"];
-const SUPPORT_FIELDS = ["cuentadantes", "photo", "technicalSheet"];
+const VALUES_FIELDS = ["purchaseDate", "entryDate", "unitPrice", "totalPrice"];
+const SUPPORT_FIELDS = ["cuentadantes", "photo", "technicalSheet", "quotations"];
 
 const generalStepSchema = cmBaseSchema.pick({
     name: true,
@@ -58,6 +59,7 @@ const inventoryStepSchema = cmBaseSchema.pick({
 
 const valuesStepSchema = cmBaseSchema.pick({
     purchaseDate: true,
+    entryDate: true,
     unitPrice: true,
     totalPrice: true,
 });
@@ -67,6 +69,7 @@ const supportStepSchema = cmBaseSchema.pick({
     cuentadantes: true,
     photo: true,
     technicalSheet: true,
+    quotations: true,
 });
 
 export default function CmRegisterForm() {
@@ -99,8 +102,10 @@ export default function CmRegisterForm() {
         // el multi-select del paso 4.
         cuentadantes: [],
         purchaseDate: new Date().toISOString().split("T")[0],
+        entryDate: new Date().toISOString().split("T")[0],
         photo: [],
         technicalSheet: [],
+        quotations: [],
     });
 
     useEffect(() => {
@@ -289,7 +294,7 @@ export default function CmRegisterForm() {
 
             // Pasar los archivos directamente de formData (no de result.data) para
             // evitar que z.instanceof(File) los descarte silenciosamente en Vite.
-            await createCm({ ...result.data, photo: formData.photo, technicalSheet: formData.technicalSheet });
+            await createCm({ ...result.data, photo: formData.photo, technicalSheet: formData.technicalSheet, quotations: formData.quotations });
 
             await showAlert({ icon: "success", iconColor: "var(--color-success)", title: "Material de consumo creado exitosamente" });
             navigate("/consumibles");
@@ -302,14 +307,14 @@ export default function CmRegisterForm() {
     }
 
     return (
-        <div className="h-full p-3 sm:p-4 text-text-primary flex flex-col gap-3">
+        <div className="h-full text-text-primary flex flex-col gap-3">
 
             {/* Titulos */}
             <div className="flex items-center gap-3">
                 <IconButton onClick={() => navigate(-1)} variant="ghost" ariaLabel="Volver atrás">
                     <Undo2 size={20}/>
                 </IconButton>
-                <h2 className="text-primary">Crear Material de Consumo</h2>
+                <h2 className="text-h2 text-text-primary font-heading">Crear Material de Consumo</h2>
             </div>
 
             <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -467,6 +472,13 @@ export default function CmRegisterForm() {
                                             maxSizeMB={3}
                                             description="Formato PDF, Excel o PNG. Tamaño máximo: 3MB. Máximo 1 archivo."
                                             className="w-full h-14 rounded-2xl"
+                                        />
+                                        <QuotationPicker
+                                            name="quotations"
+                                            value={formData.quotations}
+                                            onChange={handleChange}
+                                            error={errors.quotations}
+                                            required
                                         />
                                     </div>
                                 </EditCard>

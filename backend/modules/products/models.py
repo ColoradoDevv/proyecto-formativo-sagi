@@ -143,6 +143,13 @@ class ConsumableMaterial(models.Model):
     # Fecha de compra obligatoria segun diccionario
     purchase_date = models.DateField()
 
+    # Fecha de ingreso al inventario (puede diferir de la compra).
+    # Obligatoria: todo material registra cuándo ingresó físicamente.
+    entry_date = models.DateField(
+        default=models.fields.datetime.date.today,
+        help_text='Fecha en que el material ingresó al inventario.',
+    )
+
     # Ubicacion obligatoria segun diccionario
     location = models.CharField(max_length=100, null=True, blank=True)
     
@@ -206,3 +213,41 @@ class TechnicalSheet(models.Model):
 
     def __str__(self):
         return f'Ficha {self.pk} — material {self.material_id}'
+
+
+class Quotation(models.Model):
+    """
+    Cotización en PDF para materiales (consumibles o devolutivos).
+
+    Flujo en dos tiempos:
+      1. Se sube suelta desde el módulo Cotizaciones (material=NULL).
+      2. Al crear/editar un material se elige entre las disponibles
+         (1-3 por material, obligatorio al menos una al crear).
+    """
+    material = models.ForeignKey(
+        ConsumableMaterial,
+        on_delete=models.SET_NULL,
+        related_name='quotations',
+        null=True,
+        blank=True,
+        help_text='Material al que está asignada. Null = disponible en la biblioteca.',
+    )
+    title = models.CharField(
+        max_length=150,
+        blank=True,
+        default="",
+        help_text='Título para identificarla en el selector. Si se deja vacío se usa el nombre del archivo.',
+    )
+    file = models.FileField(
+        upload_to='quotes/',
+        help_text='Archivo de la cotización (PDF).',
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'quotations'
+        ordering = ['uploaded_at']
+
+    def __str__(self):
+        label = self.title or (self.file.name.rsplit('/', 1)[-1] if self.file else '?')
+        return f'Cotización {self.pk} — {label}'

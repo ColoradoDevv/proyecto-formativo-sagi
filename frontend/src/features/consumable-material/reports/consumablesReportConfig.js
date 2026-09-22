@@ -16,5 +16,7 @@ export const consumablesReportConfig = {
         { key: "unit_price",  label: "Valor unitario",   default: false },
         { key: "total_price", label: "Valor total",      default: false },
         { key: "is_active",      label: "Activo",           default: false },
+        { key: "purchase_date",  label: "Fecha de compra",  default: false },
+        { key: "entry_date",     label: "Fecha de ingreso", default: false },
     ],
 };

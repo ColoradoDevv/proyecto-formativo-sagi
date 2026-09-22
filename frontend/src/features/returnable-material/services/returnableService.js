@@ -15,10 +15,12 @@ const FIELD_MAP = {
     total_price: "totalPrice",
     description: "description",
     purchase_date: "purchaseDate",
+    entry_date: "entryDate",
     quantity: "quantity",
     location: "location",
     image: "photo",
     technical_sheet: "technicalSheet",
+    quotations: "quotations",
     // Cuentadantes (M2M): errores bajo `cuentadante_ids` se mapean a
     // `cuentadante` para el formulario.
     cuentadante_ids: "cuentadante",
@@ -51,6 +53,7 @@ export async function createRM(rmData) {
     formData.append("total_price", rmData.totalPrice);
     formData.append("description", rmData.description);
     formData.append("purchase_date", rmData.purchaseDate);
+    formData.append("entry_date", rmData.entryDate);
 
     // Inventario: opcional. "" = no se manda.
     if (rmData.inventory) formData.append("inventory_id", String(rmData.inventory));
@@ -62,6 +65,12 @@ export async function createRM(rmData) {
     if (Array.isArray(rmData.technicalSheet)) {
         rmData.technicalSheet.forEach((file, i) => {
             if (file instanceof File) formData.append(`technical_sheet_${i}`, file);
+        });
+    }
+    // Cotizaciones: IDs elegidos de la biblioteca (quotation_ids repetidos).
+    if (Array.isArray(rmData.quotations)) {
+        rmData.quotations.forEach((id) => {
+            if (id != null && id !== "") formData.append("quotation_ids", String(id));
         });
     }
 
@@ -104,6 +113,7 @@ export async function updateRM(id, rmData) {
     formData.append("total_price", rmData.totalPrice);
     formData.append("description", rmData.description);
     formData.append("purchase_date", rmData.purchaseDate);
+    formData.append("entry_date", rmData.entryDate);
     formData.append("quantity", rmData.quantity);
 
     // Inventario: opcional. "" = no se manda.
@@ -115,6 +125,14 @@ export async function updateRM(id, rmData) {
     if (Array.isArray(rmData.technicalSheet)) {
         rmData.technicalSheet.forEach((file, i) => {
             if (file instanceof File) formData.append(`technical_sheet_${i}`, file);
+        });
+    }
+    // Cotizaciones: conciliación total por IDs (las no listadas se liberan).
+    // Lista vacía = quitar todas (se manda llave vacía como marca explícita).
+    if (Array.isArray(rmData.quotations)) {
+        if (rmData.quotations.length === 0) formData.append("quotation_ids", "");
+        rmData.quotations.forEach((id) => {
+            if (id != null && id !== "") formData.append("quotation_ids", String(id));
         });
     }
 

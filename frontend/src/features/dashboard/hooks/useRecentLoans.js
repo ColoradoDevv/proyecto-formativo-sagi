@@ -33,12 +33,9 @@ function useRecentLoans(limit = 5) {
         const fetchLoans = async () => {
             try {
                 setLoading(true);
-                const data = await getLoans(controller.signal);
-                // Ordenar por fecha de prestamo (mas reciente primero) y recortar.
-                const recent = [...data]
-                    .sort((a, b) => new Date(b.loan_date) - new Date(a.loan_date))
-                    .slice(0, limit);
-                setLoans(recent);
+                // El backend ya ordena (recientes primero) y recorta.
+                const data = await getLoans(controller.signal, { limit });
+                setLoans(Array.isArray(data) ? data : []);
                 setError(null);
             } catch (err) {
                 // AbortError es cancelación intencional — no es un error real.

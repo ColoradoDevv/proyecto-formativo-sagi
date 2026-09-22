@@ -132,13 +132,21 @@ export const cmBaseSchema = z.object({
             message: "La fecha de compra no puede ser futura",
         }),
 
+    entryDate: z
+        .string()
+        .min(1, "Debe ingresar la fecha de ingreso")
+        .refine(isValidDateString, { message: "Debe ingresar una fecha válida" })
+        .refine((value) => value <= getTodayDateString(), {
+            message: "La fecha de ingreso no puede ser futura",
+        }),
+
 
     photo: z
         .array(z.instanceof(File))
         .min(1, "Debe subir una imagen")
         .refine(
-            (files) => ["image/jpeg", "image/png", "image/svg+xml"].includes(files[0]?.type),
-            { message: "La imagen debe ser JPG, PNG o SVG" }
+            (files) => ["image/jpeg", "image/png"].includes(files[0]?.type),
+            { message: "La imagen debe ser JPG o PNG" }
         )
         .refine(
             (files) => files[0]?.size <= 2 * 1024 * 1024,
@@ -163,11 +171,27 @@ export const cmBaseSchema = z.object({
             { message: "La ficha técnica no puede superar 3MB" }
         )
         .min(1, "Debe subir la ficha técnica"),
+
+    // Cotizaciones: se eligen de la biblioteca (módulo Cotizaciones),
+    // 1-3 por material, obligatorias al crear.
+    quotations: z
+        .array(z.string())
+        .min(1, "Debes elegir al menos una cotización de la biblioteca")
+        .max(3, "Máximo 3 cotizaciones por material"),
 });
 
 export const cmSchema = cmBaseSchema.superRefine((data, ctx) => {
 
     const hasSenaPlate = data.senaPlate && data.senaPlate.trim() !== "";
+
+    // El ingreso al inventario no puede ser anterior a la compra.
+    if (data.purchaseDate && data.entryDate && data.entryDate < data.purchaseDate) {
+        ctx.addIssue({
+            path: ["entryDate"],
+            message: "La fecha de ingreso no puede ser anterior a la de compra",
+            code: z.ZodIssueCode.custom,
+        });
+    }
 
     if (hasSenaPlate) {
         // Si hay placa SENA, la cantidad debe ser exactamente 1
@@ -292,6 +316,14 @@ export const cmEditSchema = z.object({
             message: "La fecha de compra no puede ser futura",
         }),
 
+    entryDate: z
+        .string()
+        .min(1, "Debe ingresar la fecha de ingreso")
+        .refine(isValidDateString, { message: "Debe ingresar una fecha válida" })
+        .refine((value) => value <= getTodayDateString(), {
+            message: "La fecha de ingreso no puede ser futura",
+        }),
+
     // Ficha técnica: opcional en edición (solo se reemplaza si el usuario sube una nueva).
     technicalSheet: z
         .instanceof(File)
@@ -309,8 +341,23 @@ export const cmEditSchema = z.object({
         )
         .optional()
         .nullable(),
+
+    // Cotizaciones elegidas de la biblioteca (se concilian al guardar).
+    quotations: z
+        .array(z.string())
+        .max(3, "Máximo 3 cotizaciones por material")
+        .optional(),
 }).superRefine((data, ctx) => {
     const hasSenaPlate = data.senaPlate && data.senaPlate.trim() !== "";
+
+    // El ingreso al inventario no puede ser anterior a la compra.
+    if (data.purchaseDate && data.entryDate && data.entryDate < data.purchaseDate) {
+        ctx.addIssue({
+            path: ["entryDate"],
+            message: "La fecha de ingreso no puede ser anterior a la de compra",
+            code: z.ZodIssueCode.custom,
+        });
+    }
 
     if (hasSenaPlate) {
         if (data.quantity !== "1") {

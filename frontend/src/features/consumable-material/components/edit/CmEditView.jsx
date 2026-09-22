@@ -5,6 +5,7 @@ import { Undo2 } from "lucide-react";
 import useCm from "../../hooks/useCm";
 import { getBrands, getUsers, getInventories, getCategories, createBrand, createInventory, createCategory } from "@/shared/services/selectServices";
 import { updateCm } from "../../services/consumableService";
+import { QuotationPicker } from "@/features/quotations";
 import { cmEditSchema } from "../../schemas/cmSchema";
 import ConsumableForm from "../ConsumableForm";
 import { TailChase } from "ldrs/react";
@@ -93,6 +94,7 @@ function CmEditForm({ id, CM, brands, users, inventories, categories, onCreateBr
     const [photo,          setPhoto]          = useState(CM.image ? [CM.image] : []);
     // Ficha técnica: se inicializa con la URL actual para que FileInput la muestre.
     const [technicalSheet, setTechnicalSheet] = useState(CM.technical_sheet ? [CM.technical_sheet] : []);
+    // Cotizaciones asignadas (IDs de la biblioteca; desmarcar libera).
     const [submitting,     setSubmitting]     = useState(false);
 
     const [formData, setFormData] = useState({
@@ -119,9 +121,13 @@ function CmEditForm({ id, CM, brands, users, inventories, categories, onCreateBr
             ? CM.cuentadantes.map((u) => String(u.id))
             : (CM.user?.id != null ? [String(CM.user.id)] : []),
         purchaseDate: CM.purchase_date ?? "",
+        entryDate: CM.entry_date ?? "",
+        // Cotizaciones asignadas (IDs; desmarcar libera al guardar).
+        quotations: Array.isArray(CM.quotations) ? CM.quotations.map((q) => String(q.id)) : [],
     });
 
     const [errors, setErrors] = useState({});
+
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -190,7 +196,7 @@ function CmEditForm({ id, CM, brands, users, inventories, categories, onCreateBr
     }
 
     return (
-        <div className="h-full p-3 sm:p-4 text-text-primary flex flex-col gap-3">
+        <div className="h-full text-text-primary flex flex-col gap-3">
 
             {/* Encabezado */}
             <div className="flex items-center gap-3">
@@ -198,7 +204,7 @@ function CmEditForm({ id, CM, brands, users, inventories, categories, onCreateBr
                     <Undo2 size={18}/>
                 </IconButton>
                 <div>
-                    <h2 className="text-primary">Editar Material de Consumo</h2>
+                    <h2 className="text-h2 text-text-primary font-heading">Editar Material de Consumo</h2>
                 </div>
             </div>
 
@@ -226,6 +232,7 @@ function CmEditForm({ id, CM, brands, users, inventories, categories, onCreateBr
                                 error={errors.photo}
                                 accept="image/*"
                                 className="w-full h-25 rounded-2xl"
+                                optional
                                 description="Formato JPG o PNG. Tamaño máximo: 2MB."
                             />
                             <StatusBadge active={CM.is_active} />
@@ -240,8 +247,15 @@ function CmEditForm({ id, CM, brands, users, inventories, categories, onCreateBr
                                 multiple={false}
                                 maxFiles={1}
                                 maxSizeMB={3}
+                                optional
                                 description="Formato PDF, Excel o PNG. Tamaño máximo: 3MB."
                                 className="w-full h-14 rounded-2xl"
+                            />
+                            <QuotationPicker
+                                name="quotations"
+                                value={formData.quotations}
+                                onChange={handleChange}
+                                error={errors.quotations}
                             />
                         </div>
                     }

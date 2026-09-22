@@ -112,6 +112,14 @@ export const rmSchema = z.object({
             message: "La fecha de compra no puede ser futura",
         }),
 
+    entryDate: z
+        .string()
+        .min(1, "Debe ingresar la fecha de ingreso")
+        .refine(isValidDateString, { message: "Debe ingresar una fecha válida" })
+        .refine((value) => value <= getTodayDateString(), {
+            message: "La fecha de ingreso no puede ser futura",
+        }),
+
     // Ficha técnica obligatoria en creación (RF RFADMIN08).
     // Formatos: PDF, Excel o PNG. Tamaño máximo 3MB. Mínimo 1 archivo.
     technicalSheet: z
@@ -135,8 +143,20 @@ export const rmSchema = z.object({
     length: z.string().trim().optional(),
     depth: z.string().trim().optional(),
     categoryName: z.string().optional(),
+
+    // Cotizaciones: se eligen de la biblioteca (módulo Cotizaciones),
+    // 1-3 por material, obligatorias al crear.
+    quotations: z
+        .array(z.string())
+        .min(1, "Debes elegir al menos una cotización de la biblioteca")
+        .max(3, "Máximo 3 cotizaciones por material"),
 }).superRefine((data, ctx) => {
     const categoryName = String(data.categoryName || "").trim().toLowerCase();
+
+    // El ingreso al inventario no puede ser anterior a la compra.
+    if (data.purchaseDate && data.entryDate && data.entryDate < data.purchaseDate) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["entryDate"], message: "La fecha de ingreso no puede ser anterior a la de compra" });
+    }
     
     let categoryRules = { requiresSenaPlate: false, requiresId: false, requiresDimensions: false };
     
@@ -251,12 +271,30 @@ export const rmEditSchema = z.object({
         .refine((value) => value <= getTodayDateString(), {
             message: "La fecha de compra no puede ser futura",
         }),
+    entryDate: z
+        .string()
+        .min(1, "Debe ingresar la fecha de ingreso")
+        .refine(isValidDateString, { message: "Debe ingresar una fecha válida" })
+        .refine((value) => value <= getTodayDateString(), {
+            message: "La fecha de ingreso no puede ser futura",
+        }),
     width: z.string().trim().optional(),
     length: z.string().trim().optional(),
     depth: z.string().trim().optional(),
     categoryName: z.string().optional(),
+
+    // Cotizaciones elegidas de la biblioteca (se concilian al guardar).
+    quotations: z
+        .array(z.string())
+        .max(3, "Máximo 3 cotizaciones por material")
+        .optional(),
 }).superRefine((data, ctx) => {
     const categoryName = String(data.categoryName || "").trim().toLowerCase();
+
+    // El ingreso al inventario no puede ser anterior a la compra.
+    if (data.purchaseDate && data.entryDate && data.entryDate < data.purchaseDate) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["entryDate"], message: "La fecha de ingreso no puede ser anterior a la de compra" });
+    }
     
     let categoryRules = { requiresSenaPlate: false, requiresId: false, requiresDimensions: false };
     

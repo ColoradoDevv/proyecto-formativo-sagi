@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, IconButton, Input, TextArea, StatusBadge, EditCard, usePermissions } from "@/shared";
+import { mediaUrl } from "@/shared/services/api";
 import useCm from "../../hooks/useCm";
 import { TailChase } from 'ldrs/react';
 import 'ldrs/react/TailChase.css';
@@ -47,7 +48,7 @@ export default function CmDetailView() {
         : "Sin cuentadante";
 
     return (
-        <div className="h-full p-3 sm:p-4 text-text-primary flex flex-col gap-3">
+        <div className="h-full text-text-primary flex flex-col gap-3">
 
             {/* Encabezado */}
             <div className="flex items-center gap-3">
@@ -55,7 +56,7 @@ export default function CmDetailView() {
                     <Undo2 size={18}/>
                 </IconButton>
                 <div>
-                    <h2 className="text-primary">Visualizar Material de Consumo</h2>
+                    <h2 className="text-h2 text-text-primary font-heading">Visualizar Material de Consumo</h2>
                 </div>
             </div>
 
@@ -69,14 +70,14 @@ export default function CmDetailView() {
                         <div className="flex flex-col items-center gap-2 shrink-0 w-full sm:w-32">
                             <div className="size-24 rounded-[var(--radius-xl)] overflow-hidden border border-border bg-surface-muted flex items-center justify-center">
                                 {CM.image
-                                    ? <img src={CM.image} alt={CM.name} className="w-full h-full object-contain" />
+                                    ? <img src={mediaUrl(CM.image)} alt={CM.name} className="w-full h-full object-contain" />
                                     : <ImageOff size={40} className="text-text-muted" />
                                 }
                             </div>
                             <StatusBadge active={CM.is_active} />
                             {CM.technical_sheet
                                 ? <a
-                                    href={CM.technical_sheet}
+                                    href={mediaUrl(CM.technical_sheet)}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-full)] border border-brand/40 bg-brand/8 text-brand text-small font-medium hover:bg-brand/15 transition-colors"
@@ -89,6 +90,22 @@ export default function CmDetailView() {
                                     Sin ficha
                                   </span>
                             }
+                            {CM.quotations?.length > 0 && (
+                                <div className="flex flex-col gap-1.5 w-full">
+                                    {CM.quotations.map((quote, i) => (
+                                        <a
+                                            key={quote.id}
+                                            href={mediaUrl(quote.url)}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-full)] border border-brand/40 bg-brand/8 text-brand text-small font-medium hover:bg-brand/15 transition-colors"
+                                        >
+                                            <FileText size={14} className="shrink-0" />
+                                            <span className="truncate">Cotización {i + 1}</span>
+                                        </a>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* Campos generales */}
@@ -140,6 +157,7 @@ export default function CmDetailView() {
                         <Input label="Ubicación" value={CM.location ?? "Sin ubicación"} disabled readOnly />
                         <Input label="Estado" value={CM.state ?? ""} disabled readOnly />
                         <Input label="Fecha de compra" value={CM.purchase_date ?? ""} disabled readOnly />
+                        <Input label="Fecha de ingreso" value={CM.entry_date ?? ""} disabled readOnly />
                     </EditCard>
 
                     <EditCard title="Valores">

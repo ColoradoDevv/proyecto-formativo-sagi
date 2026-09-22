@@ -3,10 +3,7 @@ import AccessCards from "../components/AccessCards"
 import QuickActions from "../components/QuickActions"
 import RecentActivity from "../components/RecentActivity"
 import { Wrench, Package, ClipboardList, UserRound } from "lucide-react"
-import { getUsers } from "@/features/users/services/userService"
-import { getCM } from "@/features/consumable-material/services/consumableService"
-import { getRMs } from "@/features/returnable-material/services/returnableService"
-import { getLoans } from "@/features/loans/services/loanService"
+import { getDashboardSummary } from "@/features/loans/services/loanService";
 import { usePermissions } from "@/shared/hooks/usePermissions"
 
 export default function DashboardLayout() {
@@ -29,32 +26,30 @@ export default function DashboardLayout() {
     const [loansError,      setLoansError]      = useState(false)
 
     useEffect(() => {
-        if (!canSeeUsers) return
-        getUsers()
-            .then(data => { setUserCount(data.length); setUserError(false) })
-            .catch(() => setUserError(true))
-    }, [canSeeUsers])
-
-    useEffect(() => {
-        if (!canSeeConsumables) return
-        getCM()
-            .then(data => { setConsumableCount(data.length); setConsumableError(false) })
-            .catch(() => setConsumableError(true))
-    }, [canSeeConsumables])
-
-    useEffect(() => {
-        if (!canSeeReturnables) return
-        getRMs()
-            .then(data => { setReturnableCount(data.length); setReturnableError(false) })
-            .catch(() => setReturnableError(true))
-    }, [canSeeReturnables])
-
-    useEffect(() => {
-        if (!canSeeLoans) return
-        getLoans()
-            .then(data => { setLoansCount(data.length); setLoansError(false) })
-            .catch(() => setLoansError(true))
-    }, [canSeeLoans])
+        // Un solo round-trip: el backend devuelve solo los contadores de
+        // los módulos que el usuario puede ver (4 COUNT en ~250ms en vez
+        // de 4 listados completos de ~1s).
+        const controller = new AbortController();
+        getDashboardSummary(controller.signal)
+            .then((data) => {
+                setUserCount(data.users ?? 0);
+                setConsumableCount(data.consumables ?? 0);
+                setReturnableCount(data.returnables ?? 0);
+                setLoansCount(data.loans ?? 0);
+                setUserError(false);
+                setConsumableError(false);
+                setReturnableError(false);
+                setLoansError(false);
+            })
+            .catch((err) => {
+                if (err?.name === "AbortError" || err?.silent) return;
+                setUserError(true);
+                setConsumableError(true);
+                setReturnableError(true);
+                setLoansError(true);
+            });
+        return () => controller.abort();
+    }, [])
 
     const userName = user?.first_name
 
@@ -102,7 +97,7 @@ export default function DashboardLayout() {
     }
 
     return (
-        <div className="p-4 sm:p-6 flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
                 <p className="text-text-primary uppercase tracking-widest text-small">
                     Panel de control / {formattedDate}
@@ -111,7 +106,7 @@ export default function DashboardLayout() {
                     {greeting}, {userName}.
                 </h2>
                 <p className="text-body text-text-secondary">
-                    Bienvenido al Sistema de Gestión de Inventario. Aquí tienes un resumen de tu operación.
+                    Bienvenido a SAGI. Aquí tienes un resumen de tu operación.
                 </p>
             </div>
 

@@ -128,12 +128,13 @@ export function ConsumableInventoryCard({ formData, errors = {}, onChange }) {
     return (
         <EditCard title="Inventario">
             <Input
-                label="Placa SENA (opcional)"
+                label="Placa SENA"
                 name="senaPlate"
                 placeholder="Placa SENA"
                 value={formData.senaPlate}
                 onChange={onChange}
                 error={errors.senaPlate}
+                optional
             />
             <Input
                 label="Cantidad"
@@ -159,12 +160,13 @@ export function ConsumableInventoryCard({ formData, errors = {}, onChange }) {
                 error={errors.serial}
             />
             <Input
-                label="Ubicación (opcional)"
+                label="Ubicación"
                 name="location"
                 placeholder="Ubicación del material"
                 value={formData.location}
                 onChange={onChange}
                 error={errors.location}
+                optional
             />
             <Select
                 label="Estado"
@@ -189,6 +191,15 @@ export function ConsumableValuesCard({ formData, errors = {}, onChange }) {
                 value={formData.purchaseDate}
                 onChange={onChange}
                 error={errors.purchaseDate}
+                required
+            />
+            <Input
+                label="Fecha de ingreso"
+                name="entryDate"
+                type="date"
+                value={formData.entryDate}
+                onChange={onChange}
+                error={errors.entryDate}
                 required
             />
             <Input
@@ -249,7 +260,7 @@ export function ConsumableAccountableCard({
 // PRESENTACIONAL: recibe formData/errors/onChange, las opciones de selects, y
 // un slot para la seccion de foto (distinta en crear vs editar).
 // Convencion de nombres unificada: name, senaPlate, brand, state, unitPrice,
-// totalPrice, purchaseDate, quantity, location, description, cuentadantes,
+// totalPrice, purchaseDate, entryDate, quantity, location, description, cuentadantes,
 // inventory, category.
 export default function ConsumableForm({
     formData,
@@ -297,12 +308,13 @@ export default function ConsumableForm({
                             required
                         />
                         <Input
-                            label="Placa SENA (opcional)"
+                            label="Placa SENA"
                             name="senaPlate"
                             placeholder="Placa SENA"
                             value={formData.senaPlate}
                             onChange={onChange}
                             error={errors.senaPlate}
+                            optional
                         />
                         <Select
                             label="Marca"
@@ -405,12 +417,13 @@ export default function ConsumableForm({
                         error={errors.serial}
                     />
                     <Input
-                        label="Ubicación (opcional)"
+                        label="Ubicación"
                         name="location"
                         placeholder="Ubicación del material"
                         value={formData.location}
                         onChange={onChange}
                         error={errors.location}
+                        optional
                     />
                     <Select
                         label="Estado"
@@ -428,6 +441,15 @@ export default function ConsumableForm({
                         value={formData.purchaseDate}
                         onChange={onChange}
                         error={errors.purchaseDate}
+                        required
+                    />
+                    <Input
+                        label="Fecha de ingreso"
+                        name="entryDate"
+                        type="date"
+                        value={formData.entryDate}
+                        onChange={onChange}
+                        error={errors.entryDate}
                         required
                     />
                 </EditCard>
