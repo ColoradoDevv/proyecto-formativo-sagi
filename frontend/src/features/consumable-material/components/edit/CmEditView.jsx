@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, IconButton, StatusBadge, showAlert, cancelAlert, FileInput, ProfileFileInput } from "@/shared";
+import { Button, IconButton, StatusBadge, showAlert, cancelAlert, FileInput, ProfileFileInput, usePermissions } from "@/shared";
 import { Undo2 } from "lucide-react";
 import useCm from "../../hooks/useCm";
 import { getBrands, getUsers, getInventories, getCategories, createBrand, createInventory, createCategory } from "@/shared/services/selectServices";
@@ -15,6 +15,11 @@ import "ldrs/react/TailChase.css";
 export default function CmEditView() {
     const { id } = useParams();
     const { CM, loading, error } = useCm(id);
+    const { isSuper, can } = usePermissions();
+    // El "+" inline solo aparece con su permiso de crear.
+    const canCreateBrand = isSuper || can("create_brand");
+    const canCreateInventory = isSuper || can("create_inventory");
+    const canCreateCategory = isSuper || can("create_category");
 
     const [brands, setBrands] = useState([]);
     const [users,  setUsers]  = useState([]);
@@ -79,9 +84,9 @@ export default function CmEditView() {
             users={users}
             inventories={inventories}
             categories={categories}
-            onCreateBrand={handleCreateBrand}
-            onCreateInventory={handleCreateInventory}
-            onCreateCategory={handleCreateCategory}
+            onCreateBrand={canCreateBrand ? handleCreateBrand : null}
+            onCreateInventory={canCreateInventory ? handleCreateInventory : null}
+            onCreateCategory={canCreateCategory ? handleCreateCategory : null}
         />
     );
 }

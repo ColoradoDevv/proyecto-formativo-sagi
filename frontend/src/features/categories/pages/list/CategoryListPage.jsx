@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, SearchField, IconButton, ActiveSwitch } from "@/shared";
+import { Button, SearchField, IconButton, ActiveSwitch, usePermissions } from "@/shared";
 import { Plus, ArrowLeft, ArrowRight, Pencil, CloudAlert, Tag, Layers } from "lucide-react";
 import { TailChase } from "ldrs/react";
 import Alert from "@mui/material/Alert";
@@ -9,6 +9,9 @@ import CategoryModal from "../../components/CategoryModal";
 
 export default function CategoryListPage() {
     const { categories, setCategories, loading, error } = useCategories();
+    const { isSuper, can } = usePermissions();
+    const canCreate = isSuper || can("create_category");
+    const canEdit = isSuper || can("edit_category");
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(0);
     const [notification, setNotification] = useState(null);
@@ -119,14 +122,16 @@ export default function CategoryListPage() {
                         fullWidth
                         className="sm:w-full sm:flex-1"
                     />
-                    <Button
-                        onClick={openCreateModal}
-                        variant="soft"
-                        className="w-full sm:w-auto shrink-0"
-                    >
-                        <Plus size={18} />
-                        Registrar Categoria
-                    </Button>
+                    {canCreate && (
+                        <Button
+                            onClick={openCreateModal}
+                            variant="soft"
+                            className="w-full sm:w-auto shrink-0"
+                        >
+                            <Plus size={18} />
+                            Registrar Categoria
+                        </Button>
+                    )}
                 </div>
 
                 {/* Grid */}
@@ -143,20 +148,24 @@ export default function CategoryListPage() {
                                         <Layers size={18} className="text-text-primary" />
                                     </span>
                                     <div className="flex items-center gap-1">
-                                        <IconButton
-                                            variant="ghost"
-                                            hitSize={32}
-                                            iconSize={16}
-                                            onClick={() => openCategoryModal(category, "edit")}
-                                            ariaLabel="Editar categoria"
-                                        >
-                                            <Pencil size={16} />
-                                        </IconButton>
-                                        <ActiveSwitch
-                                            id={category.id}
-                                            isActive={category.is_active}
-                                            toggleFn={handleToggle}
-                                        />
+                                        {canEdit && (
+                                            <IconButton
+                                                variant="ghost"
+                                                hitSize={32}
+                                                iconSize={16}
+                                                onClick={() => openCategoryModal(category, "edit")}
+                                                ariaLabel="Editar categoria"
+                                            >
+                                                <Pencil size={16} />
+                                            </IconButton>
+                                        )}
+                                        {canEdit && (
+                                            <ActiveSwitch
+                                                id={category.id}
+                                                isActive={category.is_active}
+                                                toggleFn={handleToggle}
+                                            />
+                                        )}
                                     </div>
                                 </div>
 

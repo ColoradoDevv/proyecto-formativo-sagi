@@ -70,7 +70,7 @@ export const assignmentColumns = ({ onView, onEdit, onDeleted, canEdit = true, c
 
 // Columnas para la lista de DEFINICIONES de tarea.
 // Una fila = una tarea reusable (catalogo).
-export const definitionColumns = ({ onView, onEdit, onDeleted, onManage, canDelete = true }) => [
+export const definitionColumns = ({ onView, onEdit, onDeleted, onManage, canEdit = true, canDelete = true }) => [
     {
         accessorKey: "name",
         header: "Titulo",
@@ -94,6 +94,7 @@ export const definitionColumns = ({ onView, onEdit, onDeleted, onManage, canDele
         cell: ({ row }) => (
             <DefinitionRowActions
                 definition={row.original}
+                canEdit={canEdit}
                 canDelete={canDelete}
                 onView={onView}
                 onEdit={onEdit}

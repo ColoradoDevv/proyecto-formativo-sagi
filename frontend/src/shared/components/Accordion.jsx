@@ -17,7 +17,7 @@ export function AccordionItem({ title, defaultOpen = false, open: openProp, onTo
     };
 
     return (
-        <section className="border border-border rounded-2xl overflow-hidden">
+        <section className="border border-border rounded-2xl overflow-hidden bg-surface-hover">
             <button
                 type="button"
                 onClick={toggle}

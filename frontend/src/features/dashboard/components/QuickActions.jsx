@@ -1,34 +1,34 @@
-import { usePermissions } from "@/shared/hooks/usePermissions";
+import { usePermissions, MODULE_PERMS } from "@/shared/hooks/usePermissions";
 import { Plus, UserRound, Wrench, Package, ClipboardList } from "lucide-react";
 import { Link } from "react-router-dom";
 
 // Accesos rapidos a las acciones de creacion mas frecuentes.
-// Cada acción solo se muestra si el usuario tiene al menos uno de los permisos listados.
+// Cada acción solo se muestra con el permiso de CREAR que el backend
+// exige para ese módulo (misma puerta que el submit del formulario).
 const ALL_ACTIONS = [
     {
         label: "Registrar usuario",
         to: "/usuarios/crear",
         Icon: UserRound,
-        requiredPerms: ["create_user"],
+        requiredPerms: MODULE_PERMS.users.create,
     },
     {
         label: "Registrar consumible",
         to: "/consumibles/crear",
-        // Codenames reales en BD (migración 0002) + codenames nuevos (migración 0004)
         Icon: Wrench,
-        requiredPerms: ["create_consumable_material", "create_consumable"],
+        requiredPerms: MODULE_PERMS.consumables.create,
     },
     {
         label: "Registrar devolutivo",
         to: "/devolutivos/crear",
         Icon: Package,
-        requiredPerms: ["create_returnable_material", "create_returnable"],
+        requiredPerms: MODULE_PERMS.returnables.create,
     },
     {
         label: "Registrar préstamo",
         to: "/prestamos/crear",
         Icon: ClipboardList,
-        requiredPerms: ["create_loan"],
+        requiredPerms: MODULE_PERMS.loans.create,
     },
 ];
 

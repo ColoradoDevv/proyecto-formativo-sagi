@@ -1,11 +1,14 @@
 import { useNavigate } from "react-router-dom";
-import { IconButton } from "@/shared";
+import { IconButton, usePermissions } from "@/shared";
 import { Eye, Undo2 } from "lucide-react";
 import LoanStateBadge from "../components/LoanStateBadge";
 
 // Celda de acciones extraída como componente para poder usar hooks.
+// Devolver exige create_return (misma puerta que la ruta lote/:batchId/devolver).
 function BatchRowActions({ batch }) {
     const navigate = useNavigate();
+    const { isSuper, can } = usePermissions();
+    const canReturn = isSuper || can("create_return");
     return (
         <div className="flex gap-2">
             <IconButton
@@ -18,7 +21,7 @@ function BatchRowActions({ batch }) {
                 <Eye size={16} />
             </IconButton>
 
-            {batch.is_active && (
+            {batch.is_active && canReturn && (
                 <IconButton
                     variant="ghost"
                     hitSize={32}

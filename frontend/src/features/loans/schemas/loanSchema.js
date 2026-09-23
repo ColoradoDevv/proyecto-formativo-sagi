@@ -25,7 +25,10 @@ function isValidDateString(value) {
 // Antes era un objeto estatico `loanSchema`; ahora es una funcion porque la
 // validacion de cantidad depende del stock disponible de cada material,
 // que solo se conoce en tiempo de ejecucion (viene de `materials`).
-export default function loanSchema(materials = [], { multipleMaterials = false, skipReceptorValidation = false } = {}) {
+// Objeto base sin refinamientos — permite .pick() por pasos en el wizard
+// (mismo patrón que cmBaseSchema / rmBaseSchema). La validación completa
+// con reglas cruzadas (receptor, stock) vive en el default loanSchema.
+export function loanBaseSchema(materials = [], { multipleMaterials = false } = {}) {
     const amountSchema = z
         .string()
         .trim()
@@ -95,12 +98,15 @@ export default function loanSchema(materials = [], { multipleMaterials = false, 
             .refine((value) => value >= getTodayDateString(), {
                 message: "La fecha de devolucion no puede ser anterior a hoy",
             }),
-    }).superRefine((data, ctx) => {
+    });
+}
+
+export default function loanSchema(materials = [], { multipleMaterials = false, skipReceptorValidation = false } = {}) {
+    return loanBaseSchema(materials, { multipleMaterials }).superRefine((data, ctx) => {
         // En edición, el receptor es de solo lectura (no se puede reasignar
         // ni cambiar su tipo registrado/externo desde este formulario) —
         // no tiene sentido volver a exigir estos campos ahí.
-        if (!skipReceptorValidation) {
-        if (data.receptorIsRegistered) {
+        if (!skipReceptorValidation) {        if (data.receptorIsRegistered) {
             if (!data.loanReceptorUser) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,

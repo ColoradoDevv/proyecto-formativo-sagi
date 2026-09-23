@@ -3,12 +3,15 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { House, Users, Wrench, Truck, Scroll, Settings, LogOut, X, ClipboardList, FileText, ListChecks, Boxes } from "lucide-react";
 import { logout } from "@/features/auth/services/authService";
 import { cancelAlert } from "@/shared";
-import { usePermissions } from "@/shared/hooks/usePermissions";
+import { usePermissions, MODULE_PERMS } from "@/shared/hooks/usePermissions";
 
 //
 // Mapa de módulos del menú lateral.
-// `requiredPerms`: basta con tener UNO de los codenames listados para ver el enlace.
-// Si la lista está vacía, el enlace es visible para cualquier usuario autenticado.
+// Cada enlace se muestra SOLO si el usuario tiene el permiso de VER
+// (listar) que el backend exige para ese módulo — tener solo create/edit
+// no muestra el módulo (antes bastaba cualquiera y el listado devolvía
+// "Permiso requerido").
+// Si la lista está vacía, el enlace es visible para cualquier autenticado.
 //
 const NAV_MODULES = [
     {
@@ -21,54 +24,43 @@ const NAV_MODULES = [
         to: "/usuarios",
         icon: <Users size={20} />,
         label: "Usuarios",
-        requiredPerms: ["view_user", "create_user", "edit_user", "delete_user", "list_users"],
+        requiredPerms: MODULE_PERMS.users.view,
     },
     {
         to: "/consumibles",
         icon: <Wrench size={20} />,
         label: "Consumibles",
-        requiredPerms: [
-            "view_consumable_material", "list_consumable_materials",
-            "create_consumable_material", "update_consumable_material",
-            "view_consumable", "create_consumable", "edit_consumable",
-        ],
+        requiredPerms: MODULE_PERMS.consumables.view,
     },
     {
         to: "/devolutivos",
         icon: <Scroll size={20} />,
         label: "Devolutivos",
-        requiredPerms: [
-            "view_returnable_material", "list_returnable_materials",
-            "create_returnable_material", "update_returnable_material",
-            "view_returnable", "create_returnable", "edit_returnable",
-        ],
+        requiredPerms: MODULE_PERMS.returnables.view,
     },
     {
         to: "/prestamos",
         icon: <Truck size={20} />,
         label: "Préstamos",
-        requiredPerms: ["view_loan", "create_loan", "edit_loan", "list_loans"],
+        requiredPerms: MODULE_PERMS.loans.view,
     },
     {
         to: "/cotizaciones",
         icon: <FileText size={20} />,
         label: "Cotizaciones",
-        requiredPerms: ["view_quotation", "create_quotation", "edit_quotation", "delete_quotation"],
+        requiredPerms: MODULE_PERMS.quotations.view,
     },
     {
         to: "/tareas",
         icon: <ListChecks size={20} />,
         label: "Tareas",
-        requiredPerms: [
-            "view_task", "create_task", "edit_task", "delete_task",
-            "view_task_assignment", "create_task_assignment", "edit_task_assignment", "delete_task_assignment",
-        ],
+        requiredPerms: MODULE_PERMS.tasks.view,
     },
     {
         to: "/inventarios",
         icon: <Boxes size={20} />,
         label: "Inventarios",
-        requiredPerms: ["view_inventory", "create_inventory", "edit_inventory", "delete_inventory"],
+        requiredPerms: MODULE_PERMS.inventories.view,
     },
 ];
 
@@ -138,8 +130,11 @@ function NavLinks({ onLinkClick, isCollapsed = false }) {
             </ul>
 
             <ul className="flex flex-col gap-1 pt-4 border-t border-border/50">
-                {/* Configuración */}
-                {(isSuper || canAny(["manage_groups", "manage_role_permissions", "create_role", "list_roles"])) && (
+                {/* Configuración: administración de roles/grupos o de catálogos
+                    (marcas, categorías, inventarios). Las pestañas internas se
+                    auto-filtran por permiso, así que aquí basta con tener
+                    alguna capacidad de gestión. */}
+                {(isSuper || canAny(["manage_groups", "manage_role_permissions", "create_role", "list_roles", "create_brand", "edit_brand", "create_category", "edit_category", "create_inventory", "edit_inventory"])) && (
                     <li>
                         <NavLink to="/configuracion" onClick={onLinkClick} className={linkClass} title="Configuración">
                             {({ isActive }) => renderNavContent(<Settings size={20} />, "Configuración", isActive)}

@@ -6,6 +6,8 @@ import { useEffect } from "react";
 
 // Imports Auth
 import { LoginPage, ProtectedRoute, ForgotPasswordPage, ResetPasswordPage, PrivacyNoticePage } from "@/features/auth"
+import { RequirePerms } from "@/features/auth/components/ProtectedRoute"
+import { MODULE_PERMS } from "@/shared/hooks/usePermissions"
 
 // Imports Inicio
 import { DashboardPage } from "@/features/dashboard";
@@ -62,36 +64,36 @@ export default function AppRouter() {
 
                 {/* CRUD de Usuario */}
                 <Route path="/usuarios" element={<MainLayout />}>
-                    <Route index element={<UserHomePage />} />
-                    <Route path="crear" element={<UserCreatePage />} />
-                    <Route path="visualizar/:id" element={<UserDetailPage />} />
-                    <Route path="editar/:id" element={<UserEditPage />} />
+                    <Route index element={<RequirePerms perms={MODULE_PERMS.users.view}><UserHomePage /></RequirePerms>} />
+                    <Route path="crear" element={<RequirePerms perms={MODULE_PERMS.users.create}><UserCreatePage /></RequirePerms>} />
+                    <Route path="visualizar/:id" element={<RequirePerms perms={MODULE_PERMS.users.view}><UserDetailPage /></RequirePerms>} />
+                    <Route path="editar/:id" element={<RequirePerms perms={MODULE_PERMS.users.edit}><UserEditPage /></RequirePerms>} />
                 </Route>
 
                 {/* CRUD de Materiales Consumibles */}
                 <Route path="/consumibles" element={<MainLayout />}>
-                    <Route index element={<CmHomePage />} />
-                    <Route path="crear" element={<CmCreatePage />} />
-                    <Route path="visualizar/:id" element={<CmDetailPage />} />
-                    <Route path="editar/:id" element={<CmEditPage />} />
+                    <Route index element={<RequirePerms perms={MODULE_PERMS.consumables.view}><CmHomePage /></RequirePerms>} />
+                    <Route path="crear" element={<RequirePerms perms={MODULE_PERMS.consumables.create}><CmCreatePage /></RequirePerms>} />
+                    <Route path="visualizar/:id" element={<RequirePerms perms={MODULE_PERMS.consumables.view}><CmDetailPage /></RequirePerms>} />
+                    <Route path="editar/:id" element={<RequirePerms perms={MODULE_PERMS.consumables.edit}><CmEditPage /></RequirePerms>} />
                 </Route>
 
                 {/* CRUD de Materiales Devolutivos */}
                 <Route path="/devolutivos" element={<MainLayout />}>
-                    <Route index element={<RmHomePage />} />
-                    <Route path="crear" element={<RmCreatePage />} />
-                    <Route path="visualizar/:id" element={<RmDetailPage />} />
-                    <Route path="editar/:id" element={<RmEditPage />} />
+                    <Route index element={<RequirePerms perms={MODULE_PERMS.returnables.view}><RmHomePage /></RequirePerms>} />
+                    <Route path="crear" element={<RequirePerms perms={MODULE_PERMS.returnables.create}><RmCreatePage /></RequirePerms>} />
+                    <Route path="visualizar/:id" element={<RequirePerms perms={MODULE_PERMS.returnables.view}><RmDetailPage /></RequirePerms>} />
+                    <Route path="editar/:id" element={<RequirePerms perms={MODULE_PERMS.returnables.edit}><RmEditPage /></RequirePerms>} />
                 </Route>
 
                 {/* CRUD de Prestamos */}
                 <Route path="/prestamos" element={<MainLayout />}>
-                    <Route index element={<LoansHomePage />} />
-                    <Route path="crear" element={<LoansCreatePage />} />
-                    <Route path="visualizar/:id" element={<LoansDetailPage />} />
-                    <Route path="editar/:id" element={<LoansEditPage />} />
-                    <Route path="lote/:batchId" element={<LoansDetailPage />} />
-                    <Route path="lote/:batchId/devolver" element={<BatchReturnPage />} />
+                    <Route index element={<RequirePerms perms={MODULE_PERMS.loans.view}><LoansHomePage /></RequirePerms>} />
+                    <Route path="crear" element={<RequirePerms perms={MODULE_PERMS.loans.create}><LoansCreatePage /></RequirePerms>} />
+                    <Route path="visualizar/:id" element={<RequirePerms perms={MODULE_PERMS.loans.view}><LoansDetailPage /></RequirePerms>} />
+                    <Route path="editar/:id" element={<RequirePerms perms={MODULE_PERMS.loans.edit}><LoansEditPage /></RequirePerms>} />
+                    <Route path="lote/:batchId" element={<RequirePerms perms={MODULE_PERMS.loans.view}><LoansDetailPage /></RequirePerms>} />
+                    <Route path="lote/:batchId/devolver" element={<RequirePerms perms={[...MODULE_PERMS.loans.view, ...MODULE_PERMS.loans.createReturn]} requireAll><BatchReturnPage /></RequirePerms>} />
                 </Route>
 
                 {/* Firma electrónica de préstamo — requiere sesión */}
@@ -99,17 +101,17 @@ export default function AppRouter() {
 
                 {/* CRUD de Cotizaciones (biblioteca de PDFs) */}
                 <Route path="/cotizaciones" element={<MainLayout />}>
-                    <Route index element={<QuotationsPage />} />
+                    <Route index element={<RequirePerms perms={MODULE_PERMS.quotations.view}><QuotationsPage /></RequirePerms>} />
                 </Route>
 
                 {/* Tareas (asignaciones y definiciones) */}
                 <Route path="/tareas" element={<MainLayout />}>
-                    <Route index element={<TaskHomePage />} />
+                    <Route index element={<RequirePerms perms={MODULE_PERMS.tasks.view}><TaskHomePage /></RequirePerms>} />
                 </Route>
 
                 {/* Inventarios (catálogo de nombres de inventario) */}
                 <Route path="/inventarios" element={<MainLayout />}>
-                    <Route index element={<InventoryHomePage />} />
+                    <Route index element={<RequirePerms perms={MODULE_PERMS.inventories.view}><InventoryHomePage /></RequirePerms>} />
                 </Route>
 
                 {/* Marcas: se gestionan desde la pestaña de configuración (modales) */}

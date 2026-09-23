@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, showAlert, cancelAlert, IconButton } from "@/shared";
+import { Button, showAlert, cancelAlert, IconButton, AccordionItem } from "@/shared";
 import { getStoredUser } from "@/shared/services/api";
-import loanSchema from "../../schemas/loanSchema";
+import loanSchema, { loanBaseSchema } from "../../schemas/loanSchema";
 import { createLoanDraft, getDraftStatus } from "../../services/loanService";
 import { getUsers, getMaterials } from "../../services/selectServices";
-import LoanForm from "../LoanForm";
-import { Undo2, CircleCheck, Clock } from "lucide-react";
+import { LoanMaterialCard, LoanReceptorCard, LoanDetailsCard, LoanJustificationCard } from "../LoanForm";
+import { Undo2, CircleCheck, Clock, Package, User, CalendarDays, FileText, CheckCircle2 } from "lucide-react";
 
 const POLL_INTERVAL_MS = 5000; // consultar cada 5 segundos
 
@@ -15,6 +15,13 @@ const LOAN_TYPE_OPTIONS = [
     { id: "Interno", label: "Interno" },
     { id: "Externo", label: "Externo" },
 ];
+
+// Agrupación por pasos — mismo patrón que UserRegisterForm / CmRegisterForm.
+// Solo cambia cómo se muestra el formulario; los campos y el submit son los mismos.
+const MATERIAL_FIELDS = ["loanMaterial", "loanMaterialQuantities"];
+const RECEPTOR_FIELDS = ["loanReceptorUser", "receptorIsRegistered", "receptorName", "receptorEmail", "receptorDataConsent"];
+const DETAILS_FIELDS = ["loanType", "loanGroup", "loanReturnDate"];
+const JUSTIFICATION_FIELDS = ["loanJustification"];
 
 function getTodayDateString() {
     const today = new Date();
@@ -36,6 +43,8 @@ export default function LoanRegisterForm() {
     const [submitting, setSubmitting] = useState(false);
     const [draftCreated, setDraftCreated] = useState(null);
     const [draftStatus, setDraftStatus]   = useState(null);
+    const [activeStep, setActiveStep] = useState(0);
+    const [completedSteps, setCompletedSteps] = useState([false, false, false, false]);
     const pollRef = useRef(null);
 
     const [formData, setFormData] = useState({
@@ -91,6 +100,92 @@ export default function LoanRegisterForm() {
         return () => clearInterval(pollRef.current);
     }, [draftCreated, navigate]);
 
+    const clearErrorsForFields = (fields) => {
+        setErrors((prev) => {
+            if (!prev || typeof prev !== "object") return prev;
+            const next = { ...prev };
+            fields.forEach((f) => { delete next[f]; });
+            return next;
+        });
+    };
+
+    const setErrorsForFields = (fields, fieldErrors) => {
+        setErrors((prev) => {
+            const next = { ...(prev || {}) };
+            fields.forEach((f) => { delete next[f]; });
+            return { ...next, ...fieldErrors };
+        });
+    };
+
+    const validateStep = (stepIndex) => {
+        // Se construye desde el mismo loanSchema del submit para no duplicar
+        // reglas ni modificar campos — el .pick conserva la validación base
+        // del paso; las reglas cruzadas (stock, receptor condicional) se
+        // verifican en el submit final, igual que en CmRegisterForm.
+        const full = loanBaseSchema(materials, { multipleMaterials: true });
+        const stepConfig = [
+            { schema: full.pick({ loanMaterial: true, loanMaterialQuantities: true }), fields: MATERIAL_FIELDS },
+            { schema: full.pick({ loanReceptorUser: true, receptorIsRegistered: true, receptorName: true, receptorEmail: true, receptorDataConsent: true }), fields: RECEPTOR_FIELDS },
+            { schema: full.pick({ loanType: true, loanGroup: true, loanReturnDate: true }), fields: DETAILS_FIELDS },
+            { schema: full.pick({ loanJustification: true }), fields: JUSTIFICATION_FIELDS },
+        ][stepIndex];
+
+        if (!stepConfig) return true;
+
+        const stepData = Object.fromEntries(
+            stepConfig.fields.map((f) => [f, formData[f]])
+        );
+
+        const result = stepConfig.schema.safeParse(stepData);
+        if (result.success) {
+            clearErrorsForFields(stepConfig.fields);
+            return true;
+        }
+
+        const fieldErrors = {};
+        result.error.issues.forEach((issue) => {
+            const field = issue.path[0];
+            if (field !== undefined && !(field in fieldErrors)) fieldErrors[field] = issue.message;
+        });
+        setErrorsForFields(stepConfig.fields, fieldErrors);
+        return false;
+    };
+
+    const goToStep = (targetIndex) => {
+        if (targetIndex === activeStep) return;
+        if (targetIndex < activeStep) {
+            setActiveStep(targetIndex);
+            return;
+        }
+
+        for (let i = activeStep; i < targetIndex; i++) {
+            const ok = validateStep(i);
+            if (!ok) {
+                setActiveStep(i);
+                return;
+            }
+            setCompletedSteps((prev) => {
+                const next = [...prev];
+                next[i] = true;
+                return next;
+            });
+        }
+        setActiveStep(targetIndex);
+    };
+
+    const nextStep = () => {
+        const ok = validateStep(activeStep);
+        if (!ok) return;
+        setCompletedSteps((prev) => {
+            const next = [...prev];
+            next[activeStep] = true;
+            return next;
+        });
+        setActiveStep((prev) => Math.min(prev + 1, 3));
+    };
+
+    const prevStep = () => setActiveStep((prev) => Math.max(prev - 1, 0));
+
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         if (name === "loanMaterial") {
@@ -137,6 +232,14 @@ export default function LoanRegisterForm() {
                 }
             });
             setErrors(fieldErrors);
+            const stepByField = {
+                ...Object.fromEntries(MATERIAL_FIELDS.map((f) => [f, 0])),
+                ...Object.fromEntries(RECEPTOR_FIELDS.map((f) => [f, 1])),
+                ...Object.fromEntries(DETAILS_FIELDS.map((f) => [f, 2])),
+                ...Object.fromEntries(JUSTIFICATION_FIELDS.map((f) => [f, 3])),
+            };
+            const stepCandidates = Object.keys(fieldErrors).map((f) => stepByField[f]).filter((v) => v != null);
+            if (stepCandidates.length) setActiveStep(Math.min(...stepCandidates));
             return;
         }
 
@@ -213,7 +316,7 @@ export default function LoanRegisterForm() {
         );
     }
 
-    // ── Formulario ────────────────────────────────────────────────────────
+    // ── Formulario por pasos ───────────────────────────────────────────────
     return (
         <div className="h-full text-text-primary flex flex-col gap-3">
             <div className="flex items-center gap-3">
@@ -223,27 +326,146 @@ export default function LoanRegisterForm() {
                 <h2 className="text-h2 text-text-primary font-heading">Crear Préstamo</h2>
             </div>
 
-            <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-6 w-full">
-                <LoanForm
-                    formData={formData}
-                    errors={errors}
-                    onChange={handleChange}
-                    users={users}
-                    materials={materials}
-                    multipleMaterials
-                    loan_type={LOAN_TYPE_OPTIONS}
-                    onMaterialQuantityChange={handleMaterialQuantityChange}
-                    loanDepartureDate={getTodayDateString()}
-                    hideResponsable
-                />
+            <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3">
+                    <AccordionItem
+                        title={
+                            <span className="flex items-center gap-3">
+                                <span className="size-9 rounded-[var(--radius-full)] border border-border bg-surface-muted flex items-center justify-center">
+                                    {completedSteps[0] ? <CheckCircle2 size={18} className="text-success" /> : <Package size={18} />}
+                                </span>
+                                <span className="flex flex-col leading-tight">
+                                    <span>Materiales</span>
+                                    <span className="text-small text-text-muted">Paso 1 de 4</span>
+                                </span>
+                            </span>
+                        }
+                        open={activeStep === 0}
+                        onToggle={() => goToStep(0)}
+                    >
+                        <div className="pt-4 flex flex-col gap-3">
+                            <LoanMaterialCard
+                                formData={formData}
+                                errors={errors}
+                                onChange={handleChange}
+                                materials={materials}
+                                multipleMaterials
+                                onMaterialQuantityChange={handleMaterialQuantityChange}
+                            />
+                            <div className="flex gap-3 justify-between">
+                                <Button type="button" variant="secondary" size="md" onClick={handleCancel} disabled={submitting}>
+                                    Cancelar
+                                </Button>
+                                <Button type="button" variant="primary" size="md" onClick={nextStep} disabled={submitting}>
+                                    Siguiente
+                                </Button>
+                            </div>
+                        </div>
+                    </AccordionItem>
 
-                <div className="flex gap-4 justify-center md:justify-end">
-                    <Button type="button" variant="secondary" size="md" onClick={handleCancel}>
-                        Cancelar
-                    </Button>
-                    <Button type="submit" variant="primary" size="md" disabled={submitting}>
-                        {submitting ? "Enviando..." : "Crear y enviar firmas"}
-                    </Button>
+                    <AccordionItem
+                        title={
+                            <span className="flex items-center gap-3">
+                                <span className="size-9 rounded-[var(--radius-full)] border border-border bg-surface-muted flex items-center justify-center">
+                                    {completedSteps[1] ? <CheckCircle2 size={18} className="text-success" /> : <User size={18} />}
+                                </span>
+                                <span className="flex flex-col leading-tight">
+                                    <span>Receptor</span>
+                                    <span className="text-small text-text-muted">Paso 2 de 4</span>
+                                </span>
+                            </span>
+                        }
+                        open={activeStep === 1}
+                        onToggle={() => goToStep(1)}
+                    >
+                        <div className="pt-4 flex flex-col gap-3">
+                            <LoanReceptorCard
+                                formData={formData}
+                                errors={errors}
+                                onChange={handleChange}
+                                users={users}
+                            />
+                            <div className="flex gap-3 justify-between">
+                                <Button type="button" variant="secondary" size="md" onClick={prevStep} disabled={submitting}>
+                                    Atrás
+                                </Button>
+                                <Button type="button" variant="primary" size="md" onClick={nextStep} disabled={submitting}>
+                                    Siguiente
+                                </Button>
+                            </div>
+                        </div>
+                    </AccordionItem>
+
+                    <AccordionItem
+                        title={
+                            <span className="flex items-center gap-3">
+                                <span className="size-9 rounded-[var(--radius-full)] border border-border bg-surface-muted flex items-center justify-center">
+                                    {completedSteps[2] ? <CheckCircle2 size={18} className="text-success" /> : <CalendarDays size={18} />}
+                                </span>
+                                <span className="flex flex-col leading-tight">
+                                    <span>Detalles</span>
+                                    <span className="text-small text-text-muted">Paso 3 de 4</span>
+                                </span>
+                            </span>
+                        }
+                        open={activeStep === 2}
+                        onToggle={() => goToStep(2)}
+                    >
+                        <div className="pt-4 flex flex-col gap-3">
+                            <LoanDetailsCard
+                                formData={formData}
+                                errors={errors}
+                                onChange={handleChange}
+                                loan_type={LOAN_TYPE_OPTIONS}
+                                loanDepartureDate={getTodayDateString()}
+                            />
+                            <div className="flex gap-3 justify-between">
+                                <Button type="button" variant="secondary" size="md" onClick={prevStep} disabled={submitting}>
+                                    Atrás
+                                </Button>
+                                <Button type="button" variant="primary" size="md" onClick={nextStep} disabled={submitting}>
+                                    Siguiente
+                                </Button>
+                            </div>
+                        </div>
+                    </AccordionItem>
+
+                    <AccordionItem
+                        title={
+                            <span className="flex items-center gap-3">
+                                <span className="size-9 rounded-[var(--radius-full)] border border-border bg-surface-muted flex items-center justify-center">
+                                    {completedSteps[3] ? <CheckCircle2 size={18} className="text-success" /> : <FileText size={18} />}
+                                </span>
+                                <span className="flex flex-col leading-tight">
+                                    <span>Justificación</span>
+                                    <span className="text-small text-text-muted">Paso 4 de 4</span>
+                                </span>
+                            </span>
+                        }
+                        open={activeStep === 3}
+                        onToggle={() => goToStep(3)}
+                    >
+                        <div className="pt-4 flex flex-col gap-3">
+                            <LoanJustificationCard
+                                formData={formData}
+                                errors={errors}
+                                onChange={handleChange}
+                            />
+                            <div className="flex gap-3 justify-between">
+                                <Button type="button" variant="secondary" size="md" onClick={prevStep} disabled={submitting}>
+                                    Atrás
+                                </Button>
+                                <div className="flex gap-3">
+                                    <Button type="button" variant="secondary" size="md" onClick={handleCancel} disabled={submitting}>
+                                        Cancelar
+                                    </Button>
+                                    <Button type="submit" variant="primary" size="md" disabled={submitting}>
+                                        {submitting ? "Enviando..." : "Crear y enviar firmas"}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </AccordionItem>
                 </div>
             </form>
         </div>

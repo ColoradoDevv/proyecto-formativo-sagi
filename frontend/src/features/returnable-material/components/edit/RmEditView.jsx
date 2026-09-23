@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, IconButton, StatusBadge, showAlert, cancelAlert, FileInput } from "@/shared";
+import { Button, IconButton, StatusBadge, showAlert, cancelAlert, FileInput, usePermissions } from "@/shared";
 import { mediaUrl } from "@/shared/services/api";
 import { Undo2, Pencil, ImageOff, FileText, Trash2, Plus } from "lucide-react";
 import useRm from "../../hooks/useRm";
@@ -18,6 +18,11 @@ import { useEffect } from "react";
 export default function RmEditView() {
     const { id } = useParams();
     const { RM, loading, error } = useRm(id);
+    const { isSuper, can } = usePermissions();
+    // El "+" inline solo aparece con su permiso de crear.
+    const canCreateBrand = isSuper || can("create_brand");
+    const canCreateInventory = isSuper || can("create_inventory");
+    const canCreateCategory = isSuper || can("create_category");
 
     const [categories, setCategories] = useState([]);
     const [brands,     setBrands]     = useState([]);
@@ -69,9 +74,9 @@ export default function RmEditView() {
             states={states}
             users={users}
             inventories={inventories}
-            onCreateBrand={handleCreateBrand}
-            onCreateInventory={handleCreateInventory}
-            onCreateCategory={handleCreateCategory}
+            onCreateBrand={canCreateBrand ? handleCreateBrand : null}
+            onCreateInventory={canCreateInventory ? handleCreateInventory : null}
+            onCreateCategory={canCreateCategory ? handleCreateCategory : null}
         />
     );
 }

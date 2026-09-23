@@ -6,15 +6,16 @@ import UserDetailView from "../../components/detail/UserDetailView";
 export default function UserDetailPage() {
     const { id } = useParams();
     const currentUser = getStoredUser();
-    const { isSuper } = usePermissions();
-    const isAdmin = isSuper || currentUser?.groups?.some(
-        (group) => String(group).trim().toUpperCase() === "ADMIN"
-    );
+    const { isSuper, can } = usePermissions();
+    // Puerta por PERMISO (no por nombre de grupo): con view_user se puede
+    // visualizar cualquier usuario; sin él, solo el perfil propio.
+    // El botón "Editar" dentro de UserDetailView sigue exigiendo edit_user.
+    const canView = isSuper || can("view_user");
     const isOwnProfile = String(currentUser?.id) === String(id);
 
     // El guard se ejecuta antes de montar UserDetailView, evitando incluso la
     // consulta de datos de otra cuenta desde una URL escrita manualmente.
-    if (!isAdmin && !isOwnProfile) {
+    if (!canView && !isOwnProfile) {
         return <Navigate to="/" replace />;
     }
 

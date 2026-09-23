@@ -9,7 +9,8 @@ import useLoanBatches from "../../hooks/useLoanBatches";
 
 export default function LoansListPage() {
     const navigate = useNavigate();
-    const { isAdmin } = usePermissions();
+    const { isAdmin, isSuper, can } = usePermissions();
+    const canCreate = isSuper || can("create_loan");
     const { batches, loading, error } = useLoanBatches();
 
     if (loading)
@@ -41,8 +42,8 @@ export default function LoansListPage() {
                     {isAdmin ? "Listado de Préstamos" : "Mis Préstamos"}
                 </h2>
 
-                <div className={isAdmin ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "flex justify-end"}>
-                    {isAdmin && (
+                <div className={canCreate ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "flex justify-end"}>
+                    {canCreate && (
                         <Link to="/prestamos/crear" className="w-full">
                             <Button className="w-full" variant="soft" icon={Plus}>
                                 Registrar Préstamo

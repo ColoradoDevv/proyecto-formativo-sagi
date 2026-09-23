@@ -108,6 +108,12 @@ class GroupViewSet(viewsets.ModelViewSet):
         # Agregar permiso al grupo
         group.permissions.add(permission)
 
+        # Invalidar caché de usuarios en este grupo (igual que
+        # remove_permission: si no, el permiso nuevo tarda hasta 5 min
+        # en reflejarse por PermissionService.CACHE_TIMEOUT).
+        for user_group in group.user_groups.all():
+            PermissionService.invalidate_user_cache(user_group.user.id)
+
         return Response(
             {
                 "message": f"Permiso '{permission.codename}' asignado al grupo '{group.name}'",

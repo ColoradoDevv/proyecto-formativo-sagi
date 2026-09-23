@@ -4,7 +4,7 @@ import { TailChase } from "ldrs/react";
 import { CloudAlert, Plus, Download } from "lucide-react";
 import Alert from "@mui/material/Alert";
 
-import { Button } from "@/shared";
+import { Button, usePermissions } from "@/shared";
 import DataTable from "@/shared/components/DataTable";
 import { RmColumns } from "../../table/RmColumns";
 import { returnablesReportConfig } from "../../reports/returnablesReportConfig.js";
@@ -12,6 +12,8 @@ import useRMs from "../../hooks/useRMs";
 
 export default function RmListPage() {
     const navigate = useNavigate();
+    const { isSuper, can } = usePermissions();
+    const canCreate = isSuper || can("create_returnable");
 
     const { RMs, setRMs, loading, error } = useRMs();
     const [notification, setNotification]   = useState(null);
@@ -49,11 +51,13 @@ export default function RmListPage() {
                     </Alert>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Link to="/devolutivos/crear" className="w-full">
-                        <Button className="w-full" variant="soft" icon={Plus}>
-                            Registrar Material
-                        </Button>
-                    </Link>
+                    {canCreate && (
+                        <Link to="/devolutivos/crear" className="w-full">
+                            <Button className="w-full" variant="soft" icon={Plus}>
+                                Registrar Material
+                            </Button>
+                        </Link>
+                    )}
                     <Button
                         data={RMs}
                         reportConfig={returnablesReportConfig}

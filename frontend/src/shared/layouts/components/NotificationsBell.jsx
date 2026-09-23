@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bell, ClipboardList, HandCoins, Inbox } from "lucide-react";
-import { usePermissions } from "@/shared/hooks/usePermissions";
+import { usePermissions, MODULE_PERMS } from "@/shared/hooks/usePermissions";
 import { useClickOutside } from "@/shared/hooks/useClickOutside";
 import { usePolling } from "@/shared/hooks/usePolling";
 import useRecentLoans from "@/features/dashboard/hooks/useRecentLoans";
@@ -22,10 +22,10 @@ const POLL_INTERVAL_MS = 30000;
 //   * Sin permisos para ninguna de las dos:
 //       no se renderiza (boton oculto en la navbar).
 export default function NotificationsBell() {
-    const { user, isSuper, can } = usePermissions();
+    const { user, isSuper, canAny } = usePermissions();
 
-    const canListLoans = isSuper || can("list_loans") || can("view_loan");
-    const canListTasks = isSuper || can("list_tasks") || can("view_task_assignment");
+    const canListLoans = isSuper || canAny(MODULE_PERMS.loans.view);
+    const canListTasks = isSuper || canAny(MODULE_PERMS.tasks.view);
 
     // Preferencia: panel de prestamos si hay permiso; si no, panel de tareas.
     const showAdminPanel = canListLoans;
