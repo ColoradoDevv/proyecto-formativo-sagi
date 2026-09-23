@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, SearchField, IconButton, ActiveSwitch } from "@/shared";
+import { Button, SearchField, IconButton, ActiveSwitch, usePermissions } from "@/shared";
 import { Plus, ArrowLeft, ArrowRight, Pencil, CloudAlert, Boxes, Archive } from "lucide-react";
 import { TailChase } from "ldrs/react";
 import Alert from "@mui/material/Alert";
@@ -9,6 +9,9 @@ import InventoryModal from "../../components/InventoryModal";
 
 export default function InventoryListPage() {
     const { inventories, setInventories, loading, error } = useInventories();
+    const { isSuper, can } = usePermissions();
+    const canCreate = isSuper || can("create_inventory");
+    const canEdit = isSuper || can("edit_inventory");
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(0);
     const [notification, setNotification] = useState(null);
@@ -116,14 +119,16 @@ export default function InventoryListPage() {
                         fullWidth
                         className="sm:w-full sm:flex-1"
                     />
-                    <Button
-                        onClick={openCreateModal}
-                        variant="soft"
-                        className="w-full sm:w-auto shrink-0"
-                    >
-                        <Plus size={18} />
-                        Registrar Inventario
-                    </Button>
+                    {canCreate && (
+                        <Button
+                            onClick={openCreateModal}
+                            variant="soft"
+                            className="w-full sm:w-auto shrink-0"
+                        >
+                            <Plus size={18} />
+                            Registrar Inventario
+                        </Button>
+                    )}
                 </div>
 
                 {/* Grid */}
@@ -140,20 +145,24 @@ export default function InventoryListPage() {
                                         <Boxes size={18} className="text-text-primary" />
                                     </span>
                                     <div className="flex items-center gap-1">
-                                        <IconButton
-                                            variant="ghost"
-                                            hitSize={32}
-                                            iconSize={16}
-                                            onClick={() => openInventoryModal(inventory, "edit")}
-                                            ariaLabel="Editar nombre de inventario"
-                                        >
-                                            <Pencil size={16} />
-                                        </IconButton>
-                                        <ActiveSwitch
-                                            id={inventory.id}
-                                            isActive={inventory.is_active}
-                                            toggleFn={handleToggle}
-                                        />
+                                        {canEdit && (
+                                            <IconButton
+                                                variant="ghost"
+                                                hitSize={32}
+                                                iconSize={16}
+                                                onClick={() => openInventoryModal(inventory, "edit")}
+                                                ariaLabel="Editar nombre de inventario"
+                                            >
+                                                <Pencil size={16} />
+                                            </IconButton>
+                                        )}
+                                        {canEdit && (
+                                            <ActiveSwitch
+                                                id={inventory.id}
+                                                isActive={inventory.is_active}
+                                                toggleFn={handleToggle}
+                                            />
+                                        )}
                                     </div>
                                 </div>
 

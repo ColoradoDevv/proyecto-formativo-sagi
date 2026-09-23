@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Undo2, FileText, ImageOff, Search } from "lucide-react";
-import { Button, IconButton, Input, StatusBadge, EditCard } from "@/shared";
+import { Button, IconButton, Input, StatusBadge, EditCard, usePermissions } from "@/shared";
 import { mediaUrl } from "@/shared/services/api";
 import useRm from "../../hooks/useRm";
 import { getRMById, getRMs } from "../../services/returnableService";
@@ -12,6 +12,8 @@ export default function RmDetailView() {
     const navigate = useNavigate();
     const { id } = useParams();
     const { RM: material, loading, error } = useRm(id);
+    const { isSuper, can } = usePermissions();
+    const canEdit = isSuper || can("edit_returnable");
     const [searchTerm, setSearchTerm] = useState("");
     const [matches, setMatches] = useState([]);
     const [searchError, setSearchError] = useState("");
@@ -269,9 +271,11 @@ export default function RmDetailView() {
                     <Button variant="secondary" size="md" onClick={() => navigate("/devolutivos")}>
                         Volver al listado
                     </Button>
-                    <Button variant="primary" size="md" onClick={() => navigate(`/devolutivos/editar/${material.consumable_id}`)}>
-                        Editar
-                    </Button>
+                    {canEdit && (
+                        <Button variant="primary" size="md" onClick={() => navigate(`/devolutivos/editar/${material.consumable_id}`)}>
+                            Editar
+                        </Button>
+                    )}
                 </div>
 
             </div>

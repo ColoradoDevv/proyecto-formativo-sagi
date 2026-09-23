@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, SearchField, IconButton, ActiveSwitch } from '@/shared';
+import { Button, SearchField, IconButton, ActiveSwitch, usePermissions } from '@/shared';
 import { Plus, ArrowLeft, ArrowRight, Pencil, CloudAlert, Tag, Award } from 'lucide-react';
 import { TailChase } from 'ldrs/react';
 import Alert from '@mui/material/Alert';
@@ -9,6 +9,9 @@ import BrandModal from '../../components/BrandModal';
 
 export default function BrandListPage() {
     const { brands, setBrands, loading, error } = useBrands();
+    const { isSuper, can } = usePermissions();
+    const canCreate = isSuper || can("create_brand");
+    const canEdit = isSuper || can("edit_brand");
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(0);
     const [notification, setNotification] = useState(null);
@@ -117,14 +120,16 @@ export default function BrandListPage() {
                         fullWidth
                         className="sm:w-full sm:flex-1"
                     />
-                    <Button
-                        onClick={openCreateModal}
-                        variant="soft"
-                        className="w-full sm:w-auto shrink-0"
-                    >
-                        <Plus size={18} />
-                        Registrar Marca
-                    </Button>
+                    {canCreate && (
+                        <Button
+                            onClick={openCreateModal}
+                            variant="soft"
+                            className="w-full sm:w-auto shrink-0"
+                        >
+                            <Plus size={18} />
+                            Registrar Marca
+                        </Button>
+                    )}
                 </div>
 
                 {/* Grid */}
@@ -141,20 +146,24 @@ export default function BrandListPage() {
                                         <Award size={18} className="text-text-primary" />
                                     </span>
                                     <div className="flex items-center gap-1">
-                                        <IconButton
-                                            variant="ghost"
-                                            hitSize={32}
-                                            iconSize={16}
-                                            onClick={() => openBrandModal(brand, 'edit')}
-                                            ariaLabel="Editar marca"
-                                        >
-                                            <Pencil size={16} />
-                                        </IconButton>
-                                        <ActiveSwitch
-                                            id={brand.id}
-                                            isActive={brand.is_active}
-                                            toggleFn={handleToggle}
-                                        />
+                                        {canEdit && (
+                                            <IconButton
+                                                variant="ghost"
+                                                hitSize={32}
+                                                iconSize={16}
+                                                onClick={() => openBrandModal(brand, 'edit')}
+                                                ariaLabel="Editar marca"
+                                            >
+                                                <Pencil size={16} />
+                                            </IconButton>
+                                        )}
+                                        {canEdit && (
+                                            <ActiveSwitch
+                                                id={brand.id}
+                                                isActive={brand.is_active}
+                                                toggleFn={handleToggle}
+                                            />
+                                        )}
                                     </div>
                                 </div>
 

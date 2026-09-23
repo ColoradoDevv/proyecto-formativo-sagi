@@ -32,7 +32,10 @@ function isValidDateString(value) {
 
 // Schema para CREACION. Usa la MISMA convencion de nombres que ReturnableForm
 // (name, senaPlate, brand, ...) para poder reutilizar el formulario.
-export const rmSchema = z.object({
+// rmBaseSchema es el objeto plano sin refinamientos — permite .pick() por
+// pasos en el wizard (mismo patrón que cmBaseSchema). rmSchema agrega las
+// reglas cruzadas (categoría, fechas, total) y es el que valida el submit.
+export const rmBaseSchema = z.object({
     senaPlate: z
         .string()
         .trim()
@@ -150,7 +153,10 @@ export const rmSchema = z.object({
         .array(z.string())
         .min(1, "Debes elegir al menos una cotización de la biblioteca")
         .max(3, "Máximo 3 cotizaciones por material"),
-}).superRefine((data, ctx) => {
+});
+
+// Validación completa de creación: base + reglas cruzadas.
+export const rmSchema = rmBaseSchema.superRefine((data, ctx) => {
     const categoryName = String(data.categoryName || "").trim().toLowerCase();
 
     // El ingreso al inventario no puede ser anterior a la compra.

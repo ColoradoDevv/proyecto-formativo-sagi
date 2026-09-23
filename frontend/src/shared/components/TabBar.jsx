@@ -10,13 +10,16 @@ function classNames(...classes) {
   return classes.filter(Boolean).join(' ');
 }
 
-// Pestanas que cualquier usuario autenticado puede ver.
-// Tareas e Inventarios viven ahora en el sidebar con rutas propias.
+// Pestanas base.
+// - Editar Perfil: cualquier autenticado.
+// - Marcas: requiere view_brand (el backend lo exige para listar).
+// - Roles y Permisos / Grupos: las mutaciones del backend exigen
+//   superusuario (IsSuperUser), así que solo se muestran a superusuarios.
 const BASE_TABS = [
-    { id: "profile",  label: "Editar Perfil",     panel: <ProfileEditPage /> },
-    { id: "brands",   label: "Marcas",            panel: <TmHomePage />        },
-    { id: "access",   label: "Roles y Permisos",  panel: <AccessPage />        },
-    { id: "groups",   label: "Grupos",            panel: <GroupManagement />   },
+    { id: "profile",  label: "Editar Perfil",     panel: <ProfileEditPage />, perm: [] },
+    { id: "brands",   label: "Marcas",            panel: <TmHomePage />,        perm: ["view_brand"] },
+    { id: "access",   label: "Roles y Permisos",  panel: <AccessPage />,        superOnly: true },
+    { id: "groups",   label: "Grupos",            panel: <GroupManagement />,   superOnly: true },
 ];
 
 // Pestana adicional reservada a administradores / usuarios con permiso
@@ -28,19 +31,25 @@ const CATEGORY_TAB = {
 };
 
 // Construye la lista de tabs visibles segun permisos.
-function buildTabs(canSeeCategories) {
-    // BASE_TABS tiene 4 items (indices 0..3). Inyectamos Categorias
-    // despues del tab "brands" (indice 1) para mantener un orden logico.
-    return canSeeCategories
-        ? [...BASE_TABS.slice(0, 2), CATEGORY_TAB, ...BASE_TABS.slice(2)]
-        : [...BASE_TABS];
+function buildTabs({ isSuper, can }) {
+    const visible = BASE_TABS.filter((tab) => {
+        if (tab.superOnly) return isSuper;
+        if (tab.perm?.length) return isSuper || tab.perm.some((c) => can(c));
+        return true;
+    });
+    // Inyectamos Categorias despues del tab "brands" para mantener un orden logico.
+    if (isSuper || can("view_category")) {
+        const idx = visible.findIndex((t) => t.id === "brands");
+        const at = idx >= 0 ? idx + 1 : visible.length;
+        visible.splice(at, 0, CATEGORY_TAB);
+    }
+    return visible;
 }
 
 export default function TabBar() {
     const { isSuper, can } = usePermissions();
-    const canSeeCategories  = isSuper || can("view_category");
 
-    const tabs = buildTabs(canSeeCategories);
+    const tabs = buildTabs({ isSuper, can });
 
     // El grid se ajusta dinamicamente al numero de tabs visibles para que
     // el ancho se reparta de forma pareja (4 o 5 columnas).

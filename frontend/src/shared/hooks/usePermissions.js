@@ -11,6 +11,67 @@ import { getStoredPermissions, getStoredUser } from "@/shared/services/api";
 // para que todos los componentes que usen este hook se re-rendericen.
 export const PERMISSIONS_UPDATED_EVENT = "sia:permissions-updated";
 
+//
+// Mapa central módulo → codenames EXIGIDOS por el backend.
+// Cada vista del backend valida UN codename por acción (ver
+// backend/modules/{users,products,loans,tasks}/views.py), así que aquí
+// solo figuran esos códigos — no los legacy (list_users, update_*,
+// disable_*, export_*) que el backend ya no verifica y que mostraban
+// módulos que luego devolvían "Permiso requerido".
+//
+// Convención:
+//   view   — ver listado y detalle del módulo (puerta del sidebar y dashboard)
+//   create — formulario de creación (puerta de accesos rápidos)
+//   edit   — formulario de edición
+//   remove — borrado
+//
+export const MODULE_PERMS = {
+    users: {
+        view:   ["view_user"],
+        create: ["create_user"],
+        edit:   ["edit_user"],
+        remove: ["delete_user"],
+    },
+    consumables: {
+        view:   ["view_consumable"],
+        create: ["create_consumable"],
+        edit:   ["edit_consumable"],
+        remove: [],
+    },
+    returnables: {
+        view:   ["view_returnable"],
+        create: ["create_returnable"],
+        edit:   ["edit_returnable"],
+        remove: [],
+    },
+    loans: {
+        view:   ["view_loan"],
+        create: ["create_loan"],
+        edit:   ["edit_loan"],
+        remove: [],
+        // Registrar una devolución (módulo returns).
+        createReturn: ["create_return"],
+    },
+    quotations: {
+        view:   ["view_quotation"],
+        create: ["create_quotation"],
+        edit:   ["edit_quotation"],
+        remove: ["delete_quotation"],
+    },
+    tasks: {
+        view:   ["view_task", "view_task_assignment"],
+        create: ["create_task", "create_task_assignment"],
+        edit:   ["edit_task", "edit_task_assignment"],
+        remove: ["delete_task", "delete_task_assignment"],
+    },
+    inventories: {
+        view:   ["view_inventory"],
+        create: ["create_inventory"],
+        edit:   ["edit_inventory"],
+        remove: ["delete_inventory"],
+    },
+};
+
 export function usePermissions() {
     const [permissions, setPermissions] = useState(() => getStoredPermissions());
     const [user, setUser]               = useState(() => getStoredUser());

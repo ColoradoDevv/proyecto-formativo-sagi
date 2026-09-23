@@ -1,9 +1,26 @@
-import { Switch } from "@/shared";
+import { Switch, StatusBadge, usePermissions } from "@/shared";
 import { joinCuentadantes } from "@/shared/utils/cuentadantes";
 import RmRowActions from "../components/list/RmRowActions";
 import { toggleRMActive } from "../services/returnableService";
 
 const EMPTY = "Sin cuentadante";
+
+// Sin edit_returnable, el backend rechazaría el PATCH de toggle_active con
+// un 403 — mostrar el estado como solo lectura en vez de un switch que
+// siempre terminaría fallando (mismo patrón que CmActiveSwitch).
+function RmActiveSwitch({ rm, onChange }) {
+    const { isSuper, can } = usePermissions();
+    if (!isSuper && !can("edit_returnable")) {
+        return <StatusBadge active={rm.is_active} />;
+    }
+    return (
+        <Switch
+            checked={rm.is_active}
+            onChange={onChange}
+            className="inline-flex"
+        />
+    );
+}
 
 export const RmColumns = (setRMs, setNotification) => [
     {
@@ -98,11 +115,7 @@ export const RmColumns = (setRMs, setNotification) => [
             };
 
             return (
-                <Switch
-                    checked={rm.is_active}
-                    onChange={handleChange}
-                    className="inline-flex"
-                />
+                <RmActiveSwitch rm={rm} onChange={handleChange} />
             );
         },
     },

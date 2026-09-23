@@ -5,6 +5,7 @@ import { deleteDefinition } from "../services/taskService";
 // Acciones de cada fila de definicion de tarea.
 export default function DefinitionRowActions({
     definition,
+    canEdit = true,
     canDelete,
     onView,
     onEdit,
@@ -31,9 +32,11 @@ export default function DefinitionRowActions({
 
     return (
         <div className="flex gap-1">
-            <IconButton onClick={() => onEdit?.(definition)} variant="ghost" hitSize={32} iconSize={16} title="Editar">
-                <Pencil size={16} />
-            </IconButton>
+            {canEdit && (
+                <IconButton onClick={() => onEdit?.(definition)} variant="ghost" hitSize={32} iconSize={16} title="Editar">
+                    <Pencil size={16} />
+                </IconButton>
+            )}
             <IconButton onClick={() => onView?.(definition)} variant="ghost" hitSize={32} iconSize={16} title="Ver">
                 <Eye size={16} />
             </IconButton>

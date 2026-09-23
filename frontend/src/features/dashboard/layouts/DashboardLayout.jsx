@@ -4,16 +4,17 @@ import QuickActions from "../components/QuickActions"
 import RecentActivity from "../components/RecentActivity"
 import { Wrench, Package, ClipboardList, UserRound } from "lucide-react"
 import { getDashboardSummary } from "@/features/loans/services/loanService";
-import { usePermissions } from "@/shared/hooks/usePermissions"
+import { usePermissions, MODULE_PERMS } from "@/shared/hooks/usePermissions"
 
 export default function DashboardLayout() {
     const { canAny, user } = usePermissions()
 
-    // Permisos reales en BD (0002) + codenames nuevos (0004)
-    const canSeeUsers       = canAny(["list_users", "view_user"])
-    const canSeeConsumables = canAny(["list_consumable_materials", "view_consumable_material", "view_consumable"])
-    const canSeeReturnables = canAny(["list_returnable_materials", "view_returnable_material", "view_returnable"])
-    const canSeeLoans       = canAny(["list_loans", "view_loan"])
+    // Cada tarjeta solo se muestra con el permiso de VER que el backend
+    // exige para ese módulo (misma puerta que el sidebar).
+    const canSeeUsers       = canAny(MODULE_PERMS.users.view)
+    const canSeeConsumables = canAny(MODULE_PERMS.consumables.view)
+    const canSeeReturnables = canAny(MODULE_PERMS.returnables.view)
+    const canSeeLoans       = canAny(MODULE_PERMS.loans.view)
 
     const [userCount,       setUserCount]       = useState(0)
     const [consumableCount, setConsumableCount] = useState(0)

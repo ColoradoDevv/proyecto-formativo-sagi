@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
     isAuthenticated,
     getToken,
     getStoredPermissions,
     setStoredPermissions,
 } from "@/shared/services/api";
+import { usePermissions } from "@/shared/hooks/usePermissions";
+import { Button } from "@/shared";
 
 //
 // Guard de rutas privadas.
@@ -53,4 +55,36 @@ export default function ProtectedRoute() {
     }
 
     return <Outlet />;
+}
+
+//
+// Guardia por permiso para rutas privadas.
+// Si el usuario no tiene NINGUNO de los codenames exigidos, muestra
+// "Sin permisos" en vez del contenido — así no se puede bypassear el
+// sidebar/dashboard navegando directo a la URL (ej. /usuarios/crear).
+// `requireAll`: exige TODOS los codenames en vez de cualquiera.
+//
+export function RequirePerms({ perms = [], requireAll = false, children }) {
+    const { can, canAny, isSuper } = usePermissions();
+    const navigate = useNavigate();
+
+    const allowed = requireAll
+        ? perms.every((c) => isSuper || can(c))
+        : perms.length === 0 || canAny(perms);
+
+    if (allowed) return <>{children}</>;
+
+    return (
+        <div className="h-full flex items-center justify-center p-6">
+            <div className="bg-surface-hover border border-border rounded-[var(--radius-2xl)] px-8 py-10 w-full max-w-md flex flex-col items-center gap-4 text-center animate-slide-up">
+                <h2 className="text-h2 font-heading text-text-primary">Sin permisos</h2>
+                <p className="text-small text-text-muted">
+                    No tienes permiso para acceder a esta sección. Si crees que es un error, contacta al administrador.
+                </p>
+                <Button type="button" variant="secondary" size="md" onClick={() => navigate(-1)}>
+                    Volver atrás
+                </Button>
+            </div>
+        </div>
+    );
 }

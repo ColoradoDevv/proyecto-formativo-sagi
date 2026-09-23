@@ -1,6 +1,199 @@
 import { Input, Select, TextArea, EditCard, CreateOptionButton, Checkbox, DataConsentCheckbox } from "@/shared";
 import MaterialPicker from "./MaterialPicker";
 
+// Cards independientes por paso (mismo patron que ConsumableForm /
+// ReturnableForm). Reutilizan los MISMOS campos — solo cambia como se
+// agrupan para el wizard de creacion por pasos (Accordion). El default
+// LoanForm de abajo se mantiene intacto para edicion.
+export function LoanMaterialCard({
+    formData,
+    errors = {},
+    onChange,
+    materials = [],
+    multipleMaterials = false,
+    onMaterialQuantityChange,
+}) {
+    return (
+        <EditCard title="Materiales" cols={1}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 w-full">
+                {multipleMaterials ? (
+                    <div className="sm:col-span-2">
+                        <MaterialPicker
+                            label="Materiales"
+                            name="loanMaterial"
+                            options={materials}
+                            value={formData.loanMaterial}
+                            quantities={formData.loanMaterialQuantities}
+                            error={errors.loanMaterial}
+                            quantityErrors={errors.loanMaterialQuantities}
+                            onChange={onChange}
+                            onQuantityChange={onMaterialQuantityChange}
+                            required
+                        />
+                    </div>
+                ) : (
+                    <Select
+                        label="Material"
+                        name="loanMaterial"
+                        options={materials}
+                        value={formData.loanMaterial}
+                        onChange={onChange}
+                        error={errors.loanMaterial}
+                        labelAction={<CreateOptionButton variant="spacer" />}
+                        required
+                    />
+                )}
+                {!multipleMaterials && (
+                    <Input
+                        label="Cantidad del Préstamo"
+                        name="loanAmount"
+                        placeholder="Ingrese la cantidad del préstamo"
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={formData.loanAmount}
+                        onChange={onChange}
+                        error={errors.loanAmount}
+                        labelAction={<CreateOptionButton variant="spacer" />}
+                        required
+                    />
+                )}
+            </div>
+        </EditCard>
+    );
+}
+
+export function LoanReceptorCard({ formData, errors = {}, onChange, users = [] }) {
+    return (
+        <EditCard title="Receptor" cols={1}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 w-full">
+                <div className="sm:col-span-2">
+                    <Checkbox
+                        id="receptorIsRegistered"
+                        name="receptorIsRegistered"
+                        label="El receptor está registrado en el sistema"
+                        checked={formData.receptorIsRegistered !== false}
+                        onChange={onChange}
+                    />
+                </div>
+                {formData.receptorIsRegistered !== false ? (
+                    <Select
+                        label="Usuario Receptor del Préstamo"
+                        name="loanReceptorUser"
+                        options={users}
+                        value={formData.loanReceptorUser}
+                        onChange={onChange}
+                        error={errors.loanReceptorUser}
+                        required
+                        labelAction={<CreateOptionButton variant="spacer" />}
+                    />
+                ) : (
+                    <>
+                        <Input
+                            label="Nombre completo del receptor"
+                            name="receptorName"
+                            placeholder="Nombre y apellido"
+                            value={formData.receptorName}
+                            onChange={onChange}
+                            error={errors.receptorName}
+                            required
+                        />
+                        <Input
+                            label="Correo del receptor"
+                            name="receptorEmail"
+                            type="email"
+                            placeholder="correo@ejemplo.com"
+                            value={formData.receptorEmail}
+                            onChange={onChange}
+                            error={errors.receptorEmail}
+                            required
+                        />
+                        <div className="sm:col-span-2">
+                            <DataConsentCheckbox
+                                id="receptorDataConsent"
+                                name="receptorDataConsent"
+                                variant="tercero"
+                                checked={formData.receptorDataConsent === true}
+                                onChange={onChange}
+                                error={errors.receptorDataConsent}
+                            />
+                        </div>
+                    </>
+                )}
+            </div>
+        </EditCard>
+    );
+}
+
+export function LoanDetailsCard({ formData, errors = {}, onChange, loan_type = [], loanDepartureDate = "" }) {
+    return (
+        <EditCard title="Detalles del préstamo" cols={1}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 w-full">
+                <Select
+                    label="Tipo de Préstamo"
+                    name="loanType"
+                    options={loan_type}
+                    value={formData.loanType}
+                    onChange={onChange}
+                    error={errors.loanType}
+                    labelAction={<CreateOptionButton variant="spacer" />}
+                    required
+                />
+                <Input
+                    label="Numero de Grupo o Ficha"
+                    name="loanGroup"
+                    placeholder="Ingrese su número de grupo o ficha"
+                    value={formData.loanGroup}
+                    onChange={onChange}
+                    error={errors.loanGroup}
+                    optional
+                    labelAction={<CreateOptionButton variant="spacer" />}
+                />
+                <Input
+                    label="Fecha de salida"
+                    type="date"
+                    value={loanDepartureDate}
+                    disabled
+                    labelAction={<CreateOptionButton variant="spacer" />}
+                    readOnly
+                />
+                <Input
+                    label="Fecha Devolución"
+                    name="loanReturnDate"
+                    type="date"
+                    value={formData.loanReturnDate}
+                    onChange={onChange}
+                    error={errors.loanReturnDate}
+                    labelAction={<CreateOptionButton variant="spacer" />}
+                    required
+                />
+            </div>
+        </EditCard>
+    );
+}
+
+export function LoanJustificationCard({ formData, errors = {}, onChange, extraSlot = null }) {
+    return (
+        <EditCard title="Justificación" cols={1}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 w-full">
+                {extraSlot}
+                <div className="sm:col-span-2">
+                    <TextArea
+                        label="Justificación de Uso"
+                        name="loanJustification"
+                        placeholder="Ingrese la justificación de uso"
+                        value={formData.loanJustification}
+                        onChange={onChange}
+                        error={errors.loanJustification}
+                        labelAction={<CreateOptionButton variant="spacer" />}
+                        required
+                    />
+                </div>
+            </div>
+        </EditCard>
+    );
+}
+
 // Campos de préstamo, reutilizables entre crear y editar.
 // PRESENTACIONAL: recibe formData/errors/onChange y las opciones de selects.
 // Props de control de usuarios:

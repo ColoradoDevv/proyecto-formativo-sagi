@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { TailChase } from "ldrs/react";
 import { ArrowRight, CloudAlert, ClipboardList, Lock, Package } from "lucide-react";
 import LoanStateBadge from "@/features/loans/components/LoanStateBadge";
-import { usePermissions } from "@/shared/hooks/usePermissions";
+import { usePermissions, MODULE_PERMS } from "@/shared/hooks/usePermissions";
 import useRecentLoans from "../hooks/useRecentLoans";
 
 // Resumen de los ultimos prestamos registrados para el panel de inicio.
@@ -10,8 +10,7 @@ import useRecentLoans from "../hooks/useRecentLoans";
 export default function RecentActivity() {
     const { canAny } = usePermissions();
 
-    // Codenames reales de BD (0002) + codenames nuevos (0004)
-    const canViewLoans = canAny(["view_loan", "list_loans"]);
+    const canViewLoans = canAny(MODULE_PERMS.loans.view);
 
     const { loans, loading, error } = useRecentLoans(canViewLoans ? 4 : 0);
 

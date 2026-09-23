@@ -22,8 +22,18 @@ export default function TaskListPage() {
     const canEditAssignment   = can("edit_task_assignment");
     const canDeleteAssignment = can("delete_task_assignment");
     const canDeleteDefinition = can("delete_task");
+    const canCreateAssignment = can("create_task_assignment");
+    const canCreateDefinition = can("create_task");
+    const canEditDefinition   = can("edit_task");
+    // La vista de definiciones exige view_task en el backend; sin él solo
+    // se muestran asignaciones (evita una tabla vacía por 403 silencioso).
+    const canViewDefs = can("view_task");
+    const canViewAsg  = can("view_task_assignment");
 
-    const [view, setView] = useState("assignments");
+    const [view, setView] = useState(canViewAsg ? "assignments" : "definitions");
+    const showToggle = canViewAsg && canViewDefs;
+    // Vista efectiva: nunca mostrar definiciones sin permiso.
+    const effectiveView = view === "definitions" && canViewDefs ? "definitions" : "assignments";
 
     const { definitions, setDefinitions, loading: loadingDefs } = useTaskDefinitions();
     const { assignments, setAssignments, loading: loadingAsg, error: errorAsg } =
@@ -69,7 +79,7 @@ export default function TaskListPage() {
         setAssignments((prev) => prev.filter((a) => a.id !== id));
     };
 
-    const loading = view === "assignments" ? loadingAsg : loadingDefs;
+    const loading = effectiveView === "assignments" ? loadingAsg : loadingDefs;
 
     if (loading)
         return (
@@ -105,6 +115,7 @@ export default function TaskListPage() {
         onEdit: setEditingDef,
         onDeleted: onDefDeleted,
         onManage: setPanelDef,
+        canEdit: canEditDefinition,
         canDelete: canDeleteDefinition,
     });
 
@@ -115,24 +126,30 @@ export default function TaskListPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <h2 className="text-h2 text-text-primary font-heading">Tareas</h2>
                 <div className="flex gap-3">
-                    {view === "assignments" ? (
+                    {effectiveView === "assignments" ? (
                         <>
-                            <Button className="flex gap-2" onClick={() => { setAsgScope("user"); setAsgModalOpen(true); }} variant="soft" icon={Plus}>
-                                Asignar a usuario
-                            </Button>
-                            <Button className="flex gap-2" onClick={() => { setAsgScope("group"); setAsgModalOpen(true); }} variant="soft" icon={Plus}>
-                                Asignar a grupo
-                            </Button>
+                            {canCreateAssignment && (
+                                <Button className="flex gap-2" onClick={() => { setAsgScope("user"); setAsgModalOpen(true); }} variant="soft" icon={Plus}>
+                                    Asignar a usuario
+                                </Button>
+                            )}
+                            {canCreateAssignment && (
+                                <Button className="flex gap-2" onClick={() => { setAsgScope("group"); setAsgModalOpen(true); }} variant="soft" icon={Plus}>
+                                    Asignar a grupo
+                                </Button>
+                            )}
                         </>
                     ) : (
-                        <Button className="flex gap-2" onClick={() => setDefModalOpen(true)} variant="soft" icon={Plus}>
-                            Crear tarea
-                        </Button>
+                        canCreateDefinition && (
+                            <Button className="flex gap-2" onClick={() => setDefModalOpen(true)} variant="soft" icon={Plus}>
+                                Crear tarea
+                            </Button>
+                        )
                     )}
                     <Button
-                        data={view === "assignments" ? assignments : definitions}
+                        data={effectiveView === "assignments" ? assignments : definitions}
                         reportConfig={
-                            view === "assignments"
+                            effectiveView === "assignments"
                                 ? tasksAssignmentsReportConfig
                                 : tasksDefinitionsReportConfig
                         }
@@ -144,7 +161,8 @@ export default function TaskListPage() {
                 </div>
             </div>
 
-            {/* Toggle de vista */}
+            {/* Toggle de vista (solo si hay permiso para ambas) */}
+            {showToggle && (
             <div className="inline-flex self-start rounded-[var(--radius-lg)] border border-border overflow-hidden">
                 <button
                     type="button"
@@ -173,9 +191,10 @@ export default function TaskListPage() {
                     Tareas (definiciones)
                 </button>
             </div>
+            )}
 
             {/* Tabla */}
-            {view === "assignments" ? (
+            {effectiveView === "assignments" ? (
                 <DataTable
                     data={assignments}
                     columns={asgCols}

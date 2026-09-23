@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { getBrands, getUsers, getInventories, getCategories, createBrand, createInventory, createCategory } from "@/shared/services/selectServices";
-import { FileInput, Button, showAlert, cancelAlert, ProfileFileInput, IconButton, AccordionItem, EditCard } from "@/shared";
+import { FileInput, Button, showAlert, cancelAlert, ProfileFileInput, IconButton, AccordionItem, EditCard, usePermissions } from "@/shared";
 import { cmBaseSchema, cmSchema } from "../../schemas/cmSchema";
 import { createCm } from "../../services/consumableService";
 import { ConsumableAccountableCard, ConsumableGeneralCard, ConsumableInventoryCard, ConsumableValuesCard } from "../ConsumableForm";
@@ -75,6 +75,12 @@ const supportStepSchema = cmBaseSchema.pick({
 export default function CmRegisterForm() {
 
     const navigate = useNavigate();
+    const { isSuper, can } = usePermissions();
+    // El "+" inline de marca/inventario/categoría solo aparece con su
+    // permiso de crear (el backend lo exige en cada POST).
+    const canCreateBrand = isSuper || can("create_brand");
+    const canCreateInventory = isSuper || can("create_inventory");
+    const canCreateCategory = isSuper || can("create_category");
     const [brands, setBrands] = useState([]);
     const [users, setUsers] = useState([]);
     const [inventories, setInventories] = useState([]);
@@ -343,9 +349,9 @@ export default function CmRegisterForm() {
                                 brands={brands}
                                 inventories={inventories}
                                 categories={categories}
-                                onCreateBrand={handleCreateBrand}
-                                onCreateInventory={handleCreateInventory}
-                                onCreateCategory={handleCreateCategory}
+                                onCreateBrand={canCreateBrand ? handleCreateBrand : null}
+                                onCreateInventory={canCreateInventory ? handleCreateInventory : null}
+                                onCreateCategory={canCreateCategory ? handleCreateCategory : null}
                             />
                             <div className="flex gap-3 justify-between">
                                 <Button type="button" variant="secondary" size="md" onClick={handleCancel}>

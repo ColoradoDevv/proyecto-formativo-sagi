@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Undo2, CloudAlert, Clock, CheckCircle2 } from "lucide-react";
-import { Button, IconButton, Input, TextArea, EditCard } from "@/shared";
+import { Button, IconButton, Input, TextArea, EditCard, usePermissions } from "@/shared";
 import useLoan from "../../hooks/useLoan";
 import ReturnLoanModal from "../ReturnLoanModal";
 import LoanStateBadge from "../LoanStateBadge";
@@ -12,6 +12,9 @@ export default function LoanDetailView() {
     const { id } = useParams();
     const { loan, loading, error } = useLoan(id);
     const [returnOpen, setReturnOpen] = useState(false);
+    const { isSuper, can } = usePermissions();
+    const canEdit = isSuper || can("edit_loan");
+    const canReturn = isSuper || can("create_return");
 
     if (loading)
         return (
@@ -193,14 +196,16 @@ export default function LoanDetailView() {
                     <Button variant="secondary" size="md" onClick={() => navigate("/prestamos")}>
                         Volver al listado
                     </Button>
-                    {loan.is_active && (
+                    {loan.is_active && canReturn && (
                         <Button variant="secondary" size="md" onClick={() => setReturnOpen(true)}>
                             Devolver material
                         </Button>
                     )}
-                    <Button variant="primary" size="md" onClick={() => navigate(`/prestamos/editar/${loan.id_loan}`)}>
-                        Editar
-                    </Button>
+                    {canEdit && (
+                        <Button variant="primary" size="md" onClick={() => navigate(`/prestamos/editar/${loan.id_loan}`)}>
+                            Editar
+                        </Button>
+                    )}
                 </div>
 
             </div>
