@@ -97,7 +97,7 @@ export default function LoginForm() {
 
                 {/* Error del servidor */}
                 {serverError && (
-                    <p className="text-error text-small text-center">{serverError}</p>
+                    <p className="text-error text-small text-center break-words">{serverError}</p>
                 )}
 
                 {/* Olvidó contraseña */}

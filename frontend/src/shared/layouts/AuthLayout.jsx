@@ -8,7 +8,7 @@ import senaLogoBlanco from "@/assets/images/sena/logo-sena-blanco.svg";
 // el formulario concreto (login, recuperar contraseña, etc.) llega como children.
 export default function AuthLayout({ children }) {
     return (
-        <div className="relative w-full h-screen overflow-hidden flex items-center justify-center">
+        <div className="relative w-full h-svh overflow-hidden flex items-center justify-center p-4">
 
             {/* Fondo */}
             <img
@@ -18,15 +18,16 @@ export default function AuthLayout({ children }) {
                 className="absolute inset-0 w-full h-full object-cover pointer-events-none transition dark:brightness-[0.38] dark:saturate-[0.8]"
             />
 
-            {/* Tarjeta glassmorphism — contiene TODO.
+            {/* Tarjeta glassmorphism — contiene TODO. Altura flexible: se
+                estira junto con el contenido (ej. mensajes de error largos)
+                sin recortarlo; con mínimo para presencia y tope al viewport.
                 En oscuro el fondo se atenúa (ver img) y la tarjeta se vuelve
-                más sólida para que el texto claro mantenga contraste AA. */}
+                más sólida para mantener contraste AA. */}
             <div className="
                 relative z-10
-                w-min max-w-md md:max-w-5xl
-                h-auto md:h-[85vh]
+                w-[min(28rem,100%)] h-auto min-h-[min(560px,100%)] max-h-full
                 rounded-[var(--radius-3xl)]
-                flex flex-row
+                flex flex-col
                 backdrop-blur-md
                 bg-surface-hover/55 dark:bg-surface-hover/85
                 border border-surface-hover/40 dark:border-border
@@ -48,11 +49,11 @@ export default function AuthLayout({ children }) {
                         />
                     </div>
 
-                {/* ── Lado derecho: formulario ── */}
-                <div className="relative grid items-center justify-center p-6 pt-20 sm:pt-24 md:p-0 ">
-                    <div className="w-full max-w-md px-8 py-10 sm:px-10">
-                        <div className="text-center mb-8">
-                            <h1 className="text-h1 font-heading font-bold text-text-primary select-none pb-4">
+                {/* ── Lado derecho: formulario fijo y centrado (sin scroll) ── */}
+                <div className="relative w-full flex-1 min-h-0 grid items-center justify-center px-4 py-3 sm:p-6 overflow-hidden">
+                    <div className="w-full max-w-md min-w-0 m-auto px-4 py-4 sm:px-8 sm:py-10">
+                        <div className="text-center mb-4 sm:mb-8">
+                            <h1 className="text-h1 font-heading font-bold text-text-primary select-none pb-2 sm:pb-4">
                                 SAGI
                             </h1>
                             <p className="-mt-6 text-medium text-text-secondary select-none">
