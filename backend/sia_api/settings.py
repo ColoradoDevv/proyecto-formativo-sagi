@@ -120,7 +120,9 @@ DATABASES = {
         # Si ENGINE es postgres, agregamos sslmode=require.
         'OPTIONS': {'sslmode': 'require'} if 'postgresql' in (os.getenv('DB_ENGINE') or '') else {},
         # Con PgBouncer en modo transaccion (puerto 6543) no mantener conexiones persistentes.
-        'CONN_MAX_AGE': 0,
+        # Reutilizar la conexión con Supabase entre peticiones (evita un
+        # handshake TLS nuevo en cada request contra el pooler).
+        'CONN_MAX_AGE': 60,
     }
 }
 

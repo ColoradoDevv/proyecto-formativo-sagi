@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Button, SearchField, IconButton, ActiveSwitch, usePermissions } from "@/shared";
+import { Button, SearchField, IconButton, ActiveSwitch, Notice, usePermissions } from "@/shared";
 import { Plus, ArrowLeft, ArrowRight, Pencil, CloudAlert, Boxes, Archive } from "lucide-react";
 import { TailChase } from "ldrs/react";
-import Alert from "@mui/material/Alert";
 import useInventories from "../../hooks/useInventories";
 import { toggleInventoryActive } from "../../services/inventoryService";
 import InventoryModal from "../../components/InventoryModal";
@@ -103,9 +102,9 @@ export default function InventoryListPage() {
             </div>
 
             {notification && (
-                <Alert severity={notification.severity} onClose={() => setNotification(null)}>
+                <Notice severity={notification.severity} onClose={() => setNotification(null)}>
                     {notification.message}
-                </Alert>
+                </Notice>
             )}
 
             {/* Toolbar */}

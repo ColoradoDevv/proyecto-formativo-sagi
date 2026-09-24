@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Button, SearchField, IconButton, ActiveSwitch, usePermissions } from '@/shared';
+import { Button, SearchField, IconButton, ActiveSwitch, Notice, usePermissions } from '@/shared';
 import { Plus, ArrowLeft, ArrowRight, Pencil, CloudAlert, Tag, Award } from 'lucide-react';
 import { TailChase } from 'ldrs/react';
-import Alert from '@mui/material/Alert';
 import useBrands from '../../hooks/useBrands';
 import { toggleBrandActive } from '../../services/brandService';
 import BrandModal from '../../components/BrandModal';
@@ -104,9 +103,9 @@ export default function BrandListPage() {
             </div>
 
             {notification && (
-                <Alert severity={notification.severity} onClose={() => setNotification(null)}>
+                <Notice severity={notification.severity} onClose={() => setNotification(null)}>
                     {notification.message}
-                </Alert>
+                </Notice>
             )}
 
             {/* Toolbar */}

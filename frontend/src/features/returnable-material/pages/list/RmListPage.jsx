@@ -2,9 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { TailChase } from "ldrs/react";
 import { CloudAlert, Plus, Download } from "lucide-react";
-import Alert from "@mui/material/Alert";
 
-import { Button, usePermissions } from "@/shared";
+import { Button, MODULE_PERMS, Notice, usePermissions } from "@/shared";
 import DataTable from "@/shared/components/DataTable";
 import { RmColumns } from "../../table/RmColumns";
 import { returnablesReportConfig } from "../../reports/returnablesReportConfig.js";
@@ -46,9 +45,9 @@ export default function RmListPage() {
                     Listado de Materiales Devolutivos
                 </h2>
                 {notification && (
-                    <Alert severity={notification.severity} onClose={() => setNotification(null)}>
+                    <Notice severity={notification.severity} onClose={() => setNotification(null)}>
                         {notification.message}
-                    </Alert>
+                    </Notice>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {canCreate && (

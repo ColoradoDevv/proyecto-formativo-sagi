@@ -11,10 +11,7 @@
     "start": "npm run dev"
   },
   "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
     "@headlessui/react": "^2.2.10",
-    "@mui/material": "^9.0.1",
     "@tailwindcss/vite": "^4.2.1",
     "@tanstack/react-table": "^8.21.3",
     "clsx": "^2.1.1",

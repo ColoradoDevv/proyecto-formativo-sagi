@@ -2,47 +2,56 @@
 
 // Rutas
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 
-// Imports Auth
+// Imports Auth (eager: primer pantallazo)
 import { LoginPage, ProtectedRoute, ForgotPasswordPage, ResetPasswordPage, PrivacyNoticePage } from "@/features/auth"
 import { RequirePerms } from "@/features/auth/components/ProtectedRoute"
 import { MODULE_PERMS } from "@/shared/hooks/usePermissions"
 
-// Imports Inicio
-import { DashboardPage } from "@/features/dashboard";
-
-// Imports Usuarios 
-import { UserHomePage, UserCreatePage, UserDetailPage, UserEditPage } from "@/features/users";
-
-// Imports Material de Consumo
-import { CmHomePage, CmCreatePage, CmDetailPage, CmEditPage } from "@/features/consumable-material";
-
-// Imports Material Devolutivo
-import { RmHomePage, RmCreatePage, RmDetailPage, RmEditPage } from "@/features/returnable-material";
-
-// Imports de Prestamos
-import { LoansHomePage, LoansCreatePage, LoansEditPage, LoansDetailPage, LoanSignPage, BatchReturnPage } from "@/features/loans";
-
-// Imports de Tareas
-import { TaskHomePage } from "@/features/tasks";
-
-// Imports de Inventarios (catálogo de nombres de inventario)
-import { InventoryHomePage } from "@/features/inventories";
-
-// Imports de Cotizaciones
-import { QuotationsPage } from "@/features/quotations";
-
-// Imports de Auditoría
-import { AuditLogPage } from "@/features/audit";
+// Páginas diferidas por módulo: cada una viaja en su propio chunk y solo
+// se descarga al navegar a ella (antes todo iba en un único JS de 1.7MB).
+const DashboardPage  = lazy(() => import("@/features/dashboard/pages/DashboardPage"));
+const UserHomePage   = lazy(() => import("@/features/users/pages/UserHomePage"));
+const UserCreatePage = lazy(() => import("@/features/users/pages/create/UserCreatePage"));
+const UserDetailPage = lazy(() => import("@/features/users/pages/detail/UserDetailPage"));
+const UserEditPage   = lazy(() => import("@/features/users/pages/edit/UserEditPage"));
+const CmHomePage     = lazy(() => import("@/features/consumable-material/pages/CmHomePage"));
+const CmCreatePage   = lazy(() => import("@/features/consumable-material/pages/create/CmCreatePage"));
+const CmDetailPage   = lazy(() => import("@/features/consumable-material/pages/detail/CmDetailPage"));
+const CmEditPage     = lazy(() => import("@/features/consumable-material/pages/edit/CmEditPage"));
+const RmHomePage     = lazy(() => import("@/features/returnable-material/pages/RmHomePage"));
+const RmCreatePage   = lazy(() => import("@/features/returnable-material/pages/create/RmCreatePage"));
+const RmDetailPage   = lazy(() => import("@/features/returnable-material/pages/detail/RmDetailPage"));
+const RmEditPage     = lazy(() => import("@/features/returnable-material/pages/edit/RmEditPage"));
+const LoansHomePage  = lazy(() => import("@/features/loans/pages/LoansHomePage"));
+const LoansCreatePage = lazy(() => import("@/features/loans/pages/create/LoansCreatePage"));
+const LoansEditPage  = lazy(() => import("@/features/loans/pages/edit/LoansEditPage"));
+const LoansDetailPage = lazy(() => import("@/features/loans/pages/detail/LoansDetailPage"));
+const LoanSignPage   = lazy(() => import("@/features/loans/pages/sign/LoanSignPage"));
+const BatchReturnPage = lazy(() => import("@/features/loans/pages/batch-return/BatchReturnPage"));
+const TaskHomePage   = lazy(() => import("@/features/tasks/pages/TaskHomePage"));
+const InventoryHomePage = lazy(() => import("@/features/inventories/pages/InventoryHomePage"));
+const QuotationsPage = lazy(() => import("@/features/quotations/pages/QuotationsPage"));
+const AuditLogPage   = lazy(() => import("@/features/audit/pages/AuditLogPage"));
 
 import { ConfigLayout, MainLayout } from "@/shared";
+
+// Carga diferida sin dependencias (no agranda el chunk inicial).
+function RouteFallback() {
+    return (
+        <div className="h-full min-h-[40vh] flex items-center justify-center" aria-label="Cargando">
+            <span className="size-10 rounded-full border-2 border-border-strong border-t-brand animate-spin" />
+        </div>
+    );
+}
 
 
 export default function AppRouter() {
     return (
         <>
             <PageTitle />
+            <Suspense fallback={<RouteFallback />}>
             <Routes>
             {/* ───────── Rutas PUBLICAS ───────── */}
             <Route path="/iniciar-sesion" element={<LoginPage />} />
@@ -130,6 +139,7 @@ export default function AppRouter() {
 
             </Route>
             </Routes>
+            </Suspense>
         </>
     );
 }
