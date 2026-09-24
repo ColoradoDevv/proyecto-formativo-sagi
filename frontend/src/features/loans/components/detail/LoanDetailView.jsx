@@ -165,30 +165,32 @@ export default function LoanDetailView() {
 
             <div className="flex flex-col gap-3">
 
-                {/* Información del Préstamo */}
+                {/* Personas */}
+                <EditCard title="Personas" cols={1}>
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3 min-w-0">
+                        <Input label="Usuario Responsable" value={loan.usuario_responsable ?? ""} disabled readOnly />
+                        <Input label="Usuario Receptor" value={loan.usuario_receptor ?? ""} disabled readOnly />
+                        <Input label="Documento del solicitante" value={loan.receptor_document ?? ""} disabled readOnly />
+                    </div>
+                </EditCard>
+
+                {/* Préstamo */}
                 <EditCard title="Información del Préstamo" cols={1}>
-                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
-
-                        {/* Campos del prestamo */}
-                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 min-w-0">
-                            <Input label="Usuario Responsable" value={loan.usuario_responsable ?? ""} disabled readOnly />
-                            <Input label="Usuario Receptor" value={loan.usuario_receptor ?? ""} disabled readOnly />
-                            <Input label="Material" value={loan.material ?? ""} disabled readOnly />
-                            <Input
-                                label="Tipo de material"
-                                value={loan.material_type === "devolutivo" ? "Material devolutivo" : "Material de consumo"}
-                                disabled
-                                readOnly
-                            />
-                            <Input label="Cantidad" value={loan.amount_lent ?? ""} disabled readOnly />
-                            <Input label="Grupo" value={loan.apprentice_group ?? ""} disabled readOnly />
-                            <Input label="Fecha de salida" value={loan.loan_date ?? ""} disabled readOnly />
-                            <Input label="Fecha Devolución" value={loan.return_date ?? ""} disabled readOnly />
-                            <div className="sm:col-span-2">
-                                <TextArea label="Justificación de Uso" value={loan.justification_use ?? ""} disabled readOnly />
-                            </div>
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3 min-w-0">
+                        <Input label="Material" value={loan.material ?? ""} disabled readOnly />
+                        <Input
+                            label="Tipo de material"
+                            value={loan.material_type === "devolutivo" ? "Material devolutivo" : "Material de consumo"}
+                            disabled
+                            readOnly
+                        />
+                        <Input label="Cantidad" value={loan.amount_lent ?? ""} disabled readOnly />
+                        <Input label="Grupo" value={loan.apprentice_group ?? ""} disabled readOnly />
+                        <Input label="Fecha de salida" value={loan.loan_date ?? ""} disabled readOnly />
+                        <Input label="Fecha Devolución" value={loan.return_date ?? ""} disabled readOnly />
+                        <div className="sm:col-span-3">
+                            <TextArea label="Justificación de Uso" value={loan.justification_use ?? ""} disabled readOnly />
                         </div>
-
                     </div>
                 </EditCard>
 

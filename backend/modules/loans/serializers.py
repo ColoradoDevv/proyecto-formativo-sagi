@@ -12,6 +12,8 @@ class LoanSerializer(serializers.ModelSerializer):
 
     usuario_responsable = serializers.SerializerMethodField()
     usuario_receptor    = serializers.SerializerMethodField()
+    # Documento del solicitante (registrado) o correo (externo sin cuenta).
+    receptor_document   = serializers.SerializerMethodField()
     material            = serializers.SerializerMethodField()
     material_type       = serializers.SerializerMethodField()
     is_active           = serializers.SerializerMethodField()
@@ -36,6 +38,7 @@ class LoanSerializer(serializers.ModelSerializer):
             'state',
             'usuario_responsable',
             'usuario_receptor',
+            'receptor_document',
             'material',
             'material_type',
             'is_active',
@@ -64,6 +67,11 @@ class LoanSerializer(serializers.ModelSerializer):
 
     def get_usuario_receptor(self, obj):
         return obj.receptor_display_name
+
+    def get_receptor_document(self, obj):
+        if obj.id_receptor_user_id and obj.id_receptor_user:
+            return obj.id_receptor_user.document_number or "—"
+        return obj.receptor_email or "—"
 
     def get_material(self, obj):
         return obj.id_material.name

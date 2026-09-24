@@ -60,12 +60,14 @@ export default function LoansListPage() {
                 </div>
             </div>
 
-            {/* Doble click navega al detalle del lote */}
+            {/* Doble click navega al detalle del lote (o al préstamo si no tiene lote) */}
             <DataTable
                 data={batches}
                 columns={columns}
                 onRowDoubleClick={(batch) =>
-                    navigate(`/prestamos/lote/${batch.batch_id}`)
+                    navigate(batch.batch_id
+                        ? `/prestamos/lote/${batch.batch_id}`
+                        : `/prestamos/visualizar/${batch.loans?.[0]?.id_loan}`)
                 }
             />
         </div>

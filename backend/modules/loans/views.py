@@ -1671,6 +1671,12 @@ class LoanBatchListView(APIView):
                     f"{first.id_responsable_user.first_name} {first.id_responsable_user.last_name}"
                 ),
                 'usuario_receptor': first.receptor_display_name,
+                'receptor_document': (
+                    first.id_receptor_user.document_number
+                    if first.id_receptor_user_id and first.id_receptor_user
+                    and first.id_receptor_user.document_number
+                    else (first.receptor_email or "—")
+                ),
                 'state':       batch_state,
                 'is_active':   batch_state == 'Activo',
                 'loan_count':  len(loans),
