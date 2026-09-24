@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { TailChase } from "ldrs/react";
-import { Undo2, AlertTriangle, CircleCheck } from "lucide-react";
+import { Undo2, AlertTriangle, CircleCheck, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { Button, IconButton, Input, TextArea, showAlert } from "@/shared";
 import { apiFetch } from "@/shared/services/api";
 import { returnLoan } from "../../services/returnService";
@@ -37,6 +37,10 @@ export default function BatchReturnPage() {
     const [submitting, setSubmitting] = useState(false);
     const [loading,    setLoading]    = useState(true);
     const [fetchError, setFetchError] = useState(null);
+    // Acordeón: solo se expande lo que se está trabajando (con 50 ítems la
+    // página seguiría siendo una lista compacta, sin scroll infinito).
+    const [expanded,   setExpanded]   = useState(() => new Set());
+    const expandedInitRef = useRef(false);
 
     // Cargar el lote
     useEffect(() => {
@@ -49,7 +53,14 @@ export default function BatchReturnPage() {
                 if (!found) throw new Error("Lote no encontrado.");
                 setBatch(found);
                 // Solo mostrar loans activos que pueden devolverse
-                setRows(found.loans.filter((l) => l.is_active).map(emptyRow));
+                const actives = found.loans.filter((l) => l.is_active).map(emptyRow);
+                setRows(actives);
+                // Expandir solo el primero para descubrir el patrón; el resto
+                // queda colapsado en filas compactas.
+                if (!expandedInitRef.current && actives.length > 0) {
+                    expandedInitRef.current = true;
+                    setExpanded(new Set([actives[0].loanId]));
+                }
             } catch (err) {
                 setFetchError(err);
             } finally {
@@ -88,6 +99,18 @@ export default function BatchReturnPage() {
         return errs;
     };
 
+    const toggleExpand = (loanId) => {
+        setExpanded((prev) => {
+            const next = new Set(prev);
+            if (next.has(loanId)) next.delete(loanId);
+            else next.add(loanId);
+            return next;
+        });
+    };
+
+    const expandAll = (list) => setExpanded(new Set(list.map((r) => r.loanId)));
+    const collapseAll = () => setExpanded(new Set());
+
     // Devolver un solo material del lote
     const handleReturnOne = async (row) => {
         const errs = validateRow(row);
@@ -123,7 +146,12 @@ export default function BatchReturnPage() {
             const errs = validateRow(row);
             if (Object.keys(errs).length) { allErrs[row.loanId] = errs; hasErr = true; }
         }
-        if (hasErr) { setErrors(allErrs); return; }
+        if (hasErr) {
+            setErrors(allErrs);
+            // Expandir las filas con errores para que se vean al instante.
+            setExpanded((prev) => new Set([...prev, ...Object.keys(allErrs).map(Number)]));
+            return;
+        }
 
         setSubmitting(true);
         const results = await Promise.allSettled(
@@ -202,113 +230,167 @@ export default function BatchReturnPage() {
                 </div>
             </div>
 
-            {/* Materiales pendientes */}
+            {/* Barra de progreso + expandir/colapsar */}
             {pendingRows.length > 0 && (
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between gap-3">
+                        <p className="text-small text-text-muted">
+                            {doneRows.length} de {rows.length} devuelto(s)
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => expanded.size === pendingRows.length ? collapseAll() : expandAll(pendingRows)}
+                            className="inline-flex items-center gap-1.5 text-small text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
+                        >
+                            <ChevronsUpDown size={14} />
+                            {expanded.size === pendingRows.length ? "Colapsar todo" : "Expandir todo"}
+                        </button>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-surface-muted overflow-hidden">
+                        <div
+                            className="h-full rounded-full bg-success transition-all duration-300"
+                            style={{ width: rows.length ? `${(doneRows.length / rows.length) * 100}%` : "0%" }}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Materiales pendientes (acordeón compacto) */}
+            {pendingRows.length > 0 && (
+                <div className="flex flex-col gap-2">
                     {pendingRows.map((row) => {
                         const rowErrs = errors[row.loanId] ?? {};
+                        const hasErrs = Object.keys(rowErrs).length > 0;
                         const isConsumo = row.materialType === "consumo";
                         const cMeta = CONDITION_META[row.materialCondition];
+                        const isOpen = expanded.has(row.loanId);
 
                         return (
                             <div
                                 key={row.loanId}
-                                className="rounded-[var(--radius-xl)] border border-border bg-surface-hover p-4 flex flex-col gap-4 animate-fade-in"
+                                className={`rounded-[var(--radius-xl)] border bg-surface-hover overflow-hidden animate-fade-in transition-colors ${hasErrs ? "border-error/50" : "border-border"}`}
                             >
-                                {/* Cabecera del material */}
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-body font-medium text-text-primary">{row.material}</p>
+                                {/* Cabecera compacta */}
+                                <button
+                                    type="button"
+                                    onClick={() => toggleExpand(row.loanId)}
+                                    aria-expanded={isOpen}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-muted/50 transition-colors cursor-pointer"
+                                >
+                                    <ChevronDown
+                                        size={18}
+                                        className={`shrink-0 text-text-muted transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-body font-medium text-text-primary truncate">{row.material}</p>
                                         <p className="text-small text-text-muted">
                                             {isConsumo ? "Consumo" : "Devolutivo"} · {row.amountLent} prestado(s)
                                         </p>
                                     </div>
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        disabled={submitting}
-                                        onClick={() => handleReturnOne(row)}
-                                    >
-                                        Devolver este
-                                    </Button>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* Cantidad */}
-                                    {isConsumo ? (
-                                        <Input
-                                            label="Cantidad sobrante"
-                                            type="number"
-                                            min="0"
-                                            step="1"
-                                            placeholder={`Máx ${row.amountLent}`}
-                                            value={row.leftoverQuantity}
-                                            onChange={(e) => updateRow(row.loanId, "leftoverQuantity", e.target.value)}
-                                            error={rowErrs.leftoverQuantity}
-                                            required
-                                        />
-                                    ) : (
-                                        <Input
-                                            label="Cantidad devuelta"
-                                            type="number"
-                                            min="1"
-                                            step="1"
-                                            placeholder={`Prestadas: ${row.amountLent}`}
-                                            value={row.returnedQuantity}
-                                            onChange={(e) => updateRow(row.loanId, "returnedQuantity", e.target.value)}
-                                            error={rowErrs.returnedQuantity}
-                                            required
-                                        />
+                                    {hasErrs && (
+                                        <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error-soft text-error text-small font-medium">
+                                            <AlertTriangle size={12} /> Revisar
+                                        </span>
                                     )}
+                                    <span className={`shrink-0 hidden sm:inline-flex items-center px-2 py-0.5 rounded-full border text-small font-medium ${cMeta.style} ${cMeta.bg}`}>
+                                        {row.materialCondition}
+                                    </span>
+                                </button>
 
-                                    {/* Observaciones */}
-                                    <TextArea
-                                        label="Observaciones"
-                                        placeholder="Estado del material…"
-                                        value={row.observations}
-                                        onChange={(e) => updateRow(row.loanId, "observations", e.target.value)}
-                                        optional
-                                    />
-                                </div>
-
-                                {/* Condición */}
-                                <div className="flex flex-col gap-2">
-                                    <p className="text-small font-medium text-text-primary">
-                                        Condición <span className="text-error">*</span>
-                                    </p>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {CONDITIONS.map((cond) => {
-                                            const m       = CONDITION_META[cond];
-                                            const checked = row.materialCondition === cond;
-                                            return (
-                                                <label
-                                                    key={cond}
-                                                    className={`flex flex-col gap-1 cursor-pointer rounded-[var(--radius-xl)] border-2 px-3 py-2 transition-all
-                                                        ${checked ? `${m.style} ${m.bg}` : "border-border text-text-secondary hover:border-text-muted"}`}
-                                                >
-                                                    <input
-                                                        type="radio"
-                                                        name={`condition-${row.loanId}`}
-                                                        value={cond}
-                                                        checked={checked}
-                                                        onChange={() => updateRow(row.loanId, "materialCondition", cond)}
-                                                        className="sr-only"
+                                {/* Detalle expandible */}
+                                <div className={`grid transition-[grid-template-rows,opacity] duration-200 ease-in-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"}`}>
+                                    <div className="overflow-hidden">
+                                        <div className="px-4 pb-4 flex flex-col gap-3">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                {/* Cantidad */}
+                                                {isConsumo ? (
+                                                    <Input
+                                                        label="Cantidad sobrante"
+                                                        type="number"
+                                                        min="0"
+                                                        step="1"
+                                                        placeholder={`Máx ${row.amountLent}`}
+                                                        value={row.leftoverQuantity}
+                                                        onChange={(e) => updateRow(row.loanId, "leftoverQuantity", e.target.value)}
+                                                        error={rowErrs.leftoverQuantity}
+                                                        required
                                                     />
-                                                    <span className="text-small font-medium">{m.label}</span>
-                                                </label>
-                                            );
-                                        })}
-                                    </div>
-                                    {row.materialCondition !== "Bueno" && (
-                                        <div className={`flex items-start gap-2 rounded-[var(--radius-xl)] border px-3 py-2 ${cMeta.style} ${cMeta.bg}`}>
-                                            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-                                            <p className="text-small">
-                                                {row.materialCondition === "Mantenimiento"
-                                                    ? "El material pasará a Mantenimiento para revisión técnica."
-                                                    : "El material será dado de baja permanentemente del inventario."}
-                                            </p>
+                                                ) : (
+                                                    <Input
+                                                        label="Cantidad devuelta"
+                                                        type="number"
+                                                        min="1"
+                                                        step="1"
+                                                        placeholder={`Prestadas: ${row.amountLent}`}
+                                                        value={row.returnedQuantity}
+                                                        onChange={(e) => updateRow(row.loanId, "returnedQuantity", e.target.value)}
+                                                        error={rowErrs.returnedQuantity}
+                                                        required
+                                                    />
+                                                )}
+
+                                                {/* Observaciones */}
+                                                <TextArea
+                                                    label="Observaciones"
+                                                    placeholder="Estado del material…"
+                                                    value={row.observations}
+                                                    onChange={(e) => updateRow(row.loanId, "observations", e.target.value)}
+                                                    optional
+                                                />
+                                            </div>
+
+                                            {/* Condición compacta */}
+                                            <div className="flex flex-col gap-2">
+                                                <p className="text-small font-medium text-text-primary">
+                                                    Condición <span className="text-error">*</span>
+                                                </p>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    {CONDITIONS.map((cond) => {
+                                                        const m       = CONDITION_META[cond];
+                                                        const checked = row.materialCondition === cond;
+                                                        return (
+                                                            <label
+                                                                key={cond}
+                                                                className={`flex items-center justify-center cursor-pointer rounded-[var(--radius-lg)] border px-2 py-1.5 text-small font-medium transition-all
+                                                                    ${checked ? `${m.style} ${m.bg}` : "border-border text-text-secondary hover:border-text-muted"}`}
+                                                            >
+                                                                <input
+                                                                    type="radio"
+                                                                    name={`condition-${row.loanId}`}
+                                                                    value={cond}
+                                                                    checked={checked}
+                                                                    onChange={() => updateRow(row.loanId, "materialCondition", cond)}
+                                                                    className="sr-only"
+                                                                />
+                                                                {m.label}
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                                {row.materialCondition !== "Bueno" && (
+                                                    <div className={`flex items-start gap-2 rounded-[var(--radius-lg)] border px-3 py-2 ${cMeta.style} ${cMeta.bg}`}>
+                                                        <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                                                        <p className="text-small">
+                                                            {row.materialCondition === "Mantenimiento"
+                                                                ? "El material pasará a Mantenimiento para revisión técnica."
+                                                                : "El material será dado de baja permanentemente del inventario."}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="flex justify-end">
+                                                <Button
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    disabled={submitting}
+                                                    onClick={() => handleReturnOne(row)}
+                                                >
+                                                    Devolver este
+                                                </Button>
+                                            </div>
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
                             </div>
                         );
