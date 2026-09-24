@@ -8,11 +8,29 @@ from .models import TaskDefinition, TaskAssignment
 
 class TaskDefinitionSerializer(serializers.ModelSerializer):
     # Serializer para la plantilla de tarea (TaskDefinition).
+    # assignments_count viene anotado desde el ViewSet (0 si no se anotó).
+    assignments_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = TaskDefinition
-        fields = ['id', 'name', 'description', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = ['id', 'name', 'description', 'created_at', 'assignments_count']
+        read_only_fields = ['id', 'created_at', 'assignments_count']
+
+
+class TaskEvidenceSerializer(serializers.ModelSerializer):
+    uploaded_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        from .models import TaskEvidence
+        model = TaskEvidence
+        fields = ['id', 'file', 'description', 'uploaded_by', 'uploaded_by_name', 'uploaded_at']
+        read_only_fields = ['id', 'uploaded_by', 'uploaded_at']
+
+    def get_uploaded_by_name(self, obj):
+        if not obj.uploaded_by:
+            return None
+        full = f"{obj.uploaded_by.first_name} {obj.uploaded_by.last_name}".strip()
+        return full or obj.uploaded_by.email
 
 
 class TaskAssignmentSerializer(serializers.ModelSerializer):
@@ -22,7 +40,10 @@ class TaskAssignmentSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
     group_name = serializers.SerializerMethodField()
     task_name = serializers.SerializerMethodField()
+    task_description = serializers.SerializerMethodField()
+    created_by_name = serializers.SerializerMethodField()
     recipient_name = serializers.CharField(read_only=True)
+    evidences = TaskEvidenceSerializer(many=True, read_only=True)
 
     class Meta:
         model = TaskAssignment
@@ -30,6 +51,7 @@ class TaskAssignmentSerializer(serializers.ModelSerializer):
             'id',
             'task',
             'task_name',
+            'task_description',
             'scope',
             'user',
             'user_name',
@@ -41,8 +63,15 @@ class TaskAssignmentSerializer(serializers.ModelSerializer):
             'end_date',
             'assigned_at',
             'completed_at',
+            'requires_evidence',
+            'created_by',
+            'created_by_name',
+            'evidences',
         ]
-        read_only_fields = ['id', 'assigned_at', 'completed_at', 'recipient_name']
+        read_only_fields = [
+            'id', 'assigned_at', 'completed_at', 'recipient_name',
+            'created_by', 'evidences',
+        ]
 
     def get_user_name(self, obj):
         if not obj.user:
@@ -55,6 +84,15 @@ class TaskAssignmentSerializer(serializers.ModelSerializer):
 
     def get_task_name(self, obj):
         return obj.task.name
+
+    def get_task_description(self, obj):
+        return obj.task.description
+
+    def get_created_by_name(self, obj):
+        if not obj.created_by:
+            return None
+        full = f"{obj.created_by.first_name} {obj.created_by.last_name}".strip()
+        return full or obj.created_by.email
 
     def validate(self, data):
         # Coherencia scope <-> destinatario.

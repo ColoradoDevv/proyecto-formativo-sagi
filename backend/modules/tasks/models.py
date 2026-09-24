@@ -8,6 +8,7 @@ from django.utils import timezone
 STATE_CHOICES = [
     ('Pendiente', 'Pendiente'),
     ('En progreso', 'En progreso'),
+    ('En revisión', 'En revisión'),
     ('Completada', 'Completada'),
     ('Cancelada', 'Cancelada'),
 ]
@@ -79,6 +80,21 @@ class TaskAssignment(models.Model):
     assigned_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
+    # Si es True, el asignado DEBE adjuntar evidencias al marcar como terminada.
+    requires_evidence = models.BooleanField(
+        default=False,
+        help_text="Exige evidencias (archivos/fotos) al finalizar la tarea.",
+    )
+
+    # Quién asignó la tarea (para notificarle la entrega/revisión).
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='created_task_assignments',
+        null=True,
+        blank=True,
+    )
+
     class Meta:
         db_table = 'AsignacionesTareas'
         verbose_name = 'Asignacion de tarea'
@@ -127,3 +143,43 @@ class TaskAssignment(models.Model):
             full = f"{self.user.first_name} {self.user.last_name}".strip()
             return full or self.user.email
         return ""
+
+    def assignee_emails(self):
+        """Correos de quienes tienen la tarea (usuario o miembros del grupo)."""
+        if self.scope == self.SCOPE_GROUP and self.group_id:
+            from modules.permissions.models import UserGroup
+            return list(
+                UserGroup.objects.filter(user__is_active=True, group_id=self.group_id)
+                .values_list("user__email", flat=True)
+                .distinct()
+            )
+        if self.user_id and self.user.is_active:
+            return [self.user.email]
+        return []
+
+
+class TaskEvidence(models.Model):
+    # Prueba adjunta a una asignación (foto, documento, etc.).
+    assignment = models.ForeignKey(
+        TaskAssignment,
+        on_delete=models.CASCADE,
+        related_name='evidences',
+    )
+    file = models.FileField(upload_to='task_evidence/%Y/%m/')
+    description = models.CharField(max_length=255, blank=True, default="")
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='task_evidences',
+        null=True,
+        blank=True,
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'EvidenciasTareas'
+        verbose_name = 'Evidencia de tarea'
+        verbose_name_plural = 'Evidencias de tareas'
+
+    def __str__(self):
+        return f"Evidencia {self.id} de asignación {self.assignment_id}"

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button, DataTable, usePermissions } from "@/shared";
+import { Button, DataTable, MODULE_PERMS, usePermissions } from "@/shared";
 import { Plus, ListChecks, ClipboardList, CloudAlert, Download } from "lucide-react";
 import { TailChase } from "ldrs/react";
 import "ldrs/react/TailChase.css";
@@ -10,6 +10,7 @@ import { assignmentColumns, definitionColumns } from "../table/taskColumns";
 import TaskDefinitionModal from "../components/TaskDefinitionModal";
 import TaskAssignmentModal from "../components/TaskAssignmentModal";
 import TaskAssignmentsPanel from "../components/TaskAssignmentsPanel";
+import SubmitTaskModal from "../components/SubmitTaskModal";
 import { tasksAssignmentsReportConfig, tasksDefinitionsReportConfig } from "../reports/tasksReportConfig";
 
 // Pagina principal de tareas.
@@ -18,26 +19,44 @@ import { tasksAssignmentsReportConfig, tasksDefinitionsReportConfig } from "../r
 //   - "definitions": una fila por definicion de tarea, con acceso al panel
 //     de asignaciones de esa definicion.
 export default function TaskListPage() {
-    const { can } = usePermissions();
+    const { can, canAny } = usePermissions();
     const canEditAssignment   = can("edit_task_assignment");
     const canDeleteAssignment = can("delete_task_assignment");
     const canDeleteDefinition = can("delete_task");
     const canCreateAssignment = can("create_task_assignment");
     const canCreateDefinition = can("create_task");
     const canEditDefinition   = can("edit_task");
-    // La vista de definiciones exige view_task en el backend; sin él solo
-    // se muestran asignaciones (evita una tabla vacía por 403 silencioso).
+    // Gestionar asignaciones de una definición (ver las de todos) exige el
+    // código global; sin él no se ofrece el panel ni el doble-click lo abre.
+    const canManageAssignments = can("view_task_assignment");
+    // Sin view_task_assignment global, el listado se limita a "las mías"
+    // (propias + las de mis grupos) vía ?scope=mine, que el backend permite
+    // sin el código. Así funciona por grupo, no solo por usuario suelto.
+    const canViewAllAsg = can("view_task_assignment");
+    // La vista de definiciones exige view_task en el backend; las
+    // asignaciones propias las puede ver cualquiera (el backend lo permite
+    // con ?scope=user&user=<yo>), así que "Mis tareas" es la entrada
+    // por defecto para todos.
     const canViewDefs = can("view_task");
     const canViewAsg  = can("view_task_assignment");
 
-    const [view, setView] = useState(canViewAsg ? "assignments" : "definitions");
-    const showToggle = canViewAsg && canViewDefs;
-    // Vista efectiva: nunca mostrar definiciones sin permiso.
-    const effectiveView = view === "definitions" && canViewDefs ? "definitions" : "assignments";
+    // Vista administrativa vs. vista normal: solo quien gestiona (ver todo,
+    // crear, editar o borrar) ve el toggle, destinatarios y botones de
+    // gestión. El asignado ve "Mis tareas": solo lo suyo, simple.
+    const isTaskManager =
+        canViewAllAsg || canCreateAssignment || canCreateDefinition ||
+        canEditAssignment || canDeleteAssignment || canEditDefinition || canDeleteDefinition;
+
+    const [view, setView] = useState("assignments");
+    const showToggle = isTaskManager && canViewDefs;
+    // Vista efectiva: definiciones solo en modo gestión con permiso.
+    const effectiveView = isTaskManager && view === "definitions" && canViewDefs ? "definitions" : "assignments";
+    // Reporte por vista (definiciones o asignaciones, cada uno con su código).
+    const canExport = canAny(effectiveView === "definitions" ? ["export_tasks"] : ["export_task_assignments"]);
 
     const { definitions, setDefinitions, loading: loadingDefs } = useTaskDefinitions();
     const { assignments, setAssignments, loading: loadingAsg, error: errorAsg } =
-        useTaskAssignments();
+        useTaskAssignments(canViewAllAsg ? {} : { scope: "mine" });
 
     const [users, setUsers] = useState([]);
     const [groups, setGroups] = useState([]);
@@ -55,6 +74,13 @@ export default function TaskListPage() {
 
     // Panel de asignaciones de una definicion
     const [panelDef, setPanelDef] = useState(null);
+
+    // Entrega de tarea por el asignado (pasa a "En revisión")
+    const [finishingAsg, setFinishingAsg] = useState(null);
+    const onAsgSubmitted = (updated) => {
+        setAssignments((prev) => prev.map((a) => (a.id === updated.id ? { ...a, ...updated } : a)));
+        setFinishingAsg(null);
+    };
 
     useEffect(() => {
         getUsers().then(setUsers).catch(() => setUsers([]));
@@ -105,16 +131,30 @@ export default function TaskListPage() {
     const asgCols = assignmentColumns({
         onView: setViewingAsg,
         onEdit: setEditingAsg,
+        onFinish: setFinishingAsg,
         onDeleted: onAsgDeleted,
         canEdit: canEditAssignment,
         canDelete: canDeleteAssignment,
+        canFinish: true,
+    });
+
+    // Vista normal del asignado: sin Tipo/Destinatario ni gestión.
+    const myTaskCols = assignmentColumns({
+        onView: setViewingAsg,
+        onEdit: undefined,
+        onFinish: setFinishingAsg,
+        onDeleted: onAsgDeleted,
+        canEdit: false,
+        canDelete: false,
+        canFinish: true,
+        simple: true,
     });
 
     const defCols = definitionColumns({
         onView: setViewingDef,
         onEdit: setEditingDef,
         onDeleted: onDefDeleted,
-        onManage: setPanelDef,
+        onManage: canManageAssignments ? setPanelDef : undefined,
         canEdit: canEditDefinition,
         canDelete: canDeleteDefinition,
     });
@@ -124,7 +164,10 @@ export default function TaskListPage() {
 
             {/* Encabezado */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <h2 className="text-h2 text-text-primary font-heading">Tareas</h2>
+                <h2 className="text-h2 text-text-primary font-heading">
+                    {isTaskManager ? "Tareas" : "Mis tareas"}
+                </h2>
+                {isTaskManager && (
                 <div className="flex gap-3">
                     {effectiveView === "assignments" ? (
                         <>
@@ -146,19 +189,22 @@ export default function TaskListPage() {
                             </Button>
                         )
                     )}
-                    <Button
-                        data={effectiveView === "assignments" ? assignments : definitions}
-                        reportConfig={
-                            effectiveView === "assignments"
-                                ? tasksAssignmentsReportConfig
-                                : tasksDefinitionsReportConfig
-                        }
-                        variant="primary"
-                        icon={Download}
-                    >
-                        Descargar Reporte
-                    </Button>
+                    {canExport && (
+                        <Button
+                            data={effectiveView === "assignments" ? assignments : definitions}
+                            reportConfig={
+                                effectiveView === "assignments"
+                                    ? tasksAssignmentsReportConfig
+                                    : tasksDefinitionsReportConfig
+                            }
+                            variant="primary"
+                            icon={Download}
+                        >
+                            Descargar Reporte
+                        </Button>
+                    )}
                 </div>
+                )}
             </div>
 
             {/* Toggle de vista (solo si hay permiso para ambas) */}
@@ -193,18 +239,18 @@ export default function TaskListPage() {
             </div>
             )}
 
-            {/* Tabla */}
+            {/* Tabla: doble-click abre visualización (como el resto de módulos) */}
             {effectiveView === "assignments" ? (
                 <DataTable
                     data={assignments}
-                    columns={asgCols}
+                    columns={isTaskManager ? asgCols : myTaskCols}
                     onRowDoubleClick={(row) => setViewingAsg(row)}
                 />
             ) : (
                 <DataTable
                     data={definitions}
                     columns={defCols}
-                    onRowDoubleClick={(row) => setPanelDef(row)}
+                    onRowDoubleClick={(row) => setViewingDef(row)}
                 />
             )}
 
@@ -264,6 +310,14 @@ export default function TaskListPage() {
                 definition={panelDef}
                 users={users}
                 groups={groups}
+            />
+
+            {/* Entrega de tarea por el asignado */}
+            <SubmitTaskModal
+                isOpen={Boolean(finishingAsg)}
+                onClose={() => setFinishingAsg(null)}
+                assignment={finishingAsg}
+                onSubmitted={onAsgSubmitted}
             />
         </div>
     );

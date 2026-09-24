@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { Input, Select, Button, Modal, showAlert } from "@/shared";
+import { Input, Select, Button, Checkbox, Modal, showAlert } from "@/shared";
+import { mediaUrl } from "@/shared/services/api";
+import { FileText } from "lucide-react";
 import { taskAssignmentSchema, TASK_STATES, ASSIGNMENT_SCOPES } from "../schemas/taskSchema";
 import { createAssignment, updateAssignment } from "../services/taskService";
 
@@ -11,6 +13,7 @@ const EMPTY_ASSIGNMENT = {
     taskState: "Pendiente",
     taskStartDate: "",
     taskEndDate: "",
+    requiresEvidence: false,
 };
 
 // Modal de creacion / edicion de la ASIGNACION de tarea a un destinatario
@@ -56,6 +59,7 @@ export default function TaskAssignmentModal({
                 taskState: assignment.state ?? "Pendiente",
                 taskStartDate: assignment.start_date ?? "",
                 taskEndDate: assignment.end_date ?? "",
+                requiresEvidence: assignment.requires_evidence === true,
             });
         } else {
             const initialScope = fixedUser
@@ -75,9 +79,9 @@ export default function TaskAssignmentModal({
     }, [assignment, isOpen, fixedUser, prefillDefinition, prefillScope]);
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
+        const { name, value, type, checked } = e.target;
         setFormData((prev) => {
-            const next = { ...prev, [name]: value };
+            const next = { ...prev, [name]: type === "checkbox" ? checked : value };
             // Al cambiar de scope, limpiamos el destinatario del scope contrario
             // para evitar mezclar valores y para que la validacion Zod no se confunda.
             if (name === "assignmentScope") {
@@ -268,6 +272,42 @@ export default function TaskAssignmentModal({
                         required
                     />
                 </div>
+
+                {!readOnly ? (
+                    <Checkbox
+                        id="requiresEvidence"
+                        name="requiresEvidence"
+                        label="Exigir evidencias al finalizar (archivos o fotos)"
+                        checked={formData.requiresEvidence === true}
+                        onChange={handleChange}
+                    />
+                ) : (
+                    assignment?.requires_evidence && (
+                        <p className="text-small text-text-muted">
+                            Esta tarea exige evidencias al finalizar.
+                        </p>
+                    )
+                )}
+
+                {readOnly && Array.isArray(assignment?.evidences) && assignment.evidences.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                        <p className="text-small font-medium text-text-primary">
+                            Evidencias adjuntas ({assignment.evidences.length})
+                        </p>
+                        {assignment.evidences.map((ev) => (
+                            <a
+                                key={ev.id}
+                                href={mediaUrl(ev.file)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] border border-border bg-surface-hover text-small text-brand hover:underline underline-offset-2 min-w-0"
+                            >
+                                <FileText size={14} className="shrink-0" />
+                                <span className="truncate">{ev.description || String(ev.file).split("/").pop()}</span>
+                            </a>
+                        ))}
+                    </div>
+                )}
             </form>
         </Modal>
     );
