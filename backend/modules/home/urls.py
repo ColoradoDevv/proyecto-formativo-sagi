@@ -7,4 +7,5 @@ from . import views
 urlpatterns = [
     path("", views.index, name="index"),
     path("api/dashboard/summary/", views.DashboardSummaryView.as_view(), name="dashboard-summary"),
+    path("api/support/email/", views.SupportEmailView.as_view(), name="support-email"),
 ]

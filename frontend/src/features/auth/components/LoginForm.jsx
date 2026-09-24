@@ -3,7 +3,7 @@ import { Eye, EyeOff, Asterisk } from "lucide-react";
 import { useState } from "react";
 import { loginSchemas } from "../schemas/loginSchemas";
 import { login } from "../services/authService";
-import { Button, Input } from "@/shared"
+import { Button, Input, SupportContact } from "@/shared"
 
 export default function LoginForm() {
     const navigate = useNavigate();
@@ -125,6 +125,9 @@ export default function LoginForm() {
                     </Link>
                     .
                 </p>
+
+                {/* Contacto con soporte (visible sin sesión) */}
+                <SupportContact compact />
             </form>
         </div>
     );
