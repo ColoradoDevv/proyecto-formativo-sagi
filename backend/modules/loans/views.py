@@ -1266,34 +1266,24 @@ class LoanDraftSignRequestOTPView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Invalidar OTPs previos del mismo batch/rol
-        SignOTP.objects.filter(
-            batch_id=uuid.UUID(batch_id),
-            user=request.user if request.user.is_authenticated else None,
-            role=role, used=False,
-        ).delete()
+        # Invalidar OTPs previos no usados del mismo lote/rol (en BD, para
+        # que sobrevivan reinicios y mult readers — ver migración 0015).
+        signer = request.user if request.user.is_authenticated else None
+        SignOTP.objects.filter(batch_id=uuid.UUID(batch_id), user=signer, role=role, used=False).delete()
 
-        # Generar OTP
+        # Generar OTP de 6 dígitos (persistido en BD, igual que el flujo clásico)
         code       = "".join(random.choices(string.digits, k=6))
         code_hash  = hashlib.sha256(code.encode()).hexdigest()
         expires_at = timezone.now() + datetime.timedelta(minutes=SignOTP.OTP_TTL_MINUTES)
 
-        # SignOTP necesita un loan FK; usamos None-safe: creamos un OTP "draft"
-        # apuntando al primer draft usando loan=None workaround via batch_id only.
-        # Como el modelo requiere loan, buscamos si ya existe un Loans con este
-        # batch_id (no debería); si no, reutilizamos el campo batch_id directamente.
-        # Solución: guardamos en loan el primer draft via un préstamo dummy... No.
-        # La solución limpia: el SignOTP del draft NO necesita FK a Loans.
-        # Usamos un campo batch_id + role sin loan apuntando a None.
-        # SignOTP.loan es FK con on_delete=CASCADE — no permite null.
-        # Por eso creamos un registro especial usando batch_id solamente via cache.
-        cache_key  = f"draft_otp_{batch_id}_{role}"
-        cache.set(cache_key, {
-            "code_hash":  code_hash,
-            "expires_at": expires_at.isoformat(),
-            "attempts":   0,
-            "user_id":    request.user.id,
-        }, timeout=SignOTP.OTP_TTL_MINUTES * 60 + 30)
+        SignOTP.objects.create(
+            loan=None,
+            batch_id=uuid.UUID(batch_id),
+            user=signer,
+            role=role,
+            code_hash=code_hash,
+            expires_at=expires_at,
+        )
 
         # Receptor externo: no hay User que leer, se usa lo capturado en el draft.
         if role == "receptor" and drafts[0].is_receptor_external:
@@ -1304,7 +1294,9 @@ class LoanDraftSignRequestOTPView(APIView):
         try:
             _send_draft_otp_email(otp_name, otp_email, code, drafts)
         except Exception:
-            cache.delete(cache_key)
+            SignOTP.objects.filter(
+                batch_id=uuid.UUID(batch_id), user=signer, role=role, used=False
+            ).delete()
             return Response(
                 {"error": "No se pudo enviar el código de verificación. Intenta nuevamente."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1329,7 +1321,8 @@ class LoanDraftSignView(APIView):
     POST /api/loans/draft/sign/
     Body: { "token": "<jwt draft_sign>", "otp_code": "123456" }
 
-    Valida OTP (almacenado en cache), registra la firma en el borrador.
+    Valida OTP (persistido en BD, igual que el flujo clásico), registra la
+    firma en el borrador.
     Cuando ambas partes firman, crea los registros Loans reales y marca
     los borradores como 'committed'.
     """
@@ -1417,52 +1410,52 @@ class LoanDraftSignView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # ── Validar OTP desde cache ───────────────────────────────────────
-        cache_key  = f"draft_otp_{batch_id}_{role}"
-        otp_entry  = cache.get(cache_key)
+        # ── Validar OTP desde BD (igual que el flujo clásico) ─────────────
+        signer = request.user if request.user.is_authenticated else None
+        otp_record = (
+            SignOTP.objects
+            .filter(batch_id=uuid.UUID(batch_id), user=signer, role=role, used=False)
+            .order_by('-created_at')
+            .first()
+        )
 
-        if otp_entry is None:
+        if otp_record is None or not otp_record.is_valid:
             _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
             return Response(
-                {"error": "El código no existe o ha expirado. Solicita uno nuevo."},
+                {"error": "El código no existe, expiró o fue invalidado. Solicita uno nuevo."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if otp_entry.get("user_id") != request.user.id:
+        if hashlib.sha256(otp_code.encode()).hexdigest() != otp_record.code_hash:
+            otp_record.attempts += 1
+            otp_record.save(update_fields=["attempts"])
             _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
-            return Response({"error": "El código no corresponde a tu usuario."}, status=status.HTTP_403_FORBIDDEN)
-
-        expires_dt = datetime.datetime.fromisoformat(otp_entry["expires_at"])
-        if expires_dt.tzinfo is None:
-            expires_dt = expires_dt.replace(tzinfo=datetime.timezone.utc)
-        if timezone.now() > expires_dt:
-            cache.delete(cache_key)
-            _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
-            return Response(
-                {"error": "El código ha expirado. Solicita uno nuevo."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        attempts = otp_entry.get("attempts", 0)
-        if attempts >= SignOTP.OTP_MAX_ATTEMPTS:
-            cache.delete(cache_key)
-            return Response(
-                {"error": "Límite de intentos superado. Solicita un nuevo código."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        if hashlib.sha256(otp_code.encode()).hexdigest() != otp_entry["code_hash"]:
-            otp_entry["attempts"] = attempts + 1
-            remaining = SignOTP.OTP_MAX_ATTEMPTS - otp_entry["attempts"]
-            ttl_left  = int((expires_dt - timezone.now()).total_seconds())
-            cache.set(cache_key, otp_entry, timeout=max(ttl_left, 1))
-            _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
+            remaining = SignOTP.OTP_MAX_ATTEMPTS - otp_record.attempts
             msg = (
                 f"Código incorrecto. Te quedan {remaining} intento(s)."
                 if remaining > 0
                 else "Código incorrecto. Límite de intentos superado. Solicita uno nuevo."
             )
             return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp_record.used = True
+        otp_record.save(update_fields=["used"])
+
+        # Re-validar stock al momento de firmar: pudo agotarse desde que se
+        # creó la solicitud (otro lote comprometido después). Sin esto dos
+        # lotes concurrentes podrían prestar más stock del disponible.
+        fresh_drafts = list(
+            LoanDraft.objects.select_related('id_material').filter(
+                batch_id=uuid.UUID(batch_id), state=LoanDraft.STATE_PENDING
+            )
+        )
+        stock_errors = _validate_draft_stock(fresh_drafts)
+        if stock_errors:
+            _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
+            return Response(
+                {"error": "Sin stock suficiente para completar la firma. " + " ".join(stock_errors)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # ── OTP correcto: registrar firma en todos los borradores del lote ─
         now        = timezone.now()
@@ -1552,8 +1545,7 @@ class LoanDraftSignView(APIView):
                 defaults={"expires_at": expires_at},
             )
 
-        # Limpiar OTP del cache
-        cache.delete(cache_key)
+        # El OTP ya quedó marcado used=True arriba; no hay caché que limpiar.
         _reset_rl(request, "draft_sign")
 
         # Auditoría
