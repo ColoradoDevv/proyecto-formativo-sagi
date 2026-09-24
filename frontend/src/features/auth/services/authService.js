@@ -1,4 +1,4 @@
-import { setSession, clearSession, setStoredPermissions } from "@/shared/services/api";
+import { setSession, clearSession, setStoredPermissions, broadcastNewLogin } from "@/shared/services/api";
 
 // METODO POST - inicia sesion y guarda el token
 export async function login(email, password) {
@@ -20,6 +20,8 @@ export async function login(email, password) {
 
     // Guardamos token + datos del usuario en la sesion
     setSession(data.token, data.user);
+    // Avisar a otras pestañas: si eran del mismo usuario, se cierran solas.
+    broadcastNewLogin(data.user?.id);
 
     // Obtenemos los codenames de permiso del usuario y los guardamos
     if (!data.user?.must_change_password) {

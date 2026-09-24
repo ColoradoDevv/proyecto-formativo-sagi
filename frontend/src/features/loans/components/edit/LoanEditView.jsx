@@ -71,7 +71,7 @@ function LoanEditForm({ loan, users, materials }) {
     async function handleSubmit(e) {
         e.preventDefault();
 
-        const schema = loanSchema(materials, { skipReceptorValidation: true });
+        const schema = loanSchema(materials, { skipReceptorValidation: true, originalReturnDate: loan.return_date ?? null });
         const result = schema.safeParse(formData);
 
         if (!result.success) {

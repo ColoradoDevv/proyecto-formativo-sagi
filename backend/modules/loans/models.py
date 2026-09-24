@@ -350,7 +350,9 @@ class SignOTP(models.Model):
         Loans,
         on_delete=models.CASCADE,
         related_name='otps',
-        help_text='Préstamo representativo del lote al que pertenece este OTP.',
+        null=True,
+        blank=True,
+        help_text='Préstamo representativo del lote. Null en OTPs de borrador (el Loans aún no existe).',
     )
     # Cuando el OTP cubre un lote completo este campo almacena el UUID del lote.
     # Para préstamos individuales también se rellena (batch_id == loan.batch_id).
@@ -364,7 +366,9 @@ class SignOTP(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='sign_otps',
-        help_text='Usuario que debe ingresar el código.',
+        null=True,
+        blank=True,
+        help_text='Usuario que debe ingresar el código. Null para receptor externo (sin cuenta).',
     )
     role = models.CharField(
         max_length=20,

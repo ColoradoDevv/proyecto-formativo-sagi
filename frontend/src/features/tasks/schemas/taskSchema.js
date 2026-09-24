@@ -17,9 +17,13 @@ function isValidDateString(value) {
 export const TASK_STATES = [
     { id: "Pendiente", label: "Pendiente" },
     { id: "En progreso", label: "En progreso" },
+    { id: "En revisión", label: "En revisión" },
     { id: "Completada", label: "Completada" },
     { id: "Cancelada", label: "Cancelada" },
 ];
+
+// Estados desde los que el asignado puede marcar su tarea como terminada.
+export const FINISHABLE_STATES = ["Pendiente", "En progreso"];
 
 // Alcance del destinatario de la asignacion.
 export const ASSIGNMENT_SCOPES = [
@@ -77,6 +81,8 @@ export const taskAssignmentSchema = z.object({
         .string()
         .min(1, "Debe ingresar una fecha de finalizacion")
         .refine(isValidDateString, { message: "Debe ingresar una fecha valida" }),
+
+    requiresEvidence: z.boolean().optional().default(false),
 })
 .refine(
     (data) => !data.taskStartDate || !data.taskEndDate || data.taskEndDate >= data.taskStartDate,

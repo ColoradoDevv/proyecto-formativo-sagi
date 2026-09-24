@@ -6,6 +6,56 @@
 const TOKEN_KEY = "sia_token";
 const USER_KEY = "sia_user";
 const PERMISSIONS_KEY = "sia_permissions";
+// Motivo del último cierre de sesión por 401 (ej. "otro dispositivo").
+// Vive aparte para sobrevivir al clearSession y que el modal lo muestre.
+const EXPIRED_REASON_KEY = "sia_expired_reason";
+// Identificador de esta pestaña/ventana (vive en sessionStorage, que es
+// por pestaña) y canal para avisar entre pestañas del mismo navegador.
+const TAB_ID_KEY = "sia_tab_id";
+const SESSION_CHANNEL = "sia_session";
+
+export function getTabId() {
+    let id = null;
+    try {
+        id = sessionStorage.getItem(TAB_ID_KEY);
+        if (!id) {
+            id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+            sessionStorage.setItem(TAB_ID_KEY, id);
+        }
+    } catch {
+        id = `mem-${Math.random().toString(36).slice(2)}`;
+    }
+    return id;
+}
+
+// Avisa a las demás pestañas del mismo navegador que este usuario inició
+// sesión aquí. Las que sean del mismo usuario y otra pestaña se cierran
+// solas al instante, sin esperar a su próxima petición (el 401 del backend
+// sigue como respaldo entre dispositivos distintos).
+export function broadcastNewLogin(userId) {
+    try {
+        new BroadcastChannel(SESSION_CHANNEL).postMessage({
+            type: "sia:new-login",
+            userId: userId != null ? String(userId) : null,
+            tabId: getTabId(),
+        });
+    } catch {
+        // Sin BroadcastChannel (navegador viejo): el 401 perezoso cubre.
+    }
+}
+
+export function watchNewLogins(onNewLogin) {
+    let channel = null;
+    try {
+        channel = new BroadcastChannel(SESSION_CHANNEL);
+        channel.onmessage = (event) => onNewLogin?.(event.data);
+    } catch {
+        channel = null;
+    }
+    return () => {
+        try { channel?.close(); } catch { /* noop */ }
+    };
+}
 
 // --- Manejo de la sesion en sessionStorage ---
 
@@ -16,6 +66,7 @@ export function getToken() {
 export function setSession(token, user) {
     sessionStorage.setItem(TOKEN_KEY, token);
     sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+    sessionStorage.removeItem(EXPIRED_REASON_KEY);
     window.dispatchEvent(new CustomEvent("sia:session-updated"));
 }
 
@@ -48,6 +99,18 @@ export function setStoredPermissions(permissions) {
 export function getStoredPermissions() {
     const raw = sessionStorage.getItem(PERMISSIONS_KEY);
     return raw ? JSON.parse(raw) : [];
+}
+
+export function setExpiredReason(reason) {
+    if (reason) sessionStorage.setItem(EXPIRED_REASON_KEY, reason);
+}
+
+export function getExpiredReason() {
+    return sessionStorage.getItem(EXPIRED_REASON_KEY);
+}
+
+export function clearExpiredReason() {
+    sessionStorage.removeItem(EXPIRED_REASON_KEY);
 }
 
 export function isAuthenticated() {
@@ -150,6 +213,17 @@ export async function apiFetch(url, options = {}) {
     // y ProtectedRoute redirija si se recarga la página.
     if (response.status === 401) {
         const alreadyExpired = !getToken(); // ya fue limpiado por una petición anterior
+        // Guardar el motivo del backend (ej. sesión reemplazada por otro
+        // login) para que el modal lo muestre en vez del texto genérico.
+        try {
+            const data = await response.clone().json();
+            const detail = data?.detail;
+            if (detail && /otro dispositivo|otra ventana/i.test(detail)) {
+                setExpiredReason(detail);
+            }
+        } catch {
+            // Sin body JSON: el modal usará el texto genérico.
+        }
         clearSession();
         if (!alreadyExpired) {
             // Solo disparamos el evento la primera vez que detectamos el 401

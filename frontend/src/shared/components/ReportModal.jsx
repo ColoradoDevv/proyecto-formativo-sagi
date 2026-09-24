@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FileText, TableProperties } from "lucide-react";
-import { buildReportDataset } from "@/shared/reports/buildReportDataset";
+import { buildReportDataset, getFieldValue } from "@/shared/reports/buildReportDataset";
 import { generateExcelReport } from "@/shared/reports/generateExcelReport";
 import { generatePdfReport } from "@/shared/reports/generatePdfReport";
 import { getStoredUser } from "@/shared/services/api";
@@ -8,6 +8,7 @@ import Button from "./Button";
 import Checkbox from "./Checkbox";
 import Input from "./Input";
 import Modal from "./Modal";
+import Select from "./Select";
 
 const FORMAT_OPTIONS = [
     { value: "pdf",   label: "PDF",   Icon: FileText },
@@ -24,6 +25,7 @@ export default function ReportModal({
     onClose,
     data = [],
     fields = [],
+    filters = [],
     reportTitle = "Reporte",
     fileNamePrefix = "reporte",
 }) {
@@ -31,6 +33,7 @@ export default function ReportModal({
     const [selectedFields, setSelectedFields] = useState([]);
     const [scope, setScope] = useState("all");
     const [filterValue, setFilterValue] = useState("");
+    const [columnFilters, setColumnFilters] = useState({});
 
     // Reinicia el estado al pasar de cerrado a abierto, ajustando el estado
     // durante el render (patrón recomendado por React, sin efecto en cascada).
@@ -41,9 +44,20 @@ export default function ReportModal({
         setSelectedFields(fields.filter((f) => f.default));
         setScope("all");
         setFilterValue("");
+        setColumnFilters({});
     } else if (!isOpen && wasOpen) {
         setWasOpen(false);
     }
+
+    // Opciones de cada filtro por columna, derivadas de los datos cargados.
+    const filterOptions = (filter) => {
+        const values = new Set();
+        for (const item of data) {
+            const v = getFieldValue(item, filter.field);
+            if (v != null && String(v).trim() !== "" && String(v) !== "-") values.add(String(v));
+        }
+        return [...values].sort((a, b) => a.localeCompare(b, "es")).map((v) => ({ id: v, label: v }));
+    };
 
     const handleToggleField = (field) => {
         const exists = selectedFields.find((f) => f.key === field.key);
@@ -59,9 +73,13 @@ export default function ReportModal({
 
         const { headers, rows } = buildReportDataset({
             data,
+            fields,
             selectedFields,
             scope,
             filterValue,
+            columnFilters: filters
+                .filter((f) => columnFilters[f.key])
+                .map((f) => ({ field: f.field, value: columnFilters[f.key] })),
         });
 
         if (rows.length === 0) {
@@ -192,6 +210,18 @@ export default function ReportModal({
                         placeholder="Texto a buscar en los registros…"
                     />
                 )}
+
+                {filters.map((filter) => (
+                    <Select
+                        key={filter.key}
+                        label={filter.label}
+                        name={`report-filter-${filter.key}`}
+                        options={filterOptions(filter)}
+                        value={columnFilters[filter.key] ?? ""}
+                        onChange={(e) => setColumnFilters((prev) => ({ ...prev, [filter.key]: e.target.value }))}
+                        optional
+                    />
+                ))}
             </div>
         </Modal>
     );

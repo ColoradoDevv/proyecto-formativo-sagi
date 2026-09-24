@@ -2,9 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { TailChase } from "ldrs/react";
 import { CloudAlert, Plus, Download } from "lucide-react";
-import Alert from "@mui/material/Alert";
 
-import { Button, usePermissions } from "@/shared";
+import { Button, MODULE_PERMS, Notice, usePermissions } from "@/shared";
 import DataTable from "@/shared/components/DataTable";
 import { RmColumns } from "../../table/RmColumns";
 import { returnablesReportConfig } from "../../reports/returnablesReportConfig.js";
@@ -12,8 +11,9 @@ import useRMs from "../../hooks/useRMs";
 
 export default function RmListPage() {
     const navigate = useNavigate();
-    const { isSuper, can } = usePermissions();
+    const { isSuper, can, canAny } = usePermissions();
     const canCreate = isSuper || can("create_returnable");
+    const canExport = isSuper || canAny(MODULE_PERMS.returnables.export);
 
     const { RMs, setRMs, loading, error } = useRMs();
     const [notification, setNotification]   = useState(null);
@@ -46,9 +46,9 @@ export default function RmListPage() {
                     Listado de Materiales Devolutivos
                 </h2>
                 {notification && (
-                    <Alert severity={notification.severity} onClose={() => setNotification(null)}>
+                    <Notice severity={notification.severity} onClose={() => setNotification(null)}>
                         {notification.message}
-                    </Alert>
+                    </Notice>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {canCreate && (
@@ -58,14 +58,16 @@ export default function RmListPage() {
                             </Button>
                         </Link>
                     )}
-                    <Button
-                        data={RMs}
-                        reportConfig={returnablesReportConfig}
-                        className="w-full"
-                        icon={Download}
-                    >
-                        Descargar Reporte
-                    </Button>
+                    {canExport && (
+                        <Button
+                            data={RMs}
+                            reportConfig={returnablesReportConfig}
+                            className="w-full"
+                            icon={Download}
+                        >
+                            Descargar Reporte
+                        </Button>
+                    )}
                 </div>
             </div>
 

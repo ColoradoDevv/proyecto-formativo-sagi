@@ -21,7 +21,7 @@ export default function AccessCards({ className = "", style, Icon, label, value,
             </div>
             <div className="flex flex-col gap-1">
                 <p className="text-text-primary leading-tight">{label}</p>
-                <p className={`text-h1 font-heading text-bold-variant ${hasError ? "text-text-muted" : "text-text-primary"}`}>
+                <p className={`text-h1 font-heading ${hasError ? "text-text-muted" : "text-text-primary"}`}>
                     {hasError ? "—" : value}
                 </p>
             </div>

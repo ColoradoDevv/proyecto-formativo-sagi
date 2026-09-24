@@ -57,7 +57,7 @@ export default function Navbar({ onToggleSidebar }) {
                 <h1 className="text-h1 font-heading truncate uppercase tracking-wide">
                     SAGI
                 </h1>
-                <p className="hidden sm:block text-[11px] text-text-muted truncate">
+                <p className="hidden sm:block text-small text-text-muted truncate">
                     Sistema Administrativo de Gestión de Inventarios
                 </p>
             </div>

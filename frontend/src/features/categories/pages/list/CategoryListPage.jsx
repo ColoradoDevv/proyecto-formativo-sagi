@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Button, SearchField, IconButton, ActiveSwitch, usePermissions } from "@/shared";
+import { Button, SearchField, IconButton, ActiveSwitch, Notice, usePermissions } from "@/shared";
 import { Plus, ArrowLeft, ArrowRight, Pencil, CloudAlert, Tag, Layers } from "lucide-react";
 import { TailChase } from "ldrs/react";
-import Alert from "@mui/material/Alert";
 import useCategories from "../../hooks/useCategories";
 import { toggleCategoryActive } from "../../services/categoryService";
 import CategoryModal from "../../components/CategoryModal";
@@ -106,9 +105,9 @@ export default function CategoryListPage() {
             </div>
 
             {notification && (
-                <Alert severity={notification.severity} onClose={() => setNotification(null)}>
+                <Notice severity={notification.severity} onClose={() => setNotification(null)}>
                     {notification.message}
-                </Alert>
+                </Notice>
             )}
 
             {/* Toolbar */}

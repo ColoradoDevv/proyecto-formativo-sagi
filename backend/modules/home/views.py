@@ -1,8 +1,14 @@
 # Vista sencilla para la ruta raiz (ping rapido).
 
+from django.core.validators import EmailValidator
 from django.http import HttpResponse
+from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
+
+from modules.permissions.permissions_drf import IsSuperUser
+from .models import SiteSetting
 
 
 def index(request):
@@ -48,3 +54,34 @@ class DashboardSummaryView(APIView):
             data["loans"] = loans.count()
 
         return Response(data)
+
+
+class SupportEmailView(APIView):
+    """GET /api/support/email/ — correo de soporte vigente (público, para
+    mostrar "Contactar soporte" incluso en el login sin sesión).
+
+    PUT /api/support/email/ — cambia el correo para todos (solo superusuario).
+    """
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsSuperUser()]
+
+    def get(self, request):
+        return Response({"email": SiteSetting.get_support_email()})
+
+    def put(self, request):
+        email = str(request.data.get("email") or "").strip()
+        try:
+            EmailValidator()(email)
+        except Exception:
+            return Response(
+                {"error": "Debe ingresar un correo electrónico válido."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        SiteSetting.objects.update_or_create(
+            key=SiteSetting.SUPPORT_EMAIL_KEY,
+            defaults={"value": email},
+        )
+        return Response({"email": email})

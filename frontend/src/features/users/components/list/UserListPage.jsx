@@ -6,14 +6,15 @@ import useUsers from "../../hooks/useUsers.js";
 import { TailChase } from 'ldrs/react'
 import 'ldrs/react/TailChase.css'
 import { CloudAlert, Plus, Download } from "lucide-react";
-import { Button, usePermissions } from "@/shared"
+import { Button, MODULE_PERMS, usePermissions } from "@/shared"
 
 
 export default function ListUserPage() {
 
     const navigate = useNavigate();
-    const { can, isSuper } = usePermissions();
+    const { can, canAny, isSuper } = usePermissions();
     const canCreateUsers = isSuper || can("create_user");
+    const canExport = isSuper || canAny(MODULE_PERMS.users.export);
 
     // FETCH GET /api/users/
     const { users, loading, error, refetch } = useUsers();
@@ -59,14 +60,16 @@ export default function ListUserPage() {
                             </Button>
                         </Link>
                     )}
-                    <Button
-                        data={users}
-                        icon={Download}
-                        reportConfig={usersReportConfig}
-                        className="w-full"
-                    >
-                        Descargar Reporte
-                    </Button>
+                    {canExport && (
+                        <Button
+                            data={users}
+                            icon={Download}
+                            reportConfig={usersReportConfig}
+                            className="w-full"
+                        >
+                            Descargar Reporte
+                        </Button>
+                    )}
                 </div>
             </div>
 

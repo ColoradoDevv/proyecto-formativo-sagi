@@ -22,6 +22,12 @@ export default function ActiveSwitch({ id, isActive, toggleFn, entity = "materia
         try {
             const updatedMaterial = await toggleFn(id, value, extraData);
             setActive(updatedMaterial.is_active);
+            await showAlert({
+                icon: "success",
+                iconColor: "var(--color-success)",
+                title: value ? "Activado correctamente" : "Desactivado correctamente",
+                timer: 2500,
+            });
             onToggled?.(updatedMaterial);
         } catch (error) {
             console.error("Error al actualizar estado:", error);

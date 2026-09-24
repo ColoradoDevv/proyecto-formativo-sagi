@@ -2,15 +2,16 @@ import { Link, useNavigate } from "react-router-dom";
 import { TailChase } from "ldrs/react";
 import { CloudAlert, Plus, Download } from "lucide-react";
 
-import { Button, usePermissions } from "@/shared";
+import { Button, MODULE_PERMS, usePermissions } from "@/shared";
 import DataTable from "@/shared/components/DataTable";
 import { batchColumns } from "../../table/BatchColumns";
 import useLoanBatches from "../../hooks/useLoanBatches";
 
 export default function LoansListPage() {
     const navigate = useNavigate();
-    const { isAdmin, isSuper, can } = usePermissions();
+    const { isAdmin, isSuper, can, canAny } = usePermissions();
     const canCreate = isSuper || can("create_loan");
+    const canExport = isSuper || canAny(MODULE_PERMS.loans.export);
     const { batches, loading, error } = useLoanBatches();
 
     if (loading)
@@ -50,22 +51,26 @@ export default function LoansListPage() {
                             </Button>
                         </Link>
                     )}
-                    <Button
-                        data={batches}
-                        className="w-full"
-                        icon={Download}
-                    >
-                        Descargar Reporte
-                    </Button>
+                    {canExport && (
+                        <Button
+                            data={batches}
+                            className="w-full"
+                            icon={Download}
+                        >
+                            Descargar Reporte
+                        </Button>
+                    )}
                 </div>
             </div>
 
-            {/* Doble click navega al detalle del lote */}
+            {/* Doble click navega al detalle del lote (o al préstamo si no tiene lote) */}
             <DataTable
                 data={batches}
                 columns={columns}
                 onRowDoubleClick={(batch) =>
-                    navigate(`/prestamos/lote/${batch.batch_id}`)
+                    navigate(batch.batch_id
+                        ? `/prestamos/lote/${batch.batch_id}`
+                        : `/prestamos/visualizar/${batch.loans?.[0]?.id_loan}`)
                 }
             />
         </div>

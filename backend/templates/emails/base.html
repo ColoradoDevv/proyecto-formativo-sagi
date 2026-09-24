@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+{# Plantilla base de correos SAGI. Cada correo extiende este layout y #}
+{# rellena los bloques title y content. Paleta del software: navy #}
+{# #0C2D48, verde SENA #39A900, fondo #F0F5EE. Logo incrustado (CID). #}
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F0F5EE;">
+<div style="background:#F0F5EE;padding:24px 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+<tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+<tr><td style="background:#0C2D48;border-radius:16px 16px 0 0;padding:20px 28px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td style="vertical-align:middle;"><img src="cid:logo_sena" alt="SENA" height="48" style="display:block;height:48px;"></td>
+<td align="right" style="vertical-align:middle;">
+<div style="color:#ffffff;font-size:24px;font-weight:bold;letter-spacing:2px;">SAGI</div>
+<div style="color:#AFBCBF;font-size:11px;">Sistema Administrativo de Gestión de Inventarios</div>
+</td></tr></table></td></tr>
+<tr><td style="background:#39A900;font-size:4px;line-height:4px;">&nbsp;</td></tr>
+<tr><td style="background:#ffffff;border:1px solid #CAD5D3;border-top:0;border-radius:0 0 16px 16px;padding:28px;">
+<h1 style="margin:0 0 4px 0;color:#0C2D48;font-size:22px;">{% block title %}{% endblock %}</h1>
+<p style="margin:0 0 16px 0;color:#203F57;font-size:15px;font-weight:bold;">Hola{% if greeting_name %}, {{ greeting_name }}{% endif %},</p>
+{% block content %}{% endblock %}
+</td></tr>
+<tr><td align="center" style="padding:18px 12px 4px 12px;">
+<p style="margin:0 0 4px 0;color:#526B7B;font-size:12px;">SAGI · Sistema Administrativo de Gestión de Inventarios — SENA</p>
+<p style="margin:0;color:#526B7B;font-size:12px;">Este es un correo automático, por favor no responder.
+{% if frontend_url %}<br><a href="{{ frontend_url }}" style="color:#39A900;">{{ frontend_url }}</a>{% endif %}</p>
+</td></tr>
+</table></td></tr></table></div></body></html>

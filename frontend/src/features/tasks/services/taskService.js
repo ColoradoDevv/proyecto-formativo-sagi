@@ -10,6 +10,7 @@ const ASSIGNMENT_FIELD_MAP = {
     state: "taskState",
     start_date: "taskStartDate",
     end_date: "taskEndDate",
+    requires_evidence: "requiresEvidence",
 };
 
 const DEFINITION_FIELD_MAP = {
@@ -100,7 +101,7 @@ export async function getAssignmentsByTask(taskId) {
 }
 
 // payload esperado (claves del formulario):
-//   { task, assignmentScope, taskUser?, taskGroup?, taskState, taskStartDate, taskEndDate }
+//   { task, assignmentScope, taskUser?, taskGroup?, taskState, taskStartDate, taskEndDate, requiresEvidence? }
 export async function createAssignment(payload) {
     const body = {
         task: typeof payload.task === "object" ? payload.task.id : payload.task,
@@ -108,6 +109,7 @@ export async function createAssignment(payload) {
         state: payload.taskState,
         start_date: payload.taskStartDate,
         end_date: payload.taskEndDate,
+        requires_evidence: Boolean(payload.requiresEvidence),
     };
     if (payload.assignmentScope === "user") {
         body.user = payload.taskUser;
@@ -133,6 +135,7 @@ export async function updateAssignment(id, payload) {
     if ("taskStartDate"   in payload) body.start_date = payload.taskStartDate;
     if ("taskEndDate"     in payload) body.end_date  = payload.taskEndDate;
     if ("task"            in payload) body.task      = typeof payload.task === "object" ? payload.task.id : payload.task;
+    if ("requiresEvidence" in payload) body.requires_evidence = Boolean(payload.requiresEvidence);
 
     const response = await apiFetch(`/api/tasks/assignments/${id}/`, {
         method: "PATCH",
@@ -146,4 +149,30 @@ export async function updateAssignment(id, payload) {
 export async function deleteAssignment(id) {
     const response = await apiFetch(`/api/tasks/assignments/${id}/`, { method: "DELETE" });
     if (!response.ok) await throwApiError(response, ASSIGNMENT_FIELD_MAP);
+}
+
+// El asignado marca SU tarea como terminada (pasa a "En revisión").
+// El backend solo permite este cambio exacto sin el código de edición.
+export async function finishAssignment(id) {
+    const response = await apiFetch(`/api/tasks/assignments/${id}/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: "En revisión" }),
+    });
+    if (!response.ok) await throwApiError(response, ASSIGNMENT_FIELD_MAP);
+    return response.json();
+}
+
+// Adjunta un archivo de evidencia a una asignación (multipart).
+// JPG, JPEG, PNG, PDF, XLSX o DOCX de máximo 5MB (valida el backend).
+export async function uploadTaskEvidence(assignmentId, file, description = "") {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (description) formData.append("description", description);
+    const response = await apiFetch(`/api/tasks/assignments/${assignmentId}/evidence/`, {
+        method: "POST",
+        body: formData,
+    });
+    if (!response.ok) await throwApiError(response, { file: "evidence" });
+    return response.json();
 }

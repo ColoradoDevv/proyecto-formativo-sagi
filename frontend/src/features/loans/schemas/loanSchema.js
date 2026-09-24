@@ -28,7 +28,7 @@ function isValidDateString(value) {
 // Objeto base sin refinamientos — permite .pick() por pasos en el wizard
 // (mismo patrón que cmBaseSchema / rmBaseSchema). La validación completa
 // con reglas cruzadas (receptor, stock) vive en el default loanSchema.
-export function loanBaseSchema(materials = [], { multipleMaterials = false } = {}) {
+export function loanBaseSchema(materials = [], { multipleMaterials = false, originalReturnDate = null } = {}) {
     const amountSchema = z
         .string()
         .trim()
@@ -95,14 +95,19 @@ export function loanBaseSchema(materials = [], { multipleMaterials = false } = {
             .string()
             .min(1, "Debe ingresar la fecha de devolucion")
             .refine(isValidDateString, { message: "Debe ingresar una fecha válida" })
-            .refine((value) => value >= getTodayDateString(), {
-                message: "La fecha de devolucion no puede ser anterior a hoy",
-            }),
+            .refine(
+                // En edición se permite conservar la fecha original aunque ya
+                // esté vencida (si no, un préstamo vencido quedaba ineditable).
+                (value) => value >= getTodayDateString() || (originalReturnDate != null && value === originalReturnDate),
+                {
+                    message: "La fecha de devolucion no puede ser anterior a hoy",
+                }
+            ),
     });
 }
 
-export default function loanSchema(materials = [], { multipleMaterials = false, skipReceptorValidation = false } = {}) {
-    return loanBaseSchema(materials, { multipleMaterials }).superRefine((data, ctx) => {
+export default function loanSchema(materials = [], { multipleMaterials = false, skipReceptorValidation = false, originalReturnDate = null } = {}) {
+    return loanBaseSchema(materials, { multipleMaterials, originalReturnDate }).superRefine((data, ctx) => {
         // En edición, el receptor es de solo lectura (no se puede reasignar
         // ni cambiar su tipo registrado/externo desde este formulario) —
         // no tiene sentido volver a exigir estos campos ahí.

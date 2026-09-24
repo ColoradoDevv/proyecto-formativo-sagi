@@ -73,7 +73,7 @@ export default function QuotationPicker({
                     </label>
                 )}
                 {value.length > 0 && (
-                    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/40">
+                    <span className="text-small font-medium px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/40">
                         {value.length}/{MAX_SELECTED} elegidas
                     </span>
                 )}
@@ -122,7 +122,7 @@ export default function QuotationPicker({
                                     >
                                         <span
                                             aria-hidden
-                                            className={`w-5 h-5 shrink-0 rounded-[6px] border flex items-center justify-center transition-colors ${
+                                            className={`w-5 h-5 shrink-0 rounded-md border flex items-center justify-center transition-colors ${
                                                 selected ? "bg-text-primary border-text-primary text-background" : "border-border bg-surface-hover"
                                             }`}
                                         >
@@ -132,7 +132,7 @@ export default function QuotationPicker({
                                             <span className="block text-small text-text-primary leading-snug break-words">
                                                 {displayName(q)}
                                             </span>
-                                            <span className="block text-[11px] text-text-muted truncate">
+                                            <span className="block text-small text-text-muted truncate">
                                                 {q.material ? `Asignada a: ${q.material_name ?? "material"}` : "Disponible"}
                                             </span>
                                         </span>

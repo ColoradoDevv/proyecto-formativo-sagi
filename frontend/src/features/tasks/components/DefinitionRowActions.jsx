@@ -1,5 +1,5 @@
 import { IconButton, showAlert, cancelAlert } from "@/shared";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2, Users } from "lucide-react";
 import { deleteDefinition } from "../services/taskService";
 
 // Acciones de cada fila de definicion de tarea.
@@ -42,7 +42,7 @@ export default function DefinitionRowActions({
             </IconButton>
             {onManage && (
                 <IconButton onClick={() => onManage?.(definition)} variant="ghost" hitSize={32} iconSize={16} title="Asignaciones">
-                    <Pencil size={16} />
+                    <Users size={16} />
                 </IconButton>
             )}
             {canDelete && (

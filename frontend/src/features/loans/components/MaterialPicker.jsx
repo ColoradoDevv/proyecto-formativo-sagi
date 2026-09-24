@@ -28,20 +28,20 @@ function StockBadge({ stock }) {
     if (stock == null) return null;
     if (stock <= 0) {
         return (
-            <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full leading-none bg-error/10 text-error border border-error/40">
+            <span className="shrink-0 text-small font-medium px-1.5 py-0.5 rounded-full leading-none bg-error/10 text-error border border-error/40">
                 Agotado
             </span>
         );
     }
     if (stock <= 5) {
         return (
-            <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full leading-none bg-warning/10 text-warning border border-warning/40">
+            <span className="shrink-0 text-small font-medium px-1.5 py-0.5 rounded-full leading-none bg-warning/10 text-warning border border-warning/40">
                 ¡Solo {stock}!
             </span>
         );
     }
     return (
-        <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full leading-none bg-surface-muted text-text-muted border border-border">
+        <span className="shrink-0 text-small font-medium px-1.5 py-0.5 rounded-full leading-none bg-surface-muted text-text-muted border border-border">
             {stock} disp.
         </span>
     );
@@ -183,7 +183,7 @@ export default function MaterialPicker({
                 )}
                 <div className="flex items-center gap-2">
                     {value.length > 0 && (
-                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/40">
+                        <span className="text-small font-medium px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/40">
                             {value.length} elegido{value.length === 1 ? "" : "s"}
                         </span>
                     )}
@@ -270,7 +270,7 @@ export default function MaterialPicker({
                                     }`}
                                 >
                                     {f.label}
-                                    <span className={`ml-1 text-[11px] ${active ? "opacity-70" : "text-text-muted"}`}>
+                                    <span className={`ml-1 text-small ${active ? "opacity-70" : "text-text-muted"}`}>
                                         {counts[f.id] ?? 0}
                                     </span>
                                 </button>
@@ -313,7 +313,7 @@ export default function MaterialPicker({
                                     {/* Casilla */}
                                     <span
                                         aria-hidden
-                                        className={`w-5 h-5 shrink-0 rounded-[6px] border flex items-center justify-center transition-colors ${
+                                        className={`w-5 h-5 shrink-0 rounded-md border flex items-center justify-center transition-colors ${
                                             selected ? "bg-text-primary border-text-primary text-background" : "border-border bg-surface-hover"
                                         }`}
                                     >
@@ -326,7 +326,7 @@ export default function MaterialPicker({
                                         </span>
                                         <span className="flex flex-wrap items-center gap-1 mt-1">
                                             {opt.type && (
-                                                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full leading-none ${TYPE_STYLES[opt.type] ?? "bg-surface-muted text-text-muted border border-border"}`}>
+                                                <span className={`text-small font-medium px-1.5 py-0.5 rounded-full leading-none ${TYPE_STYLES[opt.type] ?? "bg-surface-muted text-text-muted border border-border"}`}>
                                                     {opt.type}
                                                 </span>
                                             )}

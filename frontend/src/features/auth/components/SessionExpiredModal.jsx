@@ -3,6 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { LogIn, Clock } from "lucide-react";
 import Modal from "@/shared/components/Modal";
 import { Button } from "@/shared";
+import {
+    getExpiredReason,
+    clearExpiredReason,
+    setExpiredReason,
+    getStoredUser,
+    getToken,
+    clearSession,
+    getTabId,
+    watchNewLogins,
+} from "@/shared/services/api";
 import { logout } from "../services/authService";
 
 /**
@@ -21,6 +31,7 @@ import { logout } from "../services/authService";
  */
 export default function SessionExpiredModal() {
     const [open, setOpen]   = useState(false);
+    const [reason, setReason] = useState("");
     const handlingRef       = useRef(false); // evita doble apertura por peticiones paralelas
     const navigate          = useNavigate();
 
@@ -32,6 +43,9 @@ export default function SessionExpiredModal() {
             if (window.location.pathname === "/iniciar-sesion") return;
 
             handlingRef.current = true;
+            // Motivo específico (ej. sesión reemplazada por otro login) o
+            // texto genérico de expiración.
+            setReason(getExpiredReason() ?? "");
             setOpen(true);
         }
 
@@ -39,13 +53,37 @@ export default function SessionExpiredModal() {
         return () => window.removeEventListener("sia:session-expired", handleExpired);
     }, []);
 
+    // Cierre proactivo entre pestañas del mismo navegador: si OTRA pestaña
+    // avisa de un login del MISMO usuario, esta se cierra sola al instante,
+    // sin esperar a que el usuario interactúe (sin recargar nada).
+    useEffect(() => {
+        return watchNewLogins((message) => {
+            if (!message || message.type !== "sia:new-login") return;
+            if (message.tabId === getTabId()) return; // fui yo misma
+            if (handlingRef.current) return;
+            if (window.location.pathname === "/iniciar-sesion") return;
+            const me = getStoredUser();
+            if (!me || !getToken()) return; // sin sesión aquí: nada que cerrar
+            if (message.userId == null || String(message.userId) !== String(me.id)) return; // otro usuario: no me afecta
+
+            handlingRef.current = true;
+            const detail = "Se inició sesión en otra ventana con tu cuenta. Esta sesión fue cerrada por seguridad.";
+            setExpiredReason(detail);
+            setReason(detail);
+            clearSession();
+            setOpen(true);
+        });
+    }, []);
+
     const handleConfirm = useCallback(async () => {
         setOpen(false);
+        clearExpiredReason();
         // logout() intentará POST /logout pero la sesión ya está limpia en
         // sessionStorage (apiFetch la limpió al detectar el 401). El catch
         // en logout() ya maneja el fallo silenciosamente.
         await logout();
         handlingRef.current = false;
+        setReason("");
         navigate("/iniciar-sesion", { replace: true });
     }, [navigate]);
 
@@ -53,28 +91,31 @@ export default function SessionExpiredModal() {
         <Modal
             isOpen={open}
             onClose={handleConfirm}
-            title="Sesión expirada"
+            title={reason ? "Sesión cerrada" : "Sesión expirada"}
             variant="solid"
             size="sm"
             showClose={false}
             closeOnBackdrop={false}
             footer={
-                <Button onClick={handleConfirm} icon={LogIn}>
-                    Iniciar sesión de nuevo
-                </Button>
+                <div className="w-full flex justify-center">
+                    <Button onClick={handleConfirm} icon={LogIn}>
+                        Iniciar sesión de nuevo
+                    </Button>
+                </div>
             }
         >
             <div className="flex flex-col items-center gap-4 py-2 text-center">
-                <div className="flex items-center justify-center w-14 h-14 rounded-full bg-warning-subtle text-warning-default">
+                <div className="flex items-center justify-center w-14 h-14 rounded-full bg-warning-soft text-warning">
                     <Clock size={28} />
                 </div>
                 <div>
                     <p className="text-body text-text-primary font-medium">
-                        Tu sesión ha expirado
+                        {reason || "Tu sesión ha expirado"}
                     </p>
                     <p className="text-small text-text-secondary mt-1">
-                        Por seguridad, las sesiones cierran automáticamente
-                        después de 8 horas. Inicia sesión para continuar.
+                        {reason
+                            ? "Solo se permite una sesión activa por usuario: queda abierta la más reciente."
+                            : "Por seguridad, las sesiones cierran automáticamente después de 8 horas. Inicia sesión para continuar."}
                     </p>
                 </div>
             </div>

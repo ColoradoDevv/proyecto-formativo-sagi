@@ -4,7 +4,7 @@ export default function StatusLabel({ children, required, optional, error, class
             {children}
             {required && <span className="text-error ml-1">*</span>}
             {!required && optional && (
-                <span className="ml-1.5 text-[11px] font-normal text-text-muted">(Opcional)</span>
+                <span className="ml-1.5 text-small font-normal text-text-muted">(Opcional)</span>
             )}
         </label>
     );

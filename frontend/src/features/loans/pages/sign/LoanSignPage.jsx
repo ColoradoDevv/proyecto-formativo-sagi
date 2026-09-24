@@ -56,9 +56,12 @@ export default function LoanSignPage() {
     const [otpError,   setOtpError]   = useState("");
     const [message,    setMessage]    = useState("");
     const [loanState,  setLoanState]  = useState(null);
-    const [cooldown,   setCooldown]   = useState(0);
+    const [cooldown,   setCooldown]       = useState(0);
     const [expiresMin, setExpiresMin] = useState(10);
     const timerRef = useRef(null);
+    // Blindaje contra doble envío: en desarrollo StrictMode monta el efecto
+    // dos veces y se generaban 2 OTP (el segundo invalidaba al primero).
+    const otpRequestedRef = useRef(false);
 
     // Determinar el flujo una sola vez — draft o préstamo existente, y si el
     // firmante es externo (sin cuenta, llega por /prestamos/firmar-externo).
@@ -75,6 +78,8 @@ export default function LoanSignPage() {
             setStep(STEP.ERROR);
             return;
         }
+        if (otpRequestedRef.current) return;
+        otpRequestedRef.current = true;
         sendOtp();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);

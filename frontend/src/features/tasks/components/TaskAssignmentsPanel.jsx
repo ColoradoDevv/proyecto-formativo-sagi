@@ -22,7 +22,7 @@ export default function TaskAssignmentsPanel({
     const canDelete = can("delete_task_assignment");
     const canCreate = can("create_task_assignment");
 
-    const { assignments, setAssignments, loading } = useTaskAssignments(
+    const { assignments, setAssignments, loading, error } = useTaskAssignments(
         definition ? { task: definition.id } : {}
     );
 
@@ -64,6 +64,13 @@ export default function TaskAssignmentsPanel({
 
                     {loading ? (
                         <p className="text-small text-text-muted text-center py-6">Cargando asignaciones...</p>
+                    ) : error ? (
+                        <div className="flex flex-col items-center gap-3 text-center py-6">
+                            <ClipboardList size={32} className="text-text-muted" />
+                            <p className="text-small text-text-muted">
+                                No se pudieron cargar las asignaciones{error.message ? `: ${error.message}` : "."}
+                            </p>
+                        </div>
                     ) : assignments.length > 0 ? (
                         <div className="flex flex-col gap-2">
                             {assignments.map((a) => {
@@ -89,7 +96,7 @@ export default function TaskAssignmentsPanel({
                                                 <span className="text-small text-text-primary truncate font-medium">
                                                     {isGroup ? (a.group_name || a.recipient_name) : (a.user_name || a.recipient_name)}
                                                 </span>
-                                                <span className="text-[11px] text-text-muted truncate">
+                                                <span className="text-small text-text-muted truncate">
                                                     {a.start_date} - {a.end_date}
                                                 </span>
                                             </div>

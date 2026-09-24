@@ -104,3 +104,24 @@ def validate_sheet_upload(upload, field="technical_sheet"):
 def validate_quotation_upload(upload, field="quotations"):
     """Para vistas con request.FILES directo. Lanza DRF 400 si no cumple."""
     _as_drf(field, validate_quotation_file, upload)
+
+
+EVIDENCE_EXTENSIONS = {"jpg", "jpeg", "png", "pdf", "xlsx", "docx"}
+EVIDENCE_MIME_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+EVIDENCE_MAX_MB = 5
+
+
+def validate_evidence_file(upload):
+    """Validador para evidencias de tareas (fotos y documentos)."""
+    _check(upload, EVIDENCE_EXTENSIONS, EVIDENCE_MIME_TYPES, EVIDENCE_MAX_MB, "evidence")
+
+
+def validate_evidence_upload(upload, field="evidence"):
+    """Para vistas con request.FILES directo. Lanza DRF 400 si no cumple."""
+    _as_drf(field, validate_evidence_file, upload)

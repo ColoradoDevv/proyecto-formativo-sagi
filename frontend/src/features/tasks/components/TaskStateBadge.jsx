@@ -3,6 +3,7 @@
 const STATE_STYLES = {
     "Pendiente": "bg-surface-muted text-text-secondary",
     "En progreso": "bg-brand-soft text-brand",
+    "En revisión": "bg-warning-soft text-warning",
     "Completada": "bg-success-soft text-success",
     "Cancelada": "bg-error-soft text-error",
 };

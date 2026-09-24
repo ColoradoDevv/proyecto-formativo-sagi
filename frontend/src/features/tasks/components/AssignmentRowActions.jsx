@@ -1,17 +1,21 @@
 import { IconButton, showAlert, cancelAlert } from "@/shared";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2, CircleCheck } from "lucide-react";
 import { deleteAssignment } from "../services/taskService";
+import { FINISHABLE_STATES } from "../schemas/taskSchema";
 
 // Acciones de cada fila de asignacion de tarea.
 // La edicion/eliminacion solo se muestra si el usuario tiene los permisos
 // (regla: solo admin/supervisor con edit_task_assignment pueden cambiar
-// estados propios o de otros).
+// estados propios o de otros). "Finalizar" lo ve el asignado en tareas
+// pendientes/en progreso (el backend valida que sea su tarea).
 export default function AssignmentRowActions({
     assignment,
     canEdit,
     canDelete,
+    canFinish = false,
     onView,
     onEdit,
+    onFinish,
     onDeleted,
 }) {
 
@@ -42,6 +46,11 @@ export default function AssignmentRowActions({
             <IconButton onClick={() => onView?.(assignment)} variant="ghost" hitSize={32} iconSize={16} title="Ver">
                 <Eye size={16} />
             </IconButton>
+            {canFinish && FINISHABLE_STATES.includes(assignment.state) && (
+                <IconButton onClick={() => onFinish?.(assignment)} variant="ghost" hitSize={32} iconSize={16} title="Marcar como terminada">
+                    <CircleCheck size={16} />
+                </IconButton>
+            )}
             {canDelete && (
                 <IconButton onClick={handleDelete} variant="ghost" hitSize={32} iconSize={16} title="Eliminar">
                     <Trash2 size={16} />

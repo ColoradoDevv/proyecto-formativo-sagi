@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { KeyRound, Save, UserRound, Pencil, X } from "lucide-react";
 import { TailChase } from "ldrs/react";
-import { Button, EditCard, Input, ProfileFileInput, showAlert } from "@/shared";
+import { Button, EditCard, Input, ProfileFileInput, showAlert, SupportContact } from "@/shared";
 import { updateStoredUser } from "@/shared/services/api";
 import { getMyProfile, updateMyProfile, updateUserProfilePicture } from "../../services/userService";
 import ChangePasswordModal from "../../components/ChangePasswordModal";
@@ -244,6 +244,9 @@ export default function ProfileEditPage() {
                 isOpen={changePasswordOpen}
                 onClose={() => setChangePasswordOpen(false)}
             />
+
+            {/* Contacto con soporte (editable solo por superusuario) */}
+            <SupportContact />
 
         </div>
     );

@@ -9,6 +9,12 @@ function BatchRowActions({ batch }) {
     const navigate = useNavigate();
     const { isSuper, can } = usePermissions();
     const canReturn = isSuper || can("create_return");
+    const detailTarget = batch.batch_id
+        ? `/prestamos/lote/${batch.batch_id}`
+        : `/prestamos/visualizar/${batch.loans?.[0]?.id_loan}`;
+    const returnTarget = batch.batch_id
+        ? `/prestamos/lote/${batch.batch_id}/devolver`
+        : null;
     return (
         <div className="flex gap-2">
             <IconButton
@@ -16,18 +22,18 @@ function BatchRowActions({ batch }) {
                 hitSize={32}
                 iconSize={16}
                 ariaLabel="Ver detalle del lote"
-                onClick={() => navigate(`/prestamos/lote/${batch.batch_id}`)}
+                onClick={() => navigate(detailTarget)}
             >
                 <Eye size={16} />
             </IconButton>
 
-            {batch.is_active && canReturn && (
+            {batch.is_active && canReturn && returnTarget && (
                 <IconButton
                     variant="ghost"
                     hitSize={32}
                     iconSize={16}
                     ariaLabel="Devolver materiales del lote"
-                    onClick={() => navigate(`/prestamos/lote/${batch.batch_id}/devolver`)}
+                    onClick={() => navigate(returnTarget)}
                 >
                     <Undo2 size={16} />
                 </IconButton>
@@ -46,6 +52,14 @@ export const batchColumns = () => [
         accessorKey: "usuario_receptor",
         header: "Receptor",
         meta: { filterVariant: "select" },
+        cell: ({ row }) => (
+            <div className="flex flex-col min-w-0">
+                <span className="truncate">{row.original.usuario_receptor}</span>
+                <span className="text-small text-text-muted truncate">
+                    Doc: {row.original.receptor_document ?? "—"}
+                </span>
+            </div>
+        ),
     },
     {
         accessorKey: "apprentice_group",
@@ -62,7 +76,7 @@ export const batchColumns = () => [
                     {loans.map((l) => (
                         <span
                             key={l.id_loan}
-                            className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border border-border bg-surface-muted text-text-secondary"
+                            className="inline-flex items-center gap-1 text-small px-2 py-0.5 rounded-full border border-border bg-surface-muted text-text-secondary"
                         >
                             {l.material}
                             <span className="text-text-muted">×{l.amount_lent}</span>

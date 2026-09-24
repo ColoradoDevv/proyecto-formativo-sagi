@@ -31,4 +31,17 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    // El login carga solo lo esencial; cada módulo y las librerías pesadas
+    // de reportes viajan en chunks separados bajo demanda.
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-table', 'sweetalert2', '@headlessui/react', 'lucide-react', 'ldrs/react', 'zod'],
+          reports: ['jspdf', 'jspdf-autotable', 'xlsx', 'html2canvas'],
+        },
+      },
+    },
+  },
 })

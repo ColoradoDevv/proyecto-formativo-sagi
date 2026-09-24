@@ -11,6 +11,7 @@ export const consumablesReportConfig = {
         { key: "sena_plate",  label: "Placa SENA",      default: true  },
         { key: "cuentadantes", label: "Cuentadantes",    default: true,  accessor: (row) => joinCuentadantes(row) },
         { key: "brand",       label: "Marca",            default: true,  accessor: (row) => row.brand?.name ?? "-" },
+        { key: "inventory.name", label: "Nombre de inventario", default: true },
         { key: "state",       label: "Estado",           default: true  },
         { key: "quantity",    label: "Cantidad",         default: true  },
         { key: "unit_price",  label: "Valor unitario",   default: false },
@@ -18,5 +19,8 @@ export const consumablesReportConfig = {
         { key: "is_active",      label: "Activo",           default: false },
         { key: "purchase_date",  label: "Fecha de compra",  default: false },
         { key: "entry_date",     label: "Fecha de ingreso", default: false },
+    ],
+    filters: [
+        { key: "inventory", label: "Nombre de inventario", field: "inventory.name" },
     ],
 };

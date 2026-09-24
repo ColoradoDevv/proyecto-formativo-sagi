@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { TailChase } from "ldrs/react";
 import { CloudAlert, Download, Plus } from "lucide-react";
 
-import { Button, usePermissions } from "@/shared";
+import { Button, MODULE_PERMS, usePermissions } from "@/shared";
 import DataTable from "@/shared/components/DataTable";
 import { materialColumns } from "../../table/materialColumns.jsx";
 import { consumablesReportConfig } from "../../reports/consumablesReportConfig.js";
@@ -10,8 +10,9 @@ import useProducts from "../../hooks/useCMs.js";
 
 export default function ListCmPage() {
     const navigate = useNavigate();
-    const { isSuper, can } = usePermissions();
+    const { isSuper, can, canAny } = usePermissions();
     const canCreate = isSuper || can("create_consumable");
+    const canExport = isSuper || canAny(MODULE_PERMS.consumables.export);
 
     const { CMs, setCMs, loading, error } = useProducts();
 
@@ -49,14 +50,16 @@ export default function ListCmPage() {
                             </Button>
                         </Link>
                     )}
-                    <Button
-                        data={CMs}
-                        reportConfig={consumablesReportConfig}
-                        className="w-full"
-                        icon={Download}
-                    >
-                        Descargar Reporte
-                    </Button>
+                    {canExport && (
+                        <Button
+                            data={CMs}
+                            reportConfig={consumablesReportConfig}
+                            className="w-full"
+                            icon={Download}
+                        >
+                            Descargar Reporte
+                        </Button>
+                    )}
                 </div>
             </div>
 

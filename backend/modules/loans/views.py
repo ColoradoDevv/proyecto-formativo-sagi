@@ -13,7 +13,7 @@ import jwt
 from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.core.mail import send_mail
+from sia_api.emailing import send_sagi_email
 from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models import Q
@@ -123,54 +123,47 @@ def _send_sign_email(user, loans_in_batch: list, role: str, token: str) -> None:
     role_label = "responsable del préstamo" if role == "responsable" else "receptor del material"
     first_loan = loans_in_batch[0]
 
-    materials_lines = "\n".join(
-        f"  • {l.id_material.name} — cantidad: {l.amount_lent}"
-        for l in loans_in_batch
-    )
+    materials = [(l.id_material.name, f"cantidad: {l.amount_lent}") for l in loans_in_batch]
 
-    send_mail(
+    send_sagi_email(
+        user.email,
         subject="Firma requerida — Préstamo de material SAGI",
-        message=(
-            "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
-            f"Hola {user.first_name},\n\n"
-            f"Se ha registrado un préstamo en el que figuras como {role_label}.\n"
-            f"Para confirmar la entrega, firma haciendo clic en el siguiente enlace "
-            f"(válido por {_SIGN_TOKEN_TTL_MINUTES // 60} horas):\n\n"
-            f"{sign_link}\n\n"
-            f"Materiales del préstamo:\n{materials_lines}\n"
-            f"  • Grupo:  {first_loan.apprentice_group}\n"
-            f"  • Fecha:  {first_loan.loan_date}\n\n"
-            "Al abrir el enlace se te pedirá un código de verificación que recibirás "
-            "en un correo separado en ese momento.\n\n"
-            "Si no reconoces este préstamo, avisa al administrador."
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        fail_silently=False,
+        template="loan_sign.html",
+        context={
+            "greeting_name": user.first_name,
+            "role_label": role_label,
+            "validity_hours": _SIGN_TOKEN_TTL_MINUTES // 60,
+            "button": {
+                "label": "Firmar préstamo",
+                "url": sign_link,
+            },
+            "materials": materials,
+            "materials_title": "Materiales del préstamo",
+            "details": [
+                ("Grupo", first_loan.apprentice_group),
+                ("Fecha", str(first_loan.loan_date)),
+            ],
+            "warning": "Al abrir el enlace se te pedirá un código de verificación que recibirás "
+                       "en un correo separado en ese momento. Si no reconoces este préstamo, "
+                       "avisa al administrador.",
+        },
     )
 
 
 def _send_otp_email(user, code: str, loans_in_batch: list) -> None:
     """Envía UN SOLO correo OTP que cubre todo el lote."""
-    materials_lines = "\n".join(
-        f"  • {l.id_material.name} — cantidad: {l.amount_lent}"
-        for l in loans_in_batch
-    )
-    send_mail(
+    send_sagi_email(
+        user.email,
         subject="Tu código de verificación de firma — SAGI",
-        message=(
-            "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
-            f"Hola {user.first_name},\n\n"
-            f"Tu código de verificación para firmar el siguiente préstamo es:\n\n"
-            f"    {code}\n\n"
-            f"Materiales:\n{materials_lines}\n\n"
-            f"Este código es válido por {SignOTP.OTP_TTL_MINUTES} minutos y solo puede "
-            f"usarse una vez.\n\n"
-            "Si no solicitaste este código, contacta al administrador de inmediato."
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        fail_silently=False,
+        template="loan_sign_otp.html",
+        context={
+            "greeting_name": user.first_name,
+            "code": code,
+            "code_caption": f"Válido por {SignOTP.OTP_TTL_MINUTES} minutos y de un solo uso.",
+            "materials": [(l.id_material.name, f"cantidad: {l.amount_lent}") for l in loans_in_batch],
+            "materials_title": "Materiales",
+            "warning": "Si no solicitaste este código, contacta al administrador de inmediato.",
+        },
     )
 
 
@@ -874,52 +867,45 @@ def _send_draft_sign_email(name: str, email: str, drafts: list, role: str, token
     sign_link  = f"{settings.FRONTEND_URL}{sign_path}?token={token}"
     role_label = "responsable del préstamo" if role == "responsable" else "receptor del material"
     first      = drafts[0]
-    materials_lines = "\n".join(
-        f"  • {d.id_material.name} — cantidad: {d.amount_lent}" for d in drafts
-    )
-    send_mail(
+    send_sagi_email(
+        email,
         subject="Firma requerida — Préstamo de material SAGI",
-        message=(
-            "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
-            f"Hola {name},\n\n"
-            f"Se ha registrado una solicitud de préstamo en la que figuras como {role_label}.\n"
-            f"El préstamo quedará registrado definitivamente una vez que ambas partes firmen.\n\n"
-            f"Para firmar, haz clic en el siguiente enlace "
-            f"(válido por {_SIGN_TOKEN_TTL_MINUTES // 60} horas):\n\n"
-            f"{sign_link}\n\n"
-            f"Materiales:\n{materials_lines}\n"
-            f"  • Grupo:  {first.apprentice_group}\n"
-            f"  • Fecha solicitada: {first.loan_date}\n\n"
-            "Al abrir el enlace se te pedirá un código de verificación que recibirás "
-            "en un correo separado en ese momento.\n\n"
-            "Si no reconoces esta solicitud, avisa al administrador."
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[email],
-        fail_silently=False,
+        template="loan_draft_sign.html",
+        context={
+            "greeting_name": name,
+            "role_label": role_label,
+            "validity_hours": _SIGN_TOKEN_TTL_MINUTES // 60,
+            "button": {
+                "label": "Firmar solicitud",
+                "url": sign_link,
+            },
+            "materials": [(d.id_material.name, f"cantidad: {d.amount_lent}") for d in drafts],
+            "materials_title": "Materiales",
+            "details": [
+                ("Grupo", first.apprentice_group),
+                ("Fecha solicitada", str(first.loan_date)),
+            ],
+            "warning": "Al abrir el enlace se te pedirá un código de verificación que recibirás "
+                       "en un correo separado en ese momento. Si no reconoces esta solicitud, "
+                       "avisa al administrador.",
+        },
     )
 
 
 def _send_draft_otp_email(name: str, email: str, code: str, drafts: list) -> None:
     """Correo OTP para el flujo draft. Recibe (name, email) — ver _send_draft_sign_email."""
-    materials_lines = "\n".join(
-        f"  • {d.id_material.name} — cantidad: {d.amount_lent}" for d in drafts
-    )
-    send_mail(
+    send_sagi_email(
+        email,
         subject="Tu código de verificación de firma — SAGI",
-        message=(
-            "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
-            f"Hola {name},\n\n"
-            f"Tu código de verificación para firmar la solicitud de préstamo es:\n\n"
-            f"    {code}\n\n"
-            f"Materiales:\n{materials_lines}\n\n"
-            f"Este código es válido por {SignOTP.OTP_TTL_MINUTES} minutos y solo puede "
-            f"usarse una vez.\n\n"
-            "Si no solicitaste este código, contacta al administrador de inmediato."
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[email],
-        fail_silently=False,
+        template="loan_draft_otp.html",
+        context={
+            "greeting_name": name,
+            "code": code,
+            "code_caption": f"Válido por {SignOTP.OTP_TTL_MINUTES} minutos y de un solo uso.",
+            "materials": [(d.id_material.name, f"cantidad: {d.amount_lent}") for d in drafts],
+            "materials_title": "Materiales",
+            "warning": "Si no solicitaste este código, contacta al administrador de inmediato.",
+        },
     )
 
 
@@ -1280,34 +1266,24 @@ class LoanDraftSignRequestOTPView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Invalidar OTPs previos del mismo batch/rol
-        SignOTP.objects.filter(
-            batch_id=uuid.UUID(batch_id),
-            user=request.user if request.user.is_authenticated else None,
-            role=role, used=False,
-        ).delete()
+        # Invalidar OTPs previos no usados del mismo lote/rol (en BD, para
+        # que sobrevivan reinicios y mult readers — ver migración 0015).
+        signer = request.user if request.user.is_authenticated else None
+        SignOTP.objects.filter(batch_id=uuid.UUID(batch_id), user=signer, role=role, used=False).delete()
 
-        # Generar OTP
+        # Generar OTP de 6 dígitos (persistido en BD, igual que el flujo clásico)
         code       = "".join(random.choices(string.digits, k=6))
         code_hash  = hashlib.sha256(code.encode()).hexdigest()
         expires_at = timezone.now() + datetime.timedelta(minutes=SignOTP.OTP_TTL_MINUTES)
 
-        # SignOTP necesita un loan FK; usamos None-safe: creamos un OTP "draft"
-        # apuntando al primer draft usando loan=None workaround via batch_id only.
-        # Como el modelo requiere loan, buscamos si ya existe un Loans con este
-        # batch_id (no debería); si no, reutilizamos el campo batch_id directamente.
-        # Solución: guardamos en loan el primer draft via un préstamo dummy... No.
-        # La solución limpia: el SignOTP del draft NO necesita FK a Loans.
-        # Usamos un campo batch_id + role sin loan apuntando a None.
-        # SignOTP.loan es FK con on_delete=CASCADE — no permite null.
-        # Por eso creamos un registro especial usando batch_id solamente via cache.
-        cache_key  = f"draft_otp_{batch_id}_{role}"
-        cache.set(cache_key, {
-            "code_hash":  code_hash,
-            "expires_at": expires_at.isoformat(),
-            "attempts":   0,
-            "user_id":    request.user.id,
-        }, timeout=SignOTP.OTP_TTL_MINUTES * 60 + 30)
+        SignOTP.objects.create(
+            loan=None,
+            batch_id=uuid.UUID(batch_id),
+            user=signer,
+            role=role,
+            code_hash=code_hash,
+            expires_at=expires_at,
+        )
 
         # Receptor externo: no hay User que leer, se usa lo capturado en el draft.
         if role == "receptor" and drafts[0].is_receptor_external:
@@ -1318,7 +1294,9 @@ class LoanDraftSignRequestOTPView(APIView):
         try:
             _send_draft_otp_email(otp_name, otp_email, code, drafts)
         except Exception:
-            cache.delete(cache_key)
+            SignOTP.objects.filter(
+                batch_id=uuid.UUID(batch_id), user=signer, role=role, used=False
+            ).delete()
             return Response(
                 {"error": "No se pudo enviar el código de verificación. Intenta nuevamente."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1343,7 +1321,8 @@ class LoanDraftSignView(APIView):
     POST /api/loans/draft/sign/
     Body: { "token": "<jwt draft_sign>", "otp_code": "123456" }
 
-    Valida OTP (almacenado en cache), registra la firma en el borrador.
+    Valida OTP (persistido en BD, igual que el flujo clásico), registra la
+    firma en el borrador.
     Cuando ambas partes firman, crea los registros Loans reales y marca
     los borradores como 'committed'.
     """
@@ -1431,52 +1410,52 @@ class LoanDraftSignView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # ── Validar OTP desde cache ───────────────────────────────────────
-        cache_key  = f"draft_otp_{batch_id}_{role}"
-        otp_entry  = cache.get(cache_key)
+        # ── Validar OTP desde BD (igual que el flujo clásico) ─────────────
+        signer = request.user if request.user.is_authenticated else None
+        otp_record = (
+            SignOTP.objects
+            .filter(batch_id=uuid.UUID(batch_id), user=signer, role=role, used=False)
+            .order_by('-created_at')
+            .first()
+        )
 
-        if otp_entry is None:
+        if otp_record is None or not otp_record.is_valid:
             _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
             return Response(
-                {"error": "El código no existe o ha expirado. Solicita uno nuevo."},
+                {"error": "El código no existe, expiró o fue invalidado. Solicita uno nuevo."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if otp_entry.get("user_id") != request.user.id:
+        if hashlib.sha256(otp_code.encode()).hexdigest() != otp_record.code_hash:
+            otp_record.attempts += 1
+            otp_record.save(update_fields=["attempts"])
             _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
-            return Response({"error": "El código no corresponde a tu usuario."}, status=status.HTTP_403_FORBIDDEN)
-
-        expires_dt = datetime.datetime.fromisoformat(otp_entry["expires_at"])
-        if expires_dt.tzinfo is None:
-            expires_dt = expires_dt.replace(tzinfo=datetime.timezone.utc)
-        if timezone.now() > expires_dt:
-            cache.delete(cache_key)
-            _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
-            return Response(
-                {"error": "El código ha expirado. Solicita uno nuevo."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        attempts = otp_entry.get("attempts", 0)
-        if attempts >= SignOTP.OTP_MAX_ATTEMPTS:
-            cache.delete(cache_key)
-            return Response(
-                {"error": "Límite de intentos superado. Solicita un nuevo código."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        if hashlib.sha256(otp_code.encode()).hexdigest() != otp_entry["code_hash"]:
-            otp_entry["attempts"] = attempts + 1
-            remaining = SignOTP.OTP_MAX_ATTEMPTS - otp_entry["attempts"]
-            ttl_left  = int((expires_dt - timezone.now()).total_seconds())
-            cache.set(cache_key, otp_entry, timeout=max(ttl_left, 1))
-            _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
+            remaining = SignOTP.OTP_MAX_ATTEMPTS - otp_record.attempts
             msg = (
                 f"Código incorrecto. Te quedan {remaining} intento(s)."
                 if remaining > 0
                 else "Código incorrecto. Límite de intentos superado. Solicita uno nuevo."
             )
             return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp_record.used = True
+        otp_record.save(update_fields=["used"])
+
+        # Re-validar stock al momento de firmar: pudo agotarse desde que se
+        # creó la solicitud (otro lote comprometido después). Sin esto dos
+        # lotes concurrentes podrían prestar más stock del disponible.
+        fresh_drafts = list(
+            LoanDraft.objects.select_related('id_material').filter(
+                batch_id=uuid.UUID(batch_id), state=LoanDraft.STATE_PENDING
+            )
+        )
+        stock_errors = _validate_draft_stock(fresh_drafts)
+        if stock_errors:
+            _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
+            return Response(
+                {"error": "Sin stock suficiente para completar la firma. " + " ".join(stock_errors)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # ── OTP correcto: registrar firma en todos los borradores del lote ─
         now        = timezone.now()
@@ -1566,8 +1545,7 @@ class LoanDraftSignView(APIView):
                 defaults={"expires_at": expires_at},
             )
 
-        # Limpiar OTP del cache
-        cache.delete(cache_key)
+        # El OTP ya quedó marcado used=True arriba; no hay caché que limpiar.
         _reset_rl(request, "draft_sign")
 
         # Auditoría
@@ -1693,6 +1671,12 @@ class LoanBatchListView(APIView):
                     f"{first.id_responsable_user.first_name} {first.id_responsable_user.last_name}"
                 ),
                 'usuario_receptor': first.receptor_display_name,
+                'receptor_document': (
+                    first.id_receptor_user.document_number
+                    if first.id_receptor_user_id and first.id_receptor_user
+                    and first.id_receptor_user.document_number
+                    else (first.receptor_email or "—")
+                ),
                 'state':       batch_state,
                 'is_active':   batch_state == 'Activo',
                 'loan_count':  len(loans),

@@ -234,7 +234,7 @@ function UserEditForm({ id, user, documentTypes, groups, allGroups, usersList, g
 
             {/* Banner: superadministrador primigenio — solo informativo */}
             {user.is_primary_admin && (
-                <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-warning bg-warning/10 px-4 py-3 text-sm text-text-primary">
+                <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-warning bg-warning/10 px-4 py-3 text-medium text-text-primary">
                     <ShieldAlert size={18} className="shrink-0 mt-0.5 text-warning" />
                     <p>
                         Este es el <strong>superadministrador primigenio</strong> del sistema.
@@ -248,7 +248,7 @@ function UserEditForm({ id, user, documentTypes, groups, allGroups, usersList, g
                 de abajo es de un solo grupo, así que guardar sin tocarlo
                 dejaría solo el que aparece preseleccionado. */}
             {user.groups && user.groups.length > 1 && (
-                <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-warning bg-warning/10 px-4 py-3 text-sm text-text-primary">
+                <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-warning bg-warning/10 px-4 py-3 text-medium text-text-primary">
                     <ShieldAlert size={18} className="shrink-0 mt-0.5 text-warning" />
                     <p>
                         Este usuario tiene varios grupos asignados ({user.groups.map((g) => g.name).join(", ")}),

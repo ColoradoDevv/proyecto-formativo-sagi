@@ -39,11 +39,14 @@ def _is_registered_media(rel_posix: str) -> bool:
     registro: cotización, ficha, foto/ficha de material o foto de perfil."""
     from django.db.models import Q
     from modules.products.models import Quotation, TechnicalSheet, ConsumableMaterial
+    from modules.tasks.models import TaskEvidence
     from modules.users.models import User
 
     if Quotation.objects.filter(file=rel_posix).exists():
         return True
     if TechnicalSheet.objects.filter(file=rel_posix).exists():
+        return True
+    if TaskEvidence.objects.filter(file=rel_posix).exists():
         return True
     if ConsumableMaterial.objects.filter(
         Q(image=rel_posix) | Q(technical_sheet=rel_posix)

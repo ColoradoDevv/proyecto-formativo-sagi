@@ -147,7 +147,7 @@ export default function FileInput({
                         {label}
                         {required && <span className="text-error ml-1">*</span>}
                         {!required && optional && (
-                            <span className="ml-1.5 text-[11px] font-normal text-text-muted">(Opcional)</span>
+                            <span className="ml-1.5 text-small font-normal text-text-muted">(Opcional)</span>
                         )}
                 </label>
             )}
@@ -273,7 +273,7 @@ export default function FileInput({
                                 color="var(--semantic-brand)"
                             />
                         ) : (
-                            <div className="w-full h-full flex flex-rows items-center justify-center gap-1.5 text-text-muted group-hover:text-brand transition-colors duration-[var(--duration-base)] rounded-2xl p-2">
+                            <div className="w-full h-full flex flex-row items-center justify-center gap-1.5 text-text-muted group-hover:text-brand transition-colors duration-[var(--duration-base)] rounded-2xl p-2">
                                 <IconButton className="p-2" variant="ghost" ariaLabel="Subir archivo">
                                     <Upload size={18} />
                                 </IconButton>
