@@ -1,0 +1,5 @@
+{# Caja de código grande centrado (OTP). Requiere: code, code_caption (opcional). #}
+<div style="text-align:center;margin:20px 0;">
+<div style="display:inline-block;background:#E1F2D8;border:1px solid #39A900;border-radius:12px;padding:16px 36px;font-size:32px;font-weight:bold;letter-spacing:8px;color:#0C2D48;font-family:Consolas,monospace;">{{ code }}</div>
+{% if code_caption %}<p style="margin:10px 0 0 0;color:#526B7B;font-size:13px;">{{ code_caption }}</p>{% endif %}
+</div>

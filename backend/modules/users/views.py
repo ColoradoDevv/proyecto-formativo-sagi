@@ -1,13 +1,14 @@
 # Vistas del CRUD de usuarios.
 import os
 import jwt
+import uuid
 import hashlib
 import secrets
 import datetime
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.core.cache import cache
-from django.core.mail import send_mail
+from sia_api.emailing import send_sagi_email
 from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -762,19 +763,18 @@ class ForgetPasswordView(APIView):
 
         # 6. Enviar el correo. fail_silently=False para que un fallo real
         # se vea en los logs durante el desarrollo.
-        send_mail(
+        send_sagi_email(
+            user.email,
             subject="Restablece tu contraseña - SAGI",
-            message=(
-                "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
-                f"Hola {user.first_name},\n\n"
-                "Recibimos una solicitud para restablecer tu contraseña.\n"
-                f"Haz clic en el siguiente enlace para crear una nueva (válido por 15 minutos):\n\n"
-                f"{reset_link}\n\n"
-                "Si no solicitaste este cambio, puedes ignorar este correo."
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=False,
+            template="password_reset.html",
+            context={
+                "greeting_name": user.first_name,
+                "button": {
+                    "label": "Crear nueva contraseña",
+                    "url": reset_link,
+                },
+                "warning": "Si no solicitaste este cambio, puedes ignorar este correo.",
+            },
         )
 
         # 7. Solicitud legítima completada — resetear los contadores

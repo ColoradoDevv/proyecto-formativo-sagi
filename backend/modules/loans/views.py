@@ -13,7 +13,7 @@ import jwt
 from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.core.mail import send_mail
+from sia_api.emailing import send_sagi_email
 from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models import Q
@@ -123,54 +123,47 @@ def _send_sign_email(user, loans_in_batch: list, role: str, token: str) -> None:
     role_label = "responsable del préstamo" if role == "responsable" else "receptor del material"
     first_loan = loans_in_batch[0]
 
-    materials_lines = "\n".join(
-        f"  • {l.id_material.name} — cantidad: {l.amount_lent}"
-        for l in loans_in_batch
-    )
+    materials = [(l.id_material.name, f"cantidad: {l.amount_lent}") for l in loans_in_batch]
 
-    send_mail(
+    send_sagi_email(
+        user.email,
         subject="Firma requerida — Préstamo de material SAGI",
-        message=(
-            "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
-            f"Hola {user.first_name},\n\n"
-            f"Se ha registrado un préstamo en el que figuras como {role_label}.\n"
-            f"Para confirmar la entrega, firma haciendo clic en el siguiente enlace "
-            f"(válido por {_SIGN_TOKEN_TTL_MINUTES // 60} horas):\n\n"
-            f"{sign_link}\n\n"
-            f"Materiales del préstamo:\n{materials_lines}\n"
-            f"  • Grupo:  {first_loan.apprentice_group}\n"
-            f"  • Fecha:  {first_loan.loan_date}\n\n"
-            "Al abrir el enlace se te pedirá un código de verificación que recibirás "
-            "en un correo separado en ese momento.\n\n"
-            "Si no reconoces este préstamo, avisa al administrador."
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        fail_silently=False,
+        template="loan_sign.html",
+        context={
+            "greeting_name": user.first_name,
+            "role_label": role_label,
+            "validity_hours": _SIGN_TOKEN_TTL_MINUTES // 60,
+            "button": {
+                "label": "Firmar préstamo",
+                "url": sign_link,
+            },
+            "materials": materials,
+            "materials_title": "Materiales del préstamo",
+            "details": [
+                ("Grupo", first_loan.apprentice_group),
+                ("Fecha", str(first_loan.loan_date)),
+            ],
+            "warning": "Al abrir el enlace se te pedirá un código de verificación que recibirás "
+                       "en un correo separado en ese momento. Si no reconoces este préstamo, "
+                       "avisa al administrador.",
+        },
     )
 
 
 def _send_otp_email(user, code: str, loans_in_batch: list) -> None:
     """Envía UN SOLO correo OTP que cubre todo el lote."""
-    materials_lines = "\n".join(
-        f"  • {l.id_material.name} — cantidad: {l.amount_lent}"
-        for l in loans_in_batch
-    )
-    send_mail(
+    send_sagi_email(
+        user.email,
         subject="Tu código de verificación de firma — SAGI",
-        message=(
-            "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
-            f"Hola {user.first_name},\n\n"
-            f"Tu código de verificación para firmar el siguiente préstamo es:\n\n"
-            f"    {code}\n\n"
-            f"Materiales:\n{materials_lines}\n\n"
-            f"Este código es válido por {SignOTP.OTP_TTL_MINUTES} minutos y solo puede "
-            f"usarse una vez.\n\n"
-            "Si no solicitaste este código, contacta al administrador de inmediato."
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        fail_silently=False,
+        template="loan_sign_otp.html",
+        context={
+            "greeting_name": user.first_name,
+            "code": code,
+            "code_caption": f"Válido por {SignOTP.OTP_TTL_MINUTES} minutos y de un solo uso.",
+            "materials": [(l.id_material.name, f"cantidad: {l.amount_lent}") for l in loans_in_batch],
+            "materials_title": "Materiales",
+            "warning": "Si no solicitaste este código, contacta al administrador de inmediato.",
+        },
     )
 
 
@@ -874,52 +867,45 @@ def _send_draft_sign_email(name: str, email: str, drafts: list, role: str, token
     sign_link  = f"{settings.FRONTEND_URL}{sign_path}?token={token}"
     role_label = "responsable del préstamo" if role == "responsable" else "receptor del material"
     first      = drafts[0]
-    materials_lines = "\n".join(
-        f"  • {d.id_material.name} — cantidad: {d.amount_lent}" for d in drafts
-    )
-    send_mail(
+    send_sagi_email(
+        email,
         subject="Firma requerida — Préstamo de material SAGI",
-        message=(
-            "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
-            f"Hola {name},\n\n"
-            f"Se ha registrado una solicitud de préstamo en la que figuras como {role_label}.\n"
-            f"El préstamo quedará registrado definitivamente una vez que ambas partes firmen.\n\n"
-            f"Para firmar, haz clic en el siguiente enlace "
-            f"(válido por {_SIGN_TOKEN_TTL_MINUTES // 60} horas):\n\n"
-            f"{sign_link}\n\n"
-            f"Materiales:\n{materials_lines}\n"
-            f"  • Grupo:  {first.apprentice_group}\n"
-            f"  • Fecha solicitada: {first.loan_date}\n\n"
-            "Al abrir el enlace se te pedirá un código de verificación que recibirás "
-            "en un correo separado en ese momento.\n\n"
-            "Si no reconoces esta solicitud, avisa al administrador."
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[email],
-        fail_silently=False,
+        template="loan_draft_sign.html",
+        context={
+            "greeting_name": name,
+            "role_label": role_label,
+            "validity_hours": _SIGN_TOKEN_TTL_MINUTES // 60,
+            "button": {
+                "label": "Firmar solicitud",
+                "url": sign_link,
+            },
+            "materials": [(d.id_material.name, f"cantidad: {d.amount_lent}") for d in drafts],
+            "materials_title": "Materiales",
+            "details": [
+                ("Grupo", first.apprentice_group),
+                ("Fecha solicitada", str(first.loan_date)),
+            ],
+            "warning": "Al abrir el enlace se te pedirá un código de verificación que recibirás "
+                       "en un correo separado en ese momento. Si no reconoces esta solicitud, "
+                       "avisa al administrador.",
+        },
     )
 
 
 def _send_draft_otp_email(name: str, email: str, code: str, drafts: list) -> None:
     """Correo OTP para el flujo draft. Recibe (name, email) — ver _send_draft_sign_email."""
-    materials_lines = "\n".join(
-        f"  • {d.id_material.name} — cantidad: {d.amount_lent}" for d in drafts
-    )
-    send_mail(
+    send_sagi_email(
+        email,
         subject="Tu código de verificación de firma — SAGI",
-        message=(
-            "SAGI · Sistema Administrativo de Gestión de Inventarios — SENA\n\n"
-            f"Hola {name},\n\n"
-            f"Tu código de verificación para firmar la solicitud de préstamo es:\n\n"
-            f"    {code}\n\n"
-            f"Materiales:\n{materials_lines}\n\n"
-            f"Este código es válido por {SignOTP.OTP_TTL_MINUTES} minutos y solo puede "
-            f"usarse una vez.\n\n"
-            "Si no solicitaste este código, contacta al administrador de inmediato."
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[email],
-        fail_silently=False,
+        template="loan_draft_otp.html",
+        context={
+            "greeting_name": name,
+            "code": code,
+            "code_caption": f"Válido por {SignOTP.OTP_TTL_MINUTES} minutos y de un solo uso.",
+            "materials": [(d.id_material.name, f"cantidad: {d.amount_lent}") for d in drafts],
+            "materials_title": "Materiales",
+            "warning": "Si no solicitaste este código, contacta al administrador de inmediato.",
+        },
     )
 
 
