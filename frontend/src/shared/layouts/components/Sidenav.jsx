@@ -66,7 +66,7 @@ const NAV_MODULES = [
 
 function NavLinks({ onLinkClick, isCollapsed = false }) {
     const navigate = useNavigate();
-    const { canAny, isSuper, isPrimaryAdmin } = usePermissions();
+    const { canAny, isPrimaryAdmin } = usePermissions();
 
     // Filtramos los módulos según los permisos del usuario.
     const visibleModules = NAV_MODULES.filter(({ requiredPerms }) =>
@@ -130,17 +130,14 @@ function NavLinks({ onLinkClick, isCollapsed = false }) {
             </ul>
 
             <ul className="flex flex-col gap-1 pt-4 border-t border-border/50">
-                {/* Configuración: administración de roles/grupos o de catálogos
-                    (marcas, categorías, inventarios). Las pestañas internas se
-                    auto-filtran por permiso, así que aquí basta con tener
-                    alguna capacidad de gestión. */}
-                {(isSuper || canAny(["manage_groups", "manage_role_permissions", "create_role", "list_roles", "create_brand", "edit_brand", "create_category", "edit_category", "create_inventory", "edit_inventory"])) && (
-                    <li>
-                        <NavLink to="/configuracion" onClick={onLinkClick} className={linkClass} title="Configuración">
-                            {({ isActive }) => renderNavContent(<Settings size={20} />, "Configuración", isActive)}
-                        </NavLink>
-                    </li>
-                )}
+                {/* Configuración: visible para todos. Las pestañas internas
+                    (Mi perfil por defecto, Marcas, Categorías, Roles, Grupos)
+                    se muestran según el permiso de cada una. */}
+                <li>
+                    <NavLink to="/configuracion" onClick={onLinkClick} className={linkClass} title="Configuración">
+                        {({ isActive }) => renderNavContent(<Settings size={20} />, "Configuración", isActive)}
+                    </NavLink>
+                </li>
 
                 {/* Auditoría */}
                 {isPrimaryAdmin && (
