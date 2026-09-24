@@ -128,6 +128,18 @@ class User(AbstractBaseUser, PermissionsMixin):
         help_text="Fecha y hora en que se otorgó la autorización.",
     )
 
+    # Sesión única: jti del último token emitido en un login exitoso.
+    # Si llega una petición con otro jti, la sesión fue reemplazada por un
+    # login más reciente y se rechaza (la ventana vieja se cierra sola).
+    # Null = nunca ha iniciado sesión desde que existe esta regla.
+    active_session_jti = models.CharField(
+        max_length=64,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="JTI de la sesión activa. Solo una sesión a la vez por usuario.",
+    )
+
     # --- Campos que Django necesita para el control de acceso ---
     is_deleted = models.BooleanField(default=False)  # si esta en True, no puede entrar y se oculta de la lista
     deleted_at = models.DateTimeField(null=True, blank=True)  # fecha de eliminacion logica

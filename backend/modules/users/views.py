@@ -516,12 +516,12 @@ class LoginView(APIView):
             if blocked:
                 return blocked
 
-        def _fail():
+        def _fail(message=None):
             _record_failed_attempt(request, "login_attempts")
             _record_account_attempt("login_attempts", email)
             _record_global_ip(request, "login_attempts")
             return Response(
-                {"error": "Credenciales inválidas"},
+                {"error": message or "Credenciales inválidas"},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -546,11 +546,25 @@ class LoginView(APIView):
         if not check_password(password, user.password):
             return _fail()
 
-        # 5. Verificar que la cuenta no esté eliminada ni desactivada.
-        # Mensaje genérico a propósito: distinguir el motivo permitiría
-        # enumerar cuentas (probar emails y deducir cuáles existen).
-        if user.is_deleted or not user.is_active:
-            return _fail()
+        # 5. Cuenta eliminada o desactivada: mensaje específico (solo se
+        # llega aquí con la contraseña CORRECTA, así que no permite enumerar
+        # cuentas: con clave incorrecta o email inexistente sigue el genérico).
+        if user.is_deleted:
+            return _fail(
+                "Esta cuenta fue eliminada. "
+                "Contacta al administrador si crees que es un error."
+            )
+        if not user.is_active:
+            from modules.home.models import SiteSetting
+            support = SiteSetting.get_support_email()
+            return _fail(
+                "Tu cuenta está desactivada y no puedes iniciar sesión. "
+                + (
+                    f"Escribe a {support} para solicitar la reactivación."
+                    if support
+                    else "Contacta al administrador para solicitar la reactivación."
+                )
+            )
 
         # 6. Login exitoso — resetear contadores de intentos fallidos
         _reset_rate_limit(request, "login_attempts")
@@ -567,16 +581,26 @@ class LoginView(APIView):
             request=request,
         )
 
-        # 7. Construir el contenido del token (payload)
+        # 7. Construir el contenido del token (payload).
+        # El jti identifica esta sesión: al guardarlo como sesión activa,
+        # cualquier token anterior del mismo usuario queda invalidado
+        # (sesión única — el login nuevo cierra el viejo automáticamente).
+        session_jti = uuid.uuid4().hex
         payload = {
             "user_id": user.id,
             "email": user.email,
+            "scope": "session",
+            "jti": session_jti,
             "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=8),
             "iat": datetime.datetime.utcnow(),
         }
 
         # 8. Firmar el token con la clave secreta
         token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+
+        # 7b. Registrar esta como LA sesión activa (invalida la anterior).
+        user.active_session_jti = session_jti
+        user.save(update_fields=["active_session_jti"])
 
         # 9. Devolver el token y algunos datos utiles para el frontend
         # Obtener el primer grupo del usuario (si tiene)
@@ -651,6 +675,13 @@ class LogoutView(APIView):
             token_hash=token_hash,
             defaults={"expires_at": expires_at},
         )
+
+        # Liberar la sesión activa SOLO si quien cierra es la sesión vigente.
+        # Así, cerrar sesión en una ventana vieja (token ya reemplazado) no
+        # tumba la sesión nueva que sigue abierta en otro lado.
+        if payload.get("jti") and payload.get("jti") == request.user.active_session_jti:
+            request.user.active_session_jti = None
+            request.user.save(update_fields=["active_session_jti"])
 
         # Auditar cierre de sesión
         audit_log(

@@ -14,6 +14,11 @@ from .models import User, BlacklistedToken
 
 class JWTAuthentication(BaseAuthentication):
     # DRF llama a este metodo automaticamente en cada peticion.
+    def authenticate_header(self, request):
+        # Sin esto DRF responde 403 ante AuthenticationFailed y el frontend
+        # (que cierra la sesión solo con 401) nunca mostraría el aviso.
+        return "Bearer"
+
     def authenticate(self, request):
         # 1. Buscar el header "Authorization: Bearer <token>"
         auth_header = request.headers.get("Authorization")
@@ -30,6 +35,12 @@ class JWTAuthentication(BaseAuthentication):
             raise AuthenticationFailed("El token ha expirado")
         except jwt.InvalidTokenError:
             raise AuthenticationFailed("Token invalido")
+
+        # 3b. Alcance del token: los tokens de reset/firma usan la misma
+        # clave pero NO son sesiones (sin scope = login anterior a esta
+        # regla, se acepta por compatibilidad).
+        if payload.get("scope") is not None and payload.get("scope") != "session":
+            raise AuthenticationFailed("Token no válido para esta operación")
 
         # 4. Verificar que el token no haya sido revocado (logout)
         token_hash = hashlib.sha256(token.encode()).hexdigest()
@@ -49,7 +60,19 @@ class JWTAuthentication(BaseAuthentication):
             raise AuthenticationFailed("Esta cuenta ha sido eliminada")
 
         if not user.is_active:
-            raise AuthenticationFailed("Esta cuenta está desactivada")
+            raise AuthenticationFailed("Esta cuenta estǭ desactivada")
 
-        # 6. Devolver el usuario -> DRF lo pone en request.user
+        # 6. Sesión única: el token debe ser el de la sesión activa.
+        # Si el usuario inició sesión en otra ventana/dispositivo después,
+        # este token quedó reemplazado y se rechaza sin recargar nada en el
+        # cliente (el frontend muestra el aviso y cierra esta sesión).
+        # active_session_jti None = login anterior a esta regla: se permite
+        # hasta el próximo login, que ya registrará su jti.
+        if user.active_session_jti is not None and payload.get("jti") != user.active_session_jti:
+            raise AuthenticationFailed(
+                "Se inició sesión en otro dispositivo o ventana. "
+                "Esta sesión fue cerrada por seguridad."
+            )
+
+        # 7. Devolver el usuario -> DRF lo pone en request.user
         return (user, None)
