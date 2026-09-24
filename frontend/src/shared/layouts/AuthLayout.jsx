@@ -55,7 +55,7 @@ export default function AuthLayout({ children }) {
                             <h1 className="text-h1 font-heading font-bold text-text-primary select-none pb-4">
                                 SAGI
                             </h1>
-                            <p className="-mt-6 text-sm text-text-secondary select-none">
+                            <p className="-mt-6 text-medium text-text-secondary select-none">
                                 Sistema Administrativo de Gestión de Inventarios — SENA
                             </p>
                         </div>

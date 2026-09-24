@@ -10,7 +10,7 @@ const TYPE_STYLES = {
 function TypeBadge({ type }) {
     if (!type) return null;
     return (
-        <span className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full leading-none ${TYPE_STYLES[type] ?? "bg-surface-muted text-text-muted border border-border"}`}>
+        <span className={`shrink-0 text-small font-medium px-1.5 py-0.5 rounded-full leading-none ${TYPE_STYLES[type] ?? "bg-surface-muted text-text-muted border border-border"}`}>
             {type}
         </span>
     );
@@ -63,7 +63,7 @@ export default function SelectMultiple({
                     {label}
                     {required && <span className="text-error ml-1">*</span>}
                     {!required && optional && (
-                        <span className="ml-1.5 text-[11px] font-normal text-text-muted">(Opcional)</span>
+                        <span className="ml-1.5 text-small font-normal text-text-muted">(Opcional)</span>
                     )}
                 </label>
                 {labelAction}

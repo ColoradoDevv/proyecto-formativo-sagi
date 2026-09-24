@@ -87,7 +87,7 @@ function NotificationsBellInner({ userId, isAdminPanel }) {
                 {count > 0 && (
                     <span className={
                         "absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 " +
-                        "rounded-full bg-error text-text-inverse text-[10px] font-bold " +
+                        "rounded-full bg-error text-text-inverse text-small font-bold " +
                         "flex items-center justify-center"
                     }>
                         {count > 9 ? "9+" : count}
@@ -114,7 +114,7 @@ function NotificationsBellInner({ userId, isAdminPanel }) {
                                 {isAdminPanel ? "Ultimos prestamos" : "Mis tareas asignadas"}
                             </span>
                         </div>
-                        <span className="text-[11px] text-text-muted">
+                        <span className="text-small text-text-muted">
                             {loading ? "Actualizando..." : `${count} ${count === 1 ? "item" : "items"}`}
                         </span>
                     </div>
@@ -187,7 +187,7 @@ function LoansList({ loans }) {
                                 <span className="text-small text-text-primary truncate font-medium">
                                     {loan.material || loan.material_name || `Prestamo #${id}`}
                                 </span>
-                                <span className="text-[11px] text-text-muted truncate">
+                                <span className="text-small text-text-muted truncate">
                                     {loan.responsable_name || loan.responsable || ""}
                                     {loan.loan_date ? ` - ${loan.loan_date}` : ""}
                                 </span>
@@ -214,7 +214,7 @@ function AssignmentsList({ assignments }) {
                             <span className="text-small text-text-primary truncate font-medium">
                                 {a.task_name || `Tarea #${a.id}`}
                             </span>
-                            <span className="text-[11px] text-text-muted truncate">
+                            <span className="text-small text-text-muted truncate">
                                 {a.start_date && a.end_date ? `${a.start_date} - ${a.end_date}` : ""}
                             </span>
                         </div>

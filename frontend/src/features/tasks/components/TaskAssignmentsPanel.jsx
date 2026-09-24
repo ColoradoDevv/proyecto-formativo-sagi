@@ -89,7 +89,7 @@ export default function TaskAssignmentsPanel({
                                                 <span className="text-small text-text-primary truncate font-medium">
                                                     {isGroup ? (a.group_name || a.recipient_name) : (a.user_name || a.recipient_name)}
                                                 </span>
-                                                <span className="text-[11px] text-text-muted truncate">
+                                                <span className="text-small text-text-muted truncate">
                                                     {a.start_date} - {a.end_date}
                                                 </span>
                                             </div>

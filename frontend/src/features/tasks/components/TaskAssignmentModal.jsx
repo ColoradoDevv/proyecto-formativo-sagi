@@ -193,7 +193,7 @@ export default function TaskAssignmentModal({
                                         "px-3 py-1.5 text-small font-medium transition-colors " +
                                         (currentScope === s.id
                                             ? "bg-brand text-text-inverse"
-                                            : "bg-surface-base text-text-secondary hover:bg-surface-hover") +
+                                            : "bg-surface-hover text-text-secondary hover:bg-surface-hover") +
                                         (s.id !== ASSIGNMENT_SCOPES[0].id ? " border-l border-border" : "")
                                     }
                                 >

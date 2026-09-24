@@ -235,7 +235,7 @@ export default function QuotationsPage() {
                                     <p className="text-small font-medium text-text-primary truncate">
                                         {q.title || fileNameOf(q.url)}
                                     </p>
-                                    <p className="text-[11px] text-text-muted truncate">
+                                    <p className="text-small text-text-muted truncate">
                                         {fileNameOf(q.url)} · {formatDate(q.uploaded_at)} ·{" "}
                                         {q.material ? `Asignada: ${q.material_name ?? "material"}` : "Disponible"}
                                     </p>
@@ -251,7 +251,7 @@ export default function QuotationsPage() {
                                 {q.material ? (
                                     <span
                                         title="Está asignada a un material: desasígnela editando el material"
-                                        className="flex items-center gap-1 text-[11px] text-text-muted shrink-0"
+                                        className="flex items-center gap-1 text-small text-text-muted shrink-0"
                                     >
                                         <Link2Off size={13} /> Asignada
                                     </span>

@@ -171,7 +171,7 @@ export default function TaskListPage() {
                         "px-4 py-2 text-small font-medium flex items-center gap-2 transition-colors " +
                         (view === "assignments"
                             ? "bg-brand text-text-inverse"
-                            : "bg-surface-base text-text-secondary hover:bg-surface-hover")
+                            : "bg-surface-hover text-text-secondary hover:bg-surface-hover")
                     }
                 >
                     <ClipboardList size={14} />
@@ -184,7 +184,7 @@ export default function TaskListPage() {
                         "px-4 py-2 text-small font-medium flex items-center gap-2 transition-colors border-l border-border " +
                         (view === "definitions"
                             ? "bg-brand text-text-inverse"
-                            : "bg-surface-base text-text-secondary hover:bg-surface-hover")
+                            : "bg-surface-hover text-text-secondary hover:bg-surface-hover")
                     }
                 >
                     <ListChecks size={14} />

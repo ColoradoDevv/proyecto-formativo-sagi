@@ -106,7 +106,7 @@ export default function UserTasksModal({
                                             <span className="text-small text-text-primary truncate font-medium">
                                                 {a.task_name}
                                             </span>
-                                            <span className="text-[11px] text-text-muted truncate">
+                                            <span className="text-small text-text-muted truncate">
                                                 {a.start_date} - {a.end_date}
                                             </span>
                                         </div>
@@ -191,7 +191,7 @@ export default function UserTasksModal({
                                         <div className="flex flex-col min-w-0">
                                             <span className="text-small text-text-primary truncate font-medium">{d.name}</span>
                                             {d.description && (
-                                                <span className="text-[11px] text-text-muted truncate">{d.description}</span>
+                                                <span className="text-small text-text-muted truncate">{d.description}</span>
                                             )}
                                         </div>
                                         <Button

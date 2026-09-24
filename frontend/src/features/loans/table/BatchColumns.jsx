@@ -62,7 +62,7 @@ export const batchColumns = () => [
                     {loans.map((l) => (
                         <span
                             key={l.id_loan}
-                            className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border border-border bg-surface-muted text-text-secondary"
+                            className="inline-flex items-center gap-1 text-small px-2 py-0.5 rounded-full border border-border bg-surface-muted text-text-secondary"
                         >
                             {l.material}
                             <span className="text-text-muted">×{l.amount_lent}</span>

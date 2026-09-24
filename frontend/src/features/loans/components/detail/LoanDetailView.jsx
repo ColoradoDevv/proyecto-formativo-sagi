@@ -95,7 +95,7 @@ export default function LoanDetailView() {
                                         <>
                                             <p className="text-text-secondary">{firmaResponsable.usuario} — {formatDate(firmaResponsable.fecha)}</p>
                                             {formatAudit(firmaResponsable) && (
-                                                <p className="text-text-muted text-xs break-all">{formatAudit(firmaResponsable)}</p>
+                                                <p className="text-text-muted text-small break-all">{formatAudit(firmaResponsable)}</p>
                                             )}
                                         </>
                                     )
@@ -116,7 +116,7 @@ export default function LoanDetailView() {
                                         <>
                                             <p className="text-text-secondary">{firmaReceptor.usuario} — {formatDate(firmaReceptor.fecha)}</p>
                                             {formatAudit(firmaReceptor) && (
-                                                <p className="text-text-muted text-xs break-all">{formatAudit(firmaReceptor)}</p>
+                                                <p className="text-text-muted text-small break-all">{formatAudit(firmaReceptor)}</p>
                                             )}
                                         </>
                                     )
@@ -141,7 +141,7 @@ export default function LoanDetailView() {
                                     <p className="text-text-secondary">{firmaResponsable.usuario}</p>
                                     <p className="text-text-muted">{formatDate(firmaResponsable.fecha)}</p>
                                     {formatAudit(firmaResponsable) && (
-                                        <p className="text-text-muted text-xs break-all">{formatAudit(firmaResponsable)}</p>
+                                        <p className="text-text-muted text-small break-all">{formatAudit(firmaResponsable)}</p>
                                     )}
                                 </div>
                             </div>
@@ -154,7 +154,7 @@ export default function LoanDetailView() {
                                     <p className="text-text-secondary">{firmaReceptor.usuario}</p>
                                     <p className="text-text-muted">{formatDate(firmaReceptor.fecha)}</p>
                                     {formatAudit(firmaReceptor) && (
-                                        <p className="text-text-muted text-xs break-all">{formatAudit(firmaReceptor)}</p>
+                                        <p className="text-text-muted text-small break-all">{formatAudit(firmaReceptor)}</p>
                                     )}
                                 </div>
                             </div>
