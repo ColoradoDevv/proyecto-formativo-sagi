@@ -30,12 +30,12 @@ export const IconButton = React.forwardRef(function IconButton(
         cursor-pointer
         focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
         disabled:opacity-50 disabled:pointer-events-none
+        text-text-secondary
 
     `
 
     const variants = {
         default: `
-            text-text-inverse
             hover:bg-surface-muted
             hover:text-text-primary
             focus-visible:ring-focus-ring
@@ -46,7 +46,7 @@ export const IconButton = React.forwardRef(function IconButton(
             focus-visible:ring-focus-ring
         `,
         primary: `
-            text-text-inverse bg-brand
+            text-on-brand bg-brand
             hover:bg-brand-hover
             focus-visible:ring-focus-ring
             cursor-pointer

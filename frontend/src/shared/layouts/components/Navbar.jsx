@@ -83,7 +83,7 @@ export default function Navbar({ onToggleSidebar }) {
                         className="w-10 h-10 rounded-full object-cover shrink-0"
                     />
                 ) : (
-                    <span className="w-10 h-10 rounded-full bg-brand text-text-inverse flex items-center justify-center font-heading text-h3">
+                    <span className="w-10 h-10 rounded-full bg-brand text-on-brand flex items-center justify-center font-heading text-h3">
                         {userInitial}
                     </span>
                 )}

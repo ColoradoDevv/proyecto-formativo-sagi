@@ -21,6 +21,7 @@ const SIZES = {
     sm: "max-w-sm",
     md: "max-w-md",
     lg: "max-w-lg",
+    xl: "max-w-xl",
 };
 
 // Modal centralizado y reutilizable.
