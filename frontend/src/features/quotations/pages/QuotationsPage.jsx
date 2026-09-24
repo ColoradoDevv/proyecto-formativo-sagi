@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FileText, Trash2, Upload, Link2Off } from "lucide-react";
-import { Button, EditCard, FileInput, Input, Modal, showAlert } from "@/shared";
+import { Button, Checkbox, EditCard, FileInput, IconButton, Input, Modal, showAlert } from "@/shared";
 import { mediaUrl } from "@/shared/services/api";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import {
@@ -202,19 +202,17 @@ export default function QuotationsPage() {
                         onChange={(e) => handleSearch(e.target.value)}
                         className="flex-1"
                     />
-                    <label className="flex items-center gap-2 text-small text-text-secondary cursor-pointer whitespace-nowrap">
-                        <input
-                            type="checkbox"
-                            checked={onlyAvailable}
-                            onChange={(e) => {
-                                setOnlyAvailable(e.target.checked);
-                                const controller = new AbortController();
-                                fetchItems(controller.signal, { unassigned: e.target.checked });
-                            }}
-                            className="w-5 h-5 accent-text-primary"
-                        />
-                        Solo disponibles
-                    </label>
+                    <Checkbox
+                        id="onlyAvailable"
+                        checked={onlyAvailable}
+                        onChange={(e) => {
+                            setOnlyAvailable(e.target.checked);
+                            const controller = new AbortController();
+                            fetchItems(controller.signal, { unassigned: e.target.checked });
+                        }}
+                        label="Solo disponibles"
+                        className="text-text-secondary whitespace-nowrap"
+                    />
                 </div>
 
                 {loading ? (
@@ -257,14 +255,16 @@ export default function QuotationsPage() {
                                     </span>
                                 ) : (
                                     canDelete && (
-                                        <button
-                                            type="button"
+                                        <IconButton
                                             onClick={() => handleDelete(q.id)}
-                                            aria-label="Eliminar cotización"
-                                            className="shrink-0 text-error hover:opacity-70 transition-opacity p-1"
+                                            variant="ghost"
+                                            hitSize={32}
+                                            iconSize={16}
+                                            ariaLabel="Eliminar cotización"
+                                            className="shrink-0 text-error hover:opacity-70"
                                         >
                                             <Trash2 size={15} />
-                                        </button>
+                                        </IconButton>
                                     )
                                 )}
                             </li>

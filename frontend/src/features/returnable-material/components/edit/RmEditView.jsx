@@ -290,14 +290,16 @@ function RmEditForm({ RM, categories, brands, states, users, inventories, onCrea
                                             <FileText size={12} className="shrink-0" />
                                             <span className="truncate">Ficha {i + 1}</span>
                                         </a>
-                                        <button
-                                            type="button"
+                                        <IconButton
                                             onClick={() => handleDeleteSheet(sheet.id)}
-                                            className="shrink-0 text-error hover:opacity-70 transition-opacity p-0.5"
-                                            aria-label="Eliminar ficha"
+                                            variant="ghost"
+                                            hitSize={32}
+                                            iconSize={16}
+                                            ariaLabel="Eliminar ficha"
+                                            className="shrink-0 text-error hover:opacity-70"
                                         >
                                             <Trash2 size={13} />
-                                        </button>
+                                        </IconButton>
                                     </div>
                                 ))}
 
@@ -308,14 +310,16 @@ function RmEditForm({ RM, categories, brands, states, users, inventories, onCrea
                                             <FileText size={12} className="shrink-0" />
                                             <span className="truncate">{file.name}</span>
                                         </span>
-                                        <button
-                                            type="button"
+                                        <IconButton
                                             onClick={() => setNewSheets((prev) => prev.filter((_, idx) => idx !== i))}
-                                            className="shrink-0 text-error hover:opacity-70 transition-opacity p-0.5"
-                                            aria-label="Quitar ficha"
+                                            variant="ghost"
+                                            hitSize={32}
+                                            iconSize={16}
+                                            ariaLabel="Quitar ficha"
+                                            className="shrink-0 text-error hover:opacity-70"
                                         >
                                             <Trash2 size={13} />
-                                        </button>
+                                        </IconButton>
                                     </div>
                                 ))}
 
