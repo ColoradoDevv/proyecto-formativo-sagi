@@ -6,6 +6,8 @@
     --semantic-brand-hover: var(--color-secondary-950);       /* #0C2D48 */
     --semantic-brand-soft: var(--color-secondary-300);        /* #62E8FA */
     --semantic-brand-soft-hover: var(--color-secondary-400); /* #55E6F9 */
+    /* Texto sobre fondos brand: blanco en claro, navy en oscuro (9.4:1+). */
+    --semantic-on-brand: var(--color-white);                  /* #FFFFFF */
 
     /* ========= BACKGROUND ========== */
     --semantic-background: var(--color-secondary-100);         /* #F0F5EE */
@@ -116,6 +118,7 @@
     --semantic-brand-hover: var(--color-secondary-200);        /* #E1EBE3 */
     --semantic-brand-soft: var(--color-secondary-800);         /* #375267 */
     --semantic-brand-soft-hover: var(--color-secondary-700);   /* #526B7B */
+    --semantic-on-brand: var(--color-secondary-950);           /* #0C2D48 — texto sobre brand */
 
     /* ========= BACKGROUND ========== */
     --semantic-background: var(--color-secondary-950);         /* #0C2D48 */
@@ -139,7 +142,7 @@
 
     /* ============= STATE ================ */
     --semantic-success: var(--color-tertiary-300);             /* #B2D6C1 — fg claro */
-    --semantic-success-soft: var(--color-tertiary-800);        /* #168444 — bg oscuro */
+    --semantic-success-soft: var(--color-tertiary-850);         /* bg oscuro (5.26:1 con success) */
 
     /* Swap literal solid↔soft usando los mismos tokens */
     --semantic-warning: var(--color-warning-soft);             /* #FEF3C7 — fg claro */

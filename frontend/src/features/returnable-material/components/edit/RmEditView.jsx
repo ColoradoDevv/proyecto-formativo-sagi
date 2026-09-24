@@ -268,7 +268,7 @@ function RmEditForm({ RM, categories, brands, states, users, inventories, onCrea
                                     type="button"
                                     aria-label="Cambiar foto"
                                     onClick={() => photoInputRef.current.click()}
-                                    className="absolute bottom-1 right-1 size-7 bg-brand text-text-inverse rounded-[var(--radius-full)] flex items-center justify-center shadow-[var(--shadow-elevation-1)] hover:opacity-90 transition-opacity"
+                                    className="absolute bottom-1 right-1 size-7 bg-brand text-on-brand rounded-[var(--radius-full)] flex items-center justify-center shadow-[var(--shadow-elevation-1)] hover:opacity-90 transition-opacity"
                                 >
                                     <Pencil size={13} />
                                 </button>

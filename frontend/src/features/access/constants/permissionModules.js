@@ -1,6 +1,7 @@
 // Catálogo de módulos y permisos del sistema.
-// Los codenames deben coincidir con la migración del backend
-// 0002_load_initial_permissions. Fuente única de verdad para la UI de access.
+// Los codenames deben coincidir con las migraciones del backend
+// (0002 + 0004 + 0007 + 0008 + 0009 + 0010 + 0011 + 0014 + 0015).
+// Fuente única de verdad para la UI de access.
 
 export const PERMISSION_MODULES = [
   {
@@ -51,6 +52,7 @@ export const PERMISSION_MODULES = [
       { codename: "list_loans", label: "Listar préstamos" },
       { codename: "view_loan", label: "Ver préstamo" },
       { codename: "update_loan", label: "Actualizar préstamo" },
+      { codename: "edit_loan", label: "Editar préstamo (API)" },
       { codename: "export_loans", label: "Generar reporte de préstamos" },
       { codename: "return_material", label: "Devolver material devolutivo" },
       { codename: "register_surplus", label: "Registrar sobrante" },
@@ -65,6 +67,8 @@ export const PERMISSION_MODULES = [
       { codename: "list_brands", label: "Listar marcas" },
       { codename: "update_brand", label: "Actualizar marca" },
       { codename: "disable_brand", label: "Deshabilitar marca" },
+      { codename: "view_brand", label: "Ver marca (API)" },
+      { codename: "edit_brand", label: "Editar marca (API)" },
     ],
   },
   {
@@ -102,6 +106,28 @@ export const PERMISSION_MODULES = [
       { codename: "list_tasks", label: "Listar tareas" },
       { codename: "view_task", label: "Ver tarea" },
       { codename: "update_task", label: "Actualizar tarea" },
+      { codename: "edit_task", label: "Editar tarea (API)" },
+      { codename: "delete_task", label: "Eliminar tarea" },
+      { codename: "export_tasks", label: "Exportar tareas" },
+    ],
+  },
+  {
+    title: "Asignaciones de tareas",
+    permissions: [
+      { codename: "view_task_assignment", label: "Ver asignaciones" },
+      { codename: "create_task_assignment", label: "Asignar tarea" },
+      { codename: "edit_task_assignment", label: "Editar asignación" },
+      { codename: "delete_task_assignment", label: "Eliminar asignación" },
+      { codename: "export_task_assignments", label: "Exportar asignaciones" },
+    ],
+  },
+  {
+    title: "Cotizaciones",
+    permissions: [
+      { codename: "view_quotation", label: "Ver cotizaciones" },
+      { codename: "create_quotation", label: "Subir cotización" },
+      { codename: "edit_quotation", label: "Editar cotización" },
+      { codename: "delete_quotation", label: "Eliminar cotización" },
     ],
   },
   {

@@ -216,7 +216,7 @@ export default function TaskListPage() {
                     className={
                         "px-4 py-2 text-small font-medium flex items-center gap-2 transition-colors " +
                         (view === "assignments"
-                            ? "bg-brand text-text-inverse"
+                            ? "bg-brand text-on-brand"
                             : "bg-surface-hover text-text-secondary hover:bg-surface-hover")
                     }
                 >
@@ -229,7 +229,7 @@ export default function TaskListPage() {
                     className={
                         "px-4 py-2 text-small font-medium flex items-center gap-2 transition-colors border-l border-border " +
                         (view === "definitions"
-                            ? "bg-brand text-text-inverse"
+                            ? "bg-brand text-on-brand"
                             : "bg-surface-hover text-text-secondary hover:bg-surface-hover")
                     }
                 >

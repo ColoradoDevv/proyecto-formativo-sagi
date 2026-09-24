@@ -169,7 +169,7 @@ export default function DataTable({ data, columns, onRowDoubleClick, hiddenColum
               <span className="mx-3 h-4 w-px bg-border" aria-hidden="true" />
               <span className="font-medium">Filtros</span>
               {columnFilters.length > 0 && (
-                <span className="ml-2 bg-brand text-text-inverse rounded-full text-small min-w-6 text-center px-2">
+                <span className="ml-2 bg-brand text-on-brand rounded-full text-small min-w-6 text-center px-2">
                   {columnFilters.length}
                 </span>
               )}

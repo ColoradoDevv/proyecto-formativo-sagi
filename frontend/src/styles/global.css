@@ -21,6 +21,7 @@
     --color-brand-hover: var(--semantic-brand-hover);
     --color-brand-soft: var(--semantic-brand-soft);
     --color-brand-soft-hover: var(--semantic-brand-soft-hover);
+    --color-on-brand: var(--semantic-on-brand);
 
     /* ======== BACKGROUND ============ */
     --color-background: var(--semantic-background);
@@ -147,6 +148,11 @@
 @layer base {
     :root {
         font-family: 'Work Sans', 'Calibri', Helvetica, Arial, sans-serif;
+    }
+
+    /* Scrollbars y controles nativos del color-scheme del tema. */
+    [data-theme="dark"] {
+        color-scheme: dark;
     }
 
     html, body {

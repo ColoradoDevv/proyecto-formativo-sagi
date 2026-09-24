@@ -445,12 +445,23 @@ export default function CmRegisterForm() {
                     >
                         <div className="pt-4 flex flex-col gap-3">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <ConsumableAccountableCard
-                                    formData={formData}
-                                    errors={errors}
-                                    onChange={handleChange}
-                                    users={users}
-                                />
+                                <div className="flex flex-col gap-3 min-w-0">
+                                    <ConsumableAccountableCard
+                                        formData={formData}
+                                        errors={errors}
+                                        onChange={handleChange}
+                                        users={users}
+                                    />
+                                    <EditCard title="Cotizaciones">
+                                        <QuotationPicker
+                                            name="quotations"
+                                            value={formData.quotations}
+                                            onChange={handleChange}
+                                            error={errors.quotations}
+                                            required
+                                        />
+                                    </EditCard>
+                                </div>
                                 <EditCard title="Archivos">
                                     <div className="flex flex-col gap-4">
                                         <ProfileFileInput
@@ -478,13 +489,6 @@ export default function CmRegisterForm() {
                                             maxSizeMB={3}
                                             description="Formato PDF, Excel o PNG. Tamaño máximo: 3MB. Máximo 1 archivo."
                                             className="w-full h-14 rounded-2xl"
-                                        />
-                                        <QuotationPicker
-                                            name="quotations"
-                                            value={formData.quotations}
-                                            onChange={handleChange}
-                                            error={errors.quotations}
-                                            required
                                         />
                                     </div>
                                 </EditCard>

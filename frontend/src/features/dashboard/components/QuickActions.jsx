@@ -52,7 +52,7 @@ export default function QuickActions() {
                         key={action.to}
                         to={action.to}
                         style={{ animationDelay: `${index * 60}ms` }}
-                        className="group flex items-center gap-3 h-[var(--size-control-2xl)] px-3 bg-brand text-text-inverse rounded-[var(--radius-xl)] shadow-(--shadow-elevation-4) hover:shadow-(--shadow-elevation-5) hover:-translate-y-1 transition-all duration-200 cursor-pointer animate-slide-up"
+                        className="group flex items-center gap-3 h-[var(--size-control-2xl)] px-3 bg-brand text-on-brand rounded-[var(--radius-xl)] shadow-(--shadow-elevation-4) hover:shadow-(--shadow-elevation-5) hover:-translate-y-1 transition-all duration-200 cursor-pointer animate-slide-up"
                     >
                         <span className="bg-surface-hover/15 rounded-xl w-9 h-9 flex items-center justify-center shrink-0">
                             <action.Icon size={18} />

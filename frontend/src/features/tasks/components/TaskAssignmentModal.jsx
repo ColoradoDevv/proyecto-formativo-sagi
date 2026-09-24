@@ -196,7 +196,7 @@ export default function TaskAssignmentModal({
                                     className={
                                         "px-3 py-1.5 text-small font-medium transition-colors " +
                                         (currentScope === s.id
-                                            ? "bg-brand text-text-inverse"
+                                            ? "bg-brand text-on-brand"
                                             : "bg-surface-hover text-text-secondary hover:bg-surface-hover") +
                                         (s.id !== ASSIGNMENT_SCOPES[0].id ? " border-l border-border" : "")
                                     }

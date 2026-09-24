@@ -78,7 +78,7 @@ function NavLinks({ onLinkClick, isCollapsed = false }) {
             isCollapsed ? "justify-start" : ""
         } ${
             isActive
-                ? "bg-brand text-text-inverse font-medium"
+                ? "bg-brand text-on-brand font-medium"
                 : "hover:bg-surface-muted text-text-primary"
         }`;
 
@@ -89,7 +89,7 @@ function NavLinks({ onLinkClick, isCollapsed = false }) {
             </span>
             {!isCollapsed && <span className="truncate whitespace-nowrap flex-1">{label}</span>}
             {!isCollapsed && isActive && (
-                <span className="w-1.5 h-1.5 rounded-full bg-text-inverse shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-on-brand shrink-0" />
             )}
         </>
     );
