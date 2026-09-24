@@ -72,6 +72,7 @@ import ReportModal from "./ReportModal";
                     onClose={() => setIsReportModalOpen(false)}
                     data={data}
                     fields={reportConfig.fields}
+                    filters={reportConfig.filters ?? []}
                     reportTitle={reportConfig.reportTitle}
                     fileNamePrefix={reportConfig.fileNamePrefix}
                 />

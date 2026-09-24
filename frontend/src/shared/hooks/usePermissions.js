@@ -31,24 +31,28 @@ export const MODULE_PERMS = {
         create: ["create_user"],
         edit:   ["edit_user"],
         remove: ["delete_user"],
+        export: ["export_users"],
     },
     consumables: {
         view:   ["view_consumable"],
         create: ["create_consumable"],
         edit:   ["edit_consumable"],
         remove: [],
+        export: ["export_consumable_materials"],
     },
     returnables: {
         view:   ["view_returnable"],
         create: ["create_returnable"],
         edit:   ["edit_returnable"],
         remove: [],
+        export: ["export_returnable_materials"],
     },
     loans: {
         view:   ["view_loan"],
         create: ["create_loan"],
         edit:   ["edit_loan"],
         remove: [],
+        export: ["export_loans"],
         // Registrar una devolución (módulo returns).
         createReturn: ["create_return"],
     },
@@ -57,18 +61,21 @@ export const MODULE_PERMS = {
         create: ["create_quotation"],
         edit:   ["edit_quotation"],
         remove: ["delete_quotation"],
+        export: [],
     },
     tasks: {
         view:   ["view_task", "view_task_assignment"],
         create: ["create_task", "create_task_assignment"],
         edit:   ["edit_task", "edit_task_assignment"],
         remove: ["delete_task", "delete_task_assignment"],
+        export: ["export_tasks", "export_task_assignments"],
     },
     inventories: {
         view:   ["view_inventory"],
         create: ["create_inventory"],
         edit:   ["edit_inventory"],
         remove: ["delete_inventory"],
+        export: [],
     },
 };
 

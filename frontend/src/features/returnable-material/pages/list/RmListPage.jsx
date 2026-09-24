@@ -11,8 +11,9 @@ import useRMs from "../../hooks/useRMs";
 
 export default function RmListPage() {
     const navigate = useNavigate();
-    const { isSuper, can } = usePermissions();
+    const { isSuper, can, canAny } = usePermissions();
     const canCreate = isSuper || can("create_returnable");
+    const canExport = isSuper || canAny(MODULE_PERMS.returnables.export);
 
     const { RMs, setRMs, loading, error } = useRMs();
     const [notification, setNotification]   = useState(null);
@@ -57,14 +58,16 @@ export default function RmListPage() {
                             </Button>
                         </Link>
                     )}
-                    <Button
-                        data={RMs}
-                        reportConfig={returnablesReportConfig}
-                        className="w-full"
-                        icon={Download}
-                    >
-                        Descargar Reporte
-                    </Button>
+                    {canExport && (
+                        <Button
+                            data={RMs}
+                            reportConfig={returnablesReportConfig}
+                            className="w-full"
+                            icon={Download}
+                        >
+                            Descargar Reporte
+                        </Button>
+                    )}
                 </div>
             </div>
 
