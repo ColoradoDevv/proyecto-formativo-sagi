@@ -5,15 +5,18 @@ import './styles/global.css'
 import App from './app/App.jsx'
 import { ThemeProvider } from '@/shared/contexts/ThemeContext'
 import { DirtyFormProvider } from '@/shared/contexts/DirtyFormContext'
+import { ErrorBoundary } from '@/shared'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ThemeProvider>
-      <DirtyFormProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </DirtyFormProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <DirtyFormProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </DirtyFormProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   </StrictMode>,
 )

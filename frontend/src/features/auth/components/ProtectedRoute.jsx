@@ -77,6 +77,23 @@ export function RequirePerms({ perms = [], requireAll = false, children }) {
 
     if (allowed) return <>{children}</>;
 
+    return <AccessDenied onBack={() => navigate(-1)} />;
+}
+
+//
+// Guardia del módulo de Auditoría: solo el superadministrador primigenio
+// (misma regla que exige el backend). Reutiliza la tarjeta "Sin permisos".
+//
+export function RequirePrimaryAdmin({ children }) {
+    const { isPrimaryAdmin } = usePermissions();
+    const navigate = useNavigate();
+
+    if (isPrimaryAdmin) return <>{children}</>;
+
+    return <AccessDenied onBack={() => navigate(-1)} />;
+}
+
+function AccessDenied({ onBack }) {
     return (
         <div className="h-full flex items-center justify-center p-6">
             <div className="bg-surface-hover border border-border rounded-[var(--radius-2xl)] px-8 py-10 w-full max-w-md flex flex-col items-center gap-4 text-center animate-slide-up">
@@ -84,7 +101,7 @@ export function RequirePerms({ perms = [], requireAll = false, children }) {
                 <p className="text-small text-text-muted">
                     No tienes permiso para acceder a esta sección. Si crees que es un error, contacta al administrador.
                 </p>
-                <Button type="button" variant="secondary" size="md" onClick={() => navigate(-1)}>
+                <Button type="button" variant="secondary" size="md" onClick={onBack}>
                     Volver atrás
                 </Button>
             </div>
