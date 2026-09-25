@@ -24,6 +24,18 @@ from modules.audit.utils import log as audit_log
 from modules.audit.models import AuditLog
 
 
+# Permisos de la campana de notificaciones: mutuamente excluyentes.
+# Un grupo o usuario solo puede tener uno de los dos (préstamos o tareas).
+NOTIFICATION_PERMS = {"view_loan_notifications", "view_task_notifications"}
+
+
+def _conflicting_notification(codename):
+    """Devuelve el otro permiso de notificación si codename es uno de ellos."""
+    if codename not in NOTIFICATION_PERMS:
+        return None
+    return (NOTIFICATION_PERMS - {codename}).pop()
+
+
 class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet para visualizar permisos del sistema.
@@ -103,6 +115,20 @@ class GroupViewSet(viewsets.ModelViewSet):
             return Response(
                 {"error": "Permiso no encontrado"},
                 status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Las notificaciones son excluyentes: no se pueden tener ambas.
+        other = _conflicting_notification(permission.codename)
+        if other and group.permissions.filter(codename=other).exists():
+            return Response(
+                {
+                    "error": (
+                        f"No se puede asignar '{permission.codename}' porque el grupo "
+                        f"'{group.name}' ya tiene '{other}'. Las notificaciones son "
+                        "excluyentes: elija préstamos o tareas, no ambas."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Agregar permiso al grupo
@@ -251,6 +277,27 @@ class UserPermissionView(generics.GenericAPIView):
                 {"error": "Permiso no encontrado"},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+        # Las notificaciones son excluyentes: ni directo ni heredado por grupo.
+        other = _conflicting_notification(permission.codename)
+        if other:
+            has_other = UserPermission.objects.filter(
+                user=user, permission__codename=other
+            ).exists() or UserGroup.objects.filter(
+                user=user,
+                group__group_permissions__permission__codename=other,
+            ).exists()
+            if has_other:
+                return Response(
+                    {
+                        "error": (
+                            f"No se puede asignar '{permission.codename}' porque el usuario "
+                            f"ya tiene '{other}' (directo o por grupo). Las notificaciones son "
+                            "excluyentes: elija préstamos o tareas, no ambas."
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         user_perm, created = UserPermission.objects.get_or_create(
             user=user,

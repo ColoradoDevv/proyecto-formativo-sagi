@@ -65,13 +65,19 @@ export default function AccessPage() {
         ? (code) => removeGroupPermission(selectedGroup, code)
         : (code) => removeUserPermission(selectedUser, code);
 
+      // Primero los retiros y luego las asignaciones: así los cambios de
+      // permisos excluyentes (ej. notificaciones: préstamos <-> tareas)
+      // no chocan con la validación del backend.
       // Para usuarios, un permiso puede venir heredado de un grupo: el backend
       // responde 404 al intentar quitarlo directamente. Ese caso se tolera
       // (allSettled) porque no es un error de persistencia real.
-      const results = await Promise.allSettled([
-        ...toAssign.map((code) => assign(code)),
-        ...toRemove.map((code) => remove(code)),
-      ]);
+      const removeResults = await Promise.allSettled(
+        toRemove.map((code) => remove(code)),
+      );
+      const assignResults = await Promise.allSettled(
+        toAssign.map((code) => assign(code)),
+      );
+      const results = [...removeResults, ...assignResults];
 
       const realError = results.find(
         (r) => r.status === "rejected" && r.reason?.status !== 404
