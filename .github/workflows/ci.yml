@@ -8,6 +8,11 @@ jobs:
   backend:
     name: Backend (Django check + migraciones)
     runs-on: ubuntu-latest
+    # Clave dummy solo para CI: check/makemigrations no tocan servicios
+    # reales, pero settings exige SECRET_KEY (fail-closed en prod).
+    env:
+      SECRET_KEY: ci-dummy-secret-key-not-for-production
+      DEBUG: "True"
     steps:
       - uses: actions/checkout@v4
 
