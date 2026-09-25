@@ -13,6 +13,7 @@ from .serializers import (
     TaskEvidenceSerializer,
 )
 from modules.permissions.permissions_drf import HasPermission, IsSuperUser
+from modules.audit.mixins import AuditMixin
 from sia_api.emailing import send_sagi_email
 from sia_api.file_validation import validate_evidence_upload
 
@@ -20,7 +21,7 @@ from sia_api.file_validation import validate_evidence_upload
 FINISHABLE_STATES = {'Pendiente', 'En progreso'}
 
 
-class TaskDefinitionViewSet(viewsets.ModelViewSet):
+class TaskDefinitionViewSet(AuditMixin, viewsets.ModelViewSet):
     # CRUD de la plantilla de tarea (TaskDefinition).
     # Anotamos cuántas asignaciones tiene cada una para mostrarlo en el listado.
     queryset = TaskDefinition.objects.annotate(
@@ -40,7 +41,7 @@ class TaskDefinitionViewSet(viewsets.ModelViewSet):
         return [IsSuperUser()]
 
 
-class TaskAssignmentViewSet(viewsets.ModelViewSet):
+class TaskAssignmentViewSet(AuditMixin, viewsets.ModelViewSet):
     # CRUD de la asignacion de tarea a un usuario o grupo (TaskAssignment).
     queryset = TaskAssignment.objects.select_related('task', 'user', 'group').all().order_by('id')
     serializer_class = TaskAssignmentSerializer

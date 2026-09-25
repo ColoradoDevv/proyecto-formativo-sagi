@@ -127,10 +127,9 @@ DATABASES = {
         # Supabase (Postgres + Pooler PgBouncer) exige SSL.
         # Si ENGINE es postgres, agregamos sslmode=require.
         'OPTIONS': {'sslmode': 'require'} if 'postgresql' in (os.getenv('DB_ENGINE') or '') else {},
-        # Con PgBouncer en modo transaccion (puerto 6543) no mantener conexiones persistentes.
-        # Reutilizar la conexión con Supabase entre peticiones (evita un
-        # handshake TLS nuevo en cada request contra el pooler).
-        'CONN_MAX_AGE': 60,
+        # Con PgBouncer en modo transacción (puerto 6543) no mantener
+        # conexiones persistentes: 0 por defecto, ajustable con CONN_MAX_AGE.
+        'CONN_MAX_AGE': int(os.getenv('CONN_MAX_AGE', '0')),
     }
 }
 

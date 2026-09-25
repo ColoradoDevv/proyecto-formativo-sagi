@@ -80,6 +80,8 @@ class InventoryViewSet(AuditMixin, viewsets.ModelViewSet):
             return [HasPermission("create_inventory")]
         if self.action in ("update", "partial_update"):
             return [HasPermission("edit_inventory")]
+        if self.action == "destroy":
+            return [HasPermission("delete_inventory")]
         from modules.permissions.permissions_drf import IsSuperUser
         return [IsSuperUser()]
 
@@ -103,6 +105,8 @@ class CategoryViewSet(AuditMixin, viewsets.ModelViewSet):
             return [HasPermission("create_category")]
         if self.action in ("update", "partial_update"):
             return [HasPermission("edit_category")]
+        if self.action == "destroy":
+            return [HasPermission("delete_category")]
         from modules.permissions.permissions_drf import IsSuperUser
         return [IsSuperUser()]
 
