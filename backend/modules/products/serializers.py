@@ -580,6 +580,10 @@ class ReturnableMaterialSerializer(serializers.ModelSerializer):
         rep['brand']        = BrandSerializer(c.brand).data if c.brand else None
         rep['inventory']    = InventorySerializer(c.inventory).data if c.inventory else None
         rep['category']     = CategorySerializer(c.category).data if c.category else None
+        # `tipo` ahora vive en ConsumableMaterial y se replica en la respuesta
+        # del ReturnableMaterial para que el frontend lo consuma en el mismo
+        # payload que ya usa para category/brand/inventory.
+        rep['tipo']         = c.tipo
 
         # Cuentadantes: ahora vienen como lista (M2M) en lugar de un solo
         # objeto. Cada elemento es { id, first_name, last_name }.

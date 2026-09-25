@@ -297,26 +297,42 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
         for key in sorted(files.keys()):
             if key == 'technical_sheet' or key.startswith('technical_sheet_'):
                 validate_sheet_upload(files[key], field=key)
-        # Las categorias ahora se gestionan via CRUD (CategoryViewSet).
-        # Cualquier category_id valido se acepta; si la categoria no existe
-        # la FK constraint del modelo lanzara IntegrityError, que cae en el
-        # bloque try/except de abajo.
-        category_id = data.get("category_id")
-
+        # Las categorias ahora se gestionan via CRUD (CategoryViewSet) y son
+        # OBLIGATORIAS tanto para consumibles como para devolutivos.
+        # Si viene vacia/null el backend rechaza con 400 explicito.
+        category_id_raw = data.get("category_id")
+        if category_id_raw in (None, "", "null"):
+            raise ValidationError({"category": "Debe seleccionar una categoria."})
+        try:
+            category_id = int(category_id_raw)
+        except (TypeError, ValueError):
+            raise ValidationError({"category": "Categoria invalida."})
         category = Category.objects.filter(pk=category_id).first()
-        cat_name = category.name.strip().lower() if category else ""
+        if category is None:
+            raise ValidationError({"category": "La categoria seleccionada no existe."})
 
-        requires_sena_plate = cat_name in ("maquinaria y equipos", "muebles y enseres")
-        requires_serial = cat_name in ("maquinaria y equipos", "muebles y enseres")
-        requires_dimensions = cat_name == "muebles y enseres"
+        # Tipo: a partir de este cambio las reglas (placa SENA obligatoria,
+        # dimensiones obligatorias) dependen del valor del enum `tipo`, no
+        # del nombre de la categoria. `category` queda como dato auxiliar.
+        # NOTA: aceptar tanto "tipo" como posible alias para tolerar clientes
+        # que aun envien la categoria con valores legacy.
+        tipo = (data.get("tipo") or "").strip().lower()
+        valid_tipos = {choice[0] for choice in ConsumableMaterial.TIPO_CHOICES}
+        if not tipo:
+            raise ValidationError({"tipo": "Debe seleccionar un tipo."})
+        if tipo not in valid_tipos:
+            raise ValidationError({"tipo": f"Tipo invalido. Valores permitidos: {sorted(valid_tipos)}."})
+
+        requires_sena_plate = tipo in ("maquinaria", "muebles")
+        requires_dimensions = tipo == "muebles"
 
         model = str(data.get("model", "")).strip()
         if not model:
             raise ValidationError({"model": "El modelo es obligatorio."})
 
         serial = str(data.get("serial", "")).strip()
-        if requires_serial and not serial:
-            raise ValidationError({"serial": "El número de serie es obligatorio para esta categoría."})
+        # `serial` siempre es opcional (decision de UI previa); dejamos
+        # la validacion de unicidad pero no exigimos presencia.
         serial = serial or None
 
         if serial and ReturnableMaterial.objects.filter(serial__iexact=serial).exists():
@@ -331,14 +347,14 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
             sena_plate = str(sena_plate).strip() or None
 
         if requires_sena_plate and not sena_plate:
-            raise ValidationError({"sena_plate": "La placa SENA es obligatoria para esta categoría."})
+            raise ValidationError({"sena_plate": "La placa SENA es obligatoria para este tipo de material."})
 
         if sena_plate and ConsumableMaterial.objects.filter(sena_plate__iexact=sena_plate).exists():
             raise ValidationError({"sena_plate": "Ya existe un material con esta placa SENA."})
 
         dimensions = data.get("dimensions")
         if requires_dimensions and not dimensions:
-            raise ValidationError({"dimensions": "Las dimensiones son obligatorias para esta categoría."})
+            raise ValidationError({"dimensions": "Las dimensiones son obligatorias para este tipo de material."})
         dimensions = dimensions or None
 
         # Cuentadantes: si vienen del cliente (cuentadante_ids) se usan;
@@ -365,7 +381,7 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
                     state=data.get('state', 'Disponible'),
                     brand_id=data.get('brand_id') or None,
                     inventory_id=data.get('inventory_id') or None,
-                    category_id=data.get('category_id') or None,
+                    category_id=category_id,
                     quantity=data.get('quantity') or None,
                     unit_price=data.get('unit_price', 0),
                     total_price=data.get('total_price', 0),
@@ -375,6 +391,7 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
                     location=data.get('location') or None,
                     is_active=True,
                     image=files.get('image', ''),
+                    tipo=tipo,
                 )
 
                 # M2M: asignar los cuentadantes seleccionados (o el default = creador).
@@ -431,16 +448,41 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
             if key == 'technical_sheet' or key.startswith('technical_sheet_'):
                 validate_sheet_upload(files[key], field=key)
 
-        # Las categorias ahora son administrables; cualquier category_id valido
-        # se acepta. La FK constraint al modelo valida la existencia.
-        category_id = data.get('category_id', rm.category_id)
+        # Las categorias son OBLIGATORIAS. Si llegan en el payload, validar
+        # formato e integridad; si NO llegan, conservar el valor actual
+        # (compatibilidad con PATCH parciales).
+        if 'category_id' in data:
+            category_id_raw = data.get('category_id')
+            if category_id_raw in (None, "", "null"):
+                raise ValidationError({"category": "Debe seleccionar una categoria."})
+            try:
+                category_id = int(category_id_raw)
+            except (TypeError, ValueError):
+                raise ValidationError({"category": "Categoria invalida."})
+            category = Category.objects.filter(pk=category_id).first()
+            if category is None:
+                raise ValidationError({"category": "La categoria seleccionada no existe."})
+        else:
+            category_id = rm.category_id
+            category = rm.category
 
-        category = Category.objects.filter(pk=category_id).first()
-        cat_name = category.name.strip().lower() if category else ""
+        # Tipo: las reglas (placa SENA obligatoria, dimensiones obligatorias)
+        # dependen del enum `tipo`. `category` sigue siendo un campo auxiliar.
+        # Si llega `tipo`, validar y aplicarlo; si NO llega, conservar el
+        # actual (compatibilidad con PATCH parciales de clientes legacy).
+        valid_tipos = {choice[0] for choice in ConsumableMaterial.TIPO_CHOICES}
+        tipo_present = 'tipo' in data
+        if tipo_present:
+            tipo = (data.get('tipo') or '').strip().lower()
+            if not tipo:
+                raise ValidationError({"tipo": "Debe seleccionar un tipo."})
+            if tipo not in valid_tipos:
+                raise ValidationError({"tipo": f"Tipo invalido. Valores permitidos: {sorted(valid_tipos)}."})
+        else:
+            tipo = (consumable.tipo or '').strip().lower()
 
-        requires_sena_plate = cat_name in ("maquinaria y equipos", "muebles y enseres")
-        requires_serial = cat_name in ("maquinaria y equipos", "muebles y enseres")
-        requires_dimensions = cat_name == "muebles y enseres"
+        requires_sena_plate = tipo in ("maquinaria", "muebles")
+        requires_dimensions = tipo == "muebles"
 
         if 'model' in data:
             model = str(data.get('model', '')).strip()
@@ -448,34 +490,33 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
                 raise ValidationError({"model": "El modelo es obligatorio."})
             rm.model = model
 
-        if 'serial' in data or ('category_id' in data and requires_serial):
-            serial_val = data.get('serial') if 'serial' in data else rm.serial
-            serial = str(serial_val or '').strip()
-            if requires_serial and not serial:
-                raise ValidationError({"serial": "El número de serie es obligatorio para esta categoría."})
-            serial = serial or None
+        if 'serial' in data:
+            serial_val = data.get('serial')
+            serial = str(serial_val or '').strip() or None
+            # `serial` siempre opcional; solo validamos unicidad.
             if serial and ReturnableMaterial.objects.filter(serial__iexact=serial).exclude(pk=rm.pk).exists():
                 raise ValidationError({"serial": "Ya existe un material devolutivo con este número de serie."})
             rm.serial = serial
 
-        if 'sena_plate' in data or ('category_id' in data and requires_sena_plate):
+        if 'sena_plate' in data or (tipo_present and requires_sena_plate):
             sp_val = data.get('sena_plate') if 'sena_plate' in data else consumable.sena_plate
             sena_plate = str(sp_val or '').strip() or None
             if requires_sena_plate and not sena_plate:
-                raise ValidationError({"sena_plate": "La placa SENA es obligatoria para esta categoría."})
+                raise ValidationError({"sena_plate": "La placa SENA es obligatoria para este tipo de material."})
             if sena_plate and ConsumableMaterial.objects.filter(sena_plate__iexact=sena_plate).exclude(pk=consumable.pk).exists():
                 raise ValidationError({"sena_plate": "Ya existe un material con esta placa SENA."})
             consumable.sena_plate = sena_plate
 
-        if 'dimensions' in data or ('category_id' in data and requires_dimensions):
+        if 'dimensions' in data or (tipo_present and requires_dimensions):
             dim_val = data.get('dimensions') if 'dimensions' in data else rm.dimensions
             dimensions = str(dim_val or '').strip() or None
             if requires_dimensions and not dimensions:
-                raise ValidationError({"dimensions": "Las dimensiones son obligatorias para esta categoría."})
+                raise ValidationError({"dimensions": "Las dimensiones son obligatorias para este tipo de material."})
             rm.dimensions = dimensions
 
         # Mapa campo-del-request -> atributo del ConsumableMaterial.
-        # Los valores se asignan tal cual; los vacios se normalizan a None.
+        # Los valores se asignan tal cual; los vacios se normalizan a None
+        # (excepto category_id: ahora es NOT NULL, se valida arriba).
         consumable_fields = {
             'name': 'name',
             'state': 'state',
@@ -489,8 +530,9 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
             'purchase_date': 'purchase_date',
             'entry_date': 'entry_date',
             'location': 'location',
+            'tipo': 'tipo',
         }
-        nullable = {'brand_id', 'inventory_id', 'category_id', 'quantity', 'purchase_date', 'location'}
+        nullable = {'brand_id', 'inventory_id', 'quantity', 'purchase_date', 'location'}
 
         try:
             with transaction.atomic():
