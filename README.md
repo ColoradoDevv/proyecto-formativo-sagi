@@ -88,6 +88,8 @@ proyecto-formativo-sia/
 ## Documentación
 
 - [**Instalación local**](docs/instalacion-local.md) — requisitos, backend, frontend y verificación paso a paso.
+- [**Arquitectura**](docs/arquitectura.md) — diagrama del sistema, módulos y flujo de autenticación.
+- [**Cómo contribuir**](CONTRIBUTING.md) — ramas, commits, PRs y reglas del equipo.
 
 ## Puesta en marcha rápida
 
