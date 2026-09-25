@@ -40,12 +40,20 @@ export default function PermissionModule({
     permissions.filter((permission) => hasPermission(permission.codename)).length;
 
   // En modo edicion solo se toca el borrador; nada se persiste hasta "Guardar".
-  function handlePermissionChange(codename, checked) {
-    setPermissionsDraft((prev) =>
-      checked
-        ? [...prev, { codename }]
-        : prev.filter((permission) => permission.codename !== codename)
-    );
+  // Los módulos con exclusive: true (ej. Notificaciones) solo admiten una
+  // opción activa: al marcar una se desmarcan las demás del mismo módulo.
+  function handlePermissionChange(codename, checked, module) {
+    setPermissionsDraft((prev) => {
+      if (!checked) {
+        return prev.filter((permission) => permission.codename !== codename);
+      }
+      const next = [...prev, { codename }];
+      if (module?.exclusive) {
+        const peerCodes = new Set(module.permissions.map((p) => p.codename));
+        return next.filter((p) => p.codename === codename || !peerCodes.has(p.codename));
+      }
+      return next;
+    });
   }
 
   if (!target) {
@@ -92,6 +100,9 @@ export default function PermissionModule({
             }
             defaultOpen={module.title === "Gestión usuarios"}
           >
+            {module.hint && (
+              <p className="text-small text-text-muted pt-3">{module.hint}</p>
+            )}
             <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 pt-4">
               {module.permissions.map(({ codename, label }) => (
                 <Checkbox
@@ -101,7 +112,7 @@ export default function PermissionModule({
                   label={label}
                   checked={hasPermission(codename)}
                   disable={!isEditing}
-                  onChange={(e) => handlePermissionChange(codename, e.target.checked)}
+                  onChange={(e) => handlePermissionChange(codename, e.target.checked, module)}
                 />
               ))}
             </div>

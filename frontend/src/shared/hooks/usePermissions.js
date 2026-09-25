@@ -79,6 +79,16 @@ export const MODULE_PERMS = {
     },
 };
 
+//
+// Campana de notificaciones: qué panel puede ver el usuario.
+// Son mutuamente excluyentes por grupo/usuario (lo validan el backend y la
+// UI de Roles y permisos); el superusuario ve ambos (pestañas).
+//
+export const NOTIFICATION_PERMS = {
+    loans: ["view_loan_notifications"],
+    tasks: ["view_task_notifications"],
+};
+
 export function usePermissions() {
     const [permissions, setPermissions] = useState(() => getStoredPermissions());
     const [user, setUser]               = useState(() => getStoredUser());
