@@ -1,6 +1,9 @@
 # Vista sencilla para la ruta raiz (ping rapido).
 
+import logging
+
 from django.core.validators import EmailValidator
+from django.db import connection
 from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -10,10 +13,34 @@ from rest_framework.response import Response
 from modules.permissions.permissions_drf import IsSuperUser
 from .models import SiteSetting
 
+logger = logging.getLogger(__name__)
+
 
 def index(request):
     # Devuelve un texto simple para confirmar que el servidor responde.
     return HttpResponse("Hello, world. You're at the polls index.")
+
+
+class HealthCheckView(APIView):
+    """GET /healthz/ — sonda pública para balanceadores y monitoreo.
+
+    Sin autenticación a propósito: verifica que Django responde y que la
+    base de datos acepta conexiones. 200 = sano, 503 = degradado.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        try:
+            connection.ensure_connection()
+            db_ok = True
+        except Exception as exc:  # la sonda debe responder, no explotar
+            logger.warning('healthz: base de datos no disponible: %s', exc)
+            db_ok = False
+
+        data = {'status': 'ok' if db_ok else 'degraded', 'db': 'ok' if db_ok else 'error'}
+        return Response(data, status=status.HTTP_200_OK if db_ok else status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
 class DashboardSummaryView(APIView):

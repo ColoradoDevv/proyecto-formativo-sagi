@@ -224,3 +224,52 @@ EMAIL_USE_TLS  = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER     = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')   # App Password de Gmail
 DEFAULT_FROM_EMAIL  = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'no-reply@sgi.local')
+
+
+# Observabilidad: logs a consola (el PaaS los recolecta) con nivel ajustable.
+# LOG_LEVEL=DEBUG en local, INFO o WARNING en producción.
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'DEBUG' if DEBUG else 'INFO')
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'default': {
+            'format': '[{asctime}] {levelname} {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'default',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': LOG_LEVEL,
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+    },
+}
+
+# Sentry (opcional): si hay DSN, reporta errores no controlados.
+# Sin DSN no hace nada. Requiere `sentry-sdk` (ver pyproject.toml).
+SENTRY_DSN = os.getenv('SENTRY_DSN', '')
+if SENTRY_DSN:
+    try:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            send_default_pii=False,
+            traces_sample_rate=0.0,
+        )
+    except ImportError:  # pragma: no cover - SDK no instalado
+        import logging
+        logging.getLogger(__name__).warning(
+            'SENTRY_DSN definido pero sentry-sdk no está instalado.'
+        )
