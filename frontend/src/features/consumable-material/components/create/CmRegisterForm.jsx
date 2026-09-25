@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { getBrands, getUsers, getInventories, getCategories, createBrand, createInventory, createCategory } from "@/shared/services/selectServices";
-import { FileInput, Button, showAlert, cancelAlert, ProfileFileInput, IconButton, AccordionItem, EditCard, usePermissions } from "@/shared";
+import { FileInput, Button, showAlert, cancelAlert, ProfileFileInput, IconButton, AccordionItem, EditCard, usePermissions, isFormDirty, useDirtyForm, useDirtyFormStatus } from "@/shared";
 import { cmBaseSchema, cmSchema } from "../../schemas/cmSchema";
 import { createCm } from "../../services/consumableService";
 import { ConsumableAccountableCard, ConsumableGeneralCard, ConsumableInventoryCard, ConsumableValuesCard } from "../ConsumableForm";
@@ -113,6 +113,40 @@ export default function CmRegisterForm() {
         technicalSheet: [],
         quotations: [],
     });
+
+    // Snapshot inicial inmutable para detectar "dirty". Los campos de fecha
+    // se congelan al montaje para que la comparación no se active al pasar
+    // segundos (sería ruido del comparador, no un cambio del usuario).
+    const initialFormData = useMemo(() => ({
+        name: "",
+        description: "",
+        senaPlate: "",
+        serial: "",
+        quantity: "",
+        location: "",
+        brand: "",
+        inventory: "",
+        category: "",
+        state: "Disponible",
+        unitPrice: "",
+        totalPrice: "",
+        user: "",
+        cuentadantes: [],
+        purchaseDate: new Date().toISOString().split("T")[0],
+        entryDate: new Date().toISOString().split("T")[0],
+        photo: [],
+        technicalSheet: [],
+        quotations: [],
+    }), []);
+
+    const formDataRef = useRef(formData);
+    formDataRef.current = formData;
+    const checkDirty = useCallback(
+        () => isFormDirty(formDataRef.current, initialFormData),
+        [initialFormData]
+    );
+    useDirtyForm(checkDirty);
+    const { markClean } = useDirtyFormStatus();
 
     useEffect(() => {
         const controller = new AbortController();
@@ -269,7 +303,10 @@ export default function CmRegisterForm() {
 
     async function handleCancel() {
         const result = await cancelAlert();
-        if (result.isConfirmed) navigate(-1);
+        if (result.isConfirmed) {
+            markClean();
+            navigate(-1);
+        }
     }
 
     async function handleSubmit(e) {
@@ -303,6 +340,7 @@ export default function CmRegisterForm() {
             await createCm({ ...result.data, photo: formData.photo, technicalSheet: formData.technicalSheet, quotations: formData.quotations });
 
             await showAlert({ icon: "success", iconColor: "var(--color-success)", title: "Material de consumo creado exitosamente" });
+            markClean();
             navigate("/consumibles");
 
         } catch (error) {

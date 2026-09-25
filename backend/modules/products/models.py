@@ -66,6 +66,16 @@ class ConsumableMaterial(models.Model):
         ('Baja', 'Baja'),
     ]
 
+    # Tipo cerrado con 3 valores que reemplazan las reglas condicionales
+    # que antes dependían del nombre de la categoria. Mismas claves que
+    # las choices del frontend (RETURNABLE_TIPO_OPTIONS en
+    # features/returnable-material/utils/returnableCategoryRules.js).
+    TIPO_CHOICES = [
+        ("herramientas", "Herramientas"),
+        ("maquinaria",   "Equipo y Maquinaria"),
+        ("muebles",      "Muebles y Enseres"),
+    ]
+
     # Cuentadantes: usuarios responsables del material. Un material puede tener
     # N cuentadantes (RF: varios usuarios custodian un mismo material).
     # on_delete=RESTRICT conserva la regla de "no se puede borrar un usuario
@@ -97,16 +107,16 @@ class ConsumableMaterial(models.Model):
         blank=True,
     )
 
-    # FK a la categoria (antes solo la tenian los devolutivos; ahora se
-    # comparte para clasificar consumibles y devolutivos desde un mismo
-    # catalogo). Opcional — los 3 nombres sembrados quedan disponibles
-    # como punto de partida. on_delete=SET_NULL por la misma razon que
-    # `inventory`: desvincular en cascada suave para no romper historial.
+    # FK a la categoria. Ahora OBLIGATORIA para cualquier material
+    # (consumible o devolutivo). on_delete=RESTRICT para impedir borrar
+    # una categoria que tenga materiales asignados — si necesita
+    # "desaparecer" se hace con is_active=False. Coincide con la
+    # convencion usada en ReturnableMaterial.category.
     category = models.ForeignKey(
         Category,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        on_delete=models.RESTRICT,
+        null=False,
+        blank=False,
     )
 
 
@@ -133,6 +143,18 @@ class ConsumableMaterial(models.Model):
 
     # Estado obligatorio segun diccionario
     state = models.CharField(max_length=20, choices=STATE_CHOICES)
+
+    # Tipo: classify el material y define las reglas de campos obligatorios
+    # (placa SENA, dimensiones). Nullable para no romper filas existentes;
+    # la migración de datos rellena los 3 valores conocidos por nombre de
+    # categoria y deja los demas en NULL para revision manual.
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPO_CHOICES,
+        null=True,
+        blank=True,
+        help_text="Tipo de material. Determina reglas de placa SENA y dimensiones.",
+    )
     
     is_active = models.BooleanField(default=True)  # Default 1 segun diccionario
 

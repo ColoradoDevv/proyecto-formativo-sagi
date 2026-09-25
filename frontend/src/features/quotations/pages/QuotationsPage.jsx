@@ -176,7 +176,6 @@ export default function QuotationsPage() {
                         placeholder="Ej. Cotización ferretería — taladro (opcional, por defecto el nombre del archivo)"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        optional
                     />
                     <FileInput
                         label="Archivo PDF"

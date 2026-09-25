@@ -50,7 +50,6 @@ export function ConsumableGeneralCard({
                     value={formData.brand}
                     onChange={onChange}
                     error={errors.brand}
-                    optional
                     labelAction={
                         <CreateOptionButton
                             onCreate={onCreateBrand}
@@ -71,7 +70,6 @@ export function ConsumableGeneralCard({
                     value={formData.inventory}
                     onChange={onChange}
                     error={errors.inventory}
-                    optional
                     labelAction={
                         <CreateOptionButton
                             onCreate={onCreateInventory}
@@ -92,7 +90,6 @@ export function ConsumableGeneralCard({
                     value={formData.category}
                     onChange={onChange}
                     error={errors.category}
-                    optional
                     labelAction={
                         <CreateOptionButton
                             onCreate={onCreateCategory}
@@ -105,6 +102,7 @@ export function ConsumableGeneralCard({
                             icon={Plus}
                         />
                     }
+                    required
                 />
                 <div className="sm:col-span-2">
                     <TextArea
@@ -134,7 +132,6 @@ export function ConsumableInventoryCard({ formData, errors = {}, onChange }) {
                 value={formData.senaPlate}
                 onChange={onChange}
                 error={errors.senaPlate}
-                optional
             />
             <Input
                 label="Cantidad"
@@ -155,7 +152,6 @@ export function ConsumableInventoryCard({ formData, errors = {}, onChange }) {
                 name="serial"
                 placeholder="Numero serial del material"
                 value={formData.serial}
-                optional
                 onChange={onChange}
                 error={errors.serial}
             />
@@ -166,7 +162,6 @@ export function ConsumableInventoryCard({ formData, errors = {}, onChange }) {
                 value={formData.location}
                 onChange={onChange}
                 error={errors.location}
-                optional
             />
             <Select
                 label="Estado"
@@ -314,7 +309,29 @@ export default function ConsumableForm({
                             value={formData.senaPlate}
                             onChange={onChange}
                             error={errors.senaPlate}
-                            optional
+                        />
+                        <Select
+                            label="Categoría"
+                            name="category"
+                            options={categories}
+                            value={formData.category}
+                            onChange={onChange}
+                            error={errors.category}
+                            labelAction={
+                                <CreateOptionButton
+                                    onCreate={onCreateCategory}
+                                    onCreated={(option) =>
+                                        onChange({ target: { name: "category", value: String(option.id) } })
+                                    }
+                                    title="Nueva categoría"
+                                    inputLabel="Nombre de la categoría"
+                                    inputPlaceholder="Ej. Tornillería, Cables"
+                                    errorTitle="No se pudo crear la categoría"
+                                    ariaLabel="Agregar nueva categoría"
+                                    icon={Plus}
+                                />
+                            }
+                            required
                         />
                         <Select
                             label="Marca"
@@ -323,7 +340,6 @@ export default function ConsumableForm({
                             value={formData.brand}
                             onChange={onChange}
                             error={errors.brand}
-                            optional
                             labelAction={
                                 <CreateOptionButton
                                     onCreate={onCreateBrand}
@@ -344,7 +360,6 @@ export default function ConsumableForm({
                             value={formData.inventory}
                             onChange={onChange}
                             error={errors.inventory}
-                            optional
                             labelAction={
                                 <CreateOptionButton
                                     onCreate={onCreateInventory}
@@ -412,7 +427,6 @@ export default function ConsumableForm({
                         name="serial"
                         placeholder="Numero serial del material"
                         value={formData.serial}
-                        optional
                         onChange={onChange}
                         error={errors.serial}
                     />
@@ -423,7 +437,6 @@ export default function ConsumableForm({
                         value={formData.location}
                         onChange={onChange}
                         error={errors.location}
-                        optional
                     />
                     <Select
                         label="Estado"

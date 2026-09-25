@@ -5,6 +5,7 @@ import { Button, IconButton, Input, StatusBadge, EditCard, usePermissions } from
 import { mediaUrl } from "@/shared/services/api";
 import useRm from "../../hooks/useRm";
 import { getRMById, getRMs } from "../../services/returnableService";
+import { RETURNABLE_TIPO_OPTIONS } from "../../utils/returnableCategoryRules";
 import { TailChase } from "ldrs/react";
 import { CloudAlert } from "lucide-react";
 
@@ -220,6 +221,14 @@ export default function RmDetailView() {
                         <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 min-w-0">
                             <Input label="Nombre" value={material.name ?? ""} disabled readOnly />
                             <Input label="Modelo" value={material.model ?? ""} disabled readOnly />
+                            <Input
+                                label="Tipo"
+                                value={material.tipo
+                                    ? RETURNABLE_TIPO_OPTIONS.find((opt) => opt.id === material.tipo)?.label ?? material.tipo
+                                    : "Sin tipo"}
+                                disabled
+                                readOnly
+                            />
                             <Input label="Placa SENA" value={material.sena_plate ?? ""} disabled readOnly />
                             <Input label="Serial" value={material.serial ?? ""} disabled readOnly />
                             <Input label="Categoría" value={categoryLabel} disabled readOnly />

@@ -76,10 +76,13 @@ export default function InventoryListPage() {
 
     const handleToggle = async (id, newValue) => {
         try {
-            await toggleInventoryActive(id, newValue);
+            // Devolvemos el resultado del PATCH para que ActiveSwitch
+            // refleje el `is_active` que efectivamente persistió el backend.
+            const updated = await toggleInventoryActive(id, newValue);
             setInventories((prev) =>
                 prev.map((b) => (b.id === id ? { ...b, is_active: newValue } : b))
             );
+            return updated;
         } catch {
             setNotification({
                 severity: "error",

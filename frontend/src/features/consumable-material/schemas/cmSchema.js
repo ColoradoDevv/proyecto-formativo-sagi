@@ -87,7 +87,7 @@ export const cmBaseSchema = z.object({
     category: z
         .string()
         .trim()
-        .optional(),
+        .min(1, "Debe seleccionar una categoría"),
 
     state: z
         .string()
@@ -281,7 +281,8 @@ export const cmEditSchema = z.object({
 
     category: z
         .string()
-        .optional(),
+        .trim()
+        .min(1, "Debe seleccionar una categoría"),
 
     state: z
         .string()

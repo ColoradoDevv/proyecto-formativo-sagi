@@ -190,7 +190,7 @@ export default function ProfileEditPage() {
                             <Input label="Apellidos" name="last_name" value={editForm.last_name} onChange={handleEditChange} error={editErrors.last_name} required />
                             <Input label="Tipo de documento" value={readOnlyValue(user.document_type?.name)} readOnly disabled />
                             <Input label="Número de documento" value={readOnlyValue(user.document_number)} readOnly disabled />
-                            <div className="sm:col-span-2"><Input label="Dirección" name="address" value={editForm.address} onChange={handleEditChange} error={editErrors.address} optional /></div>
+                            <div className="sm:col-span-2"><Input label="Dirección" name="address" value={editForm.address} onChange={handleEditChange} error={editErrors.address} /></div>
                             <div className="sm:col-span-2 flex gap-2 justify-end">
                                 <Button variant="secondary" onClick={() => setEditing(false)} disabled={savingData}>
                                     <X size={16} /> Cancelar
@@ -211,7 +211,7 @@ export default function ProfileEditPage() {
                     {editing ? (
                         <>
                             <Input label="Teléfono" name="phone_number" value={editForm.phone_number} onChange={handleEditChange} error={editErrors.phone_number} required />
-                            <Input label="Teléfono adicional" name="second_phone_number" value={editForm.second_phone_number} onChange={handleEditChange} error={editErrors.second_phone_number} optional />
+                            <Input label="Teléfono adicional" name="second_phone_number" value={editForm.second_phone_number} onChange={handleEditChange} error={editErrors.second_phone_number} />
                         </>
                     ) : (
                         <>

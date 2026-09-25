@@ -32,7 +32,6 @@ export default function InventoryForm({
                 onChange={descriptionOnChange}
                 error={descriptionError}
                 maxLength={255}
-                optional
             />
         </>
     );

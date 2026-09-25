@@ -13,7 +13,6 @@ export default function Select({
     value,
     className = "",
     onChange,
-    optional,
     required,
     disabled = false,
     options = [],
@@ -35,9 +34,6 @@ export default function Select({
                     >
                         {label}
                         {required && <span className="text-error ml-1">*</span>}
-                        {!required && optional && (
-                            <span className="ml-1.5 text-small font-normal text-text-muted">(Opcional)</span>
-                        )}
                     </label>
                     {labelAction}
                 </div>

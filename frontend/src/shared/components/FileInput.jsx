@@ -41,7 +41,6 @@ export default function FileInput({
     error,
     required,
     description,
-    optional,
     accept = "image/*,application/pdf",
     maxFiles = 12,
     maxSizeMB = MAX_SIZE_MB,
@@ -146,9 +145,6 @@ export default function FileInput({
                     `}>
                         {label}
                         {required && <span className="text-error ml-1">*</span>}
-                        {!required && optional && (
-                            <span className="ml-1.5 text-small font-normal text-text-muted">(Opcional)</span>
-                        )}
                 </label>
             )}
 

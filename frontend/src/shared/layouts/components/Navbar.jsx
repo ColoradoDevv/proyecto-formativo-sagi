@@ -1,7 +1,9 @@
 import { Menu } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { mediaUrl } from "@/shared/services/api";
+import { cancelAlert } from "@/shared";
+import { useDirtyFormStatus } from "@/shared";
 import ThemeToggle from "@/shared/components/ThemeToggle";
 import NotificationsBell from "./NotificationsBell";
 import senaLogoVerde from "@/assets/images/sena/logo-sena-verde.svg";
@@ -10,17 +12,28 @@ import senaLogoBlanco from "@/assets/images/sena/logo-sena-blanco.svg";
 
 export default function Navbar({ onToggleSidebar }) {
 
+    const navigate = useNavigate();
     // usePermissions() expone el usuario de forma reactiva (se refresca solo
     // con sia:session-updated) — a diferencia de leer getStoredUser()
     // directamente, así el avatar se actualiza sin recargar la página al
     // cambiar la foto de perfil desde "Mi perfil".
     const { user } = usePermissions();
+    const { isDirty } = useDirtyFormStatus();
     const userName = user?.first_name ?? "Usuario";
     const userInitial = (user?.first_name?.[0] ?? "U").toUpperCase();
 
     const handleMenuClick = () => {
         if (onToggleSidebar) onToggleSidebar();
         window.dispatchEvent(new Event("toggle-sidebar-collapse"));
+    };
+
+    // El avatar navega a /configuracion; si hay un formulario sucio montado,
+    // mostramos el mismo modal de cancelación que usa el SideNav.
+    const handleProfileClick = async (e) => {
+        if (!isDirty()) return;
+        e.preventDefault();
+        const result = await cancelAlert();
+        if (result.isConfirmed) navigate("/configuracion");
     };
 
     return (
@@ -68,12 +81,15 @@ export default function Navbar({ onToggleSidebar }) {
             {/* Selector de tema (claro / oscuro / sistema) */}
             <ThemeToggle />
 
-            {/* Perfil: nombre + avatar (clic redirige a /configuracion) */}
-            <Link
-                to="/configuracion"
+            {/* Perfil: nombre + avatar (clic redirige a /configuracion).
+                Convertido a <button onClick> en lugar de <Link> para poder
+                interceptar la navegación cuando hay un formulario sucio. */}
+            <button
+                type="button"
+                onClick={handleProfileClick}
                 aria-label="Ir a mi perfil"
                 title="Mi perfil"
-                className="flex items-center gap-3 shrink-0 rounded-xl px-3 py-1.5 hover:bg-surface-muted transition-colors cursor-pointer"
+                className="flex items-center gap-3 shrink-0 rounded-xl px-3 py-1.5 hover:bg-surface-muted transition-colors cursor-pointer bg-transparent border-0 text-text-primary"
             >
                 <span className="hidden sm:inline text-text-primary">{userName}</span>
                 {user?.profile_picture ? (
@@ -87,7 +103,7 @@ export default function Navbar({ onToggleSidebar }) {
                         {userInitial}
                     </span>
                 )}
-            </Link>
+            </button>
 
         </nav>
     );

@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { House, Users, Wrench, Truck, Scroll, Settings, LogOut, X, ClipboardList, FileText, ListChecks, Boxes } from "lucide-react";
 import { logout } from "@/features/auth/services/authService";
 import { cancelAlert } from "@/shared";
 import { usePermissions, MODULE_PERMS } from "@/shared/hooks/usePermissions";
+import { useDirtyFormStatus } from "@/shared";
 
 //
 // Mapa de módulos del menú lateral.
@@ -67,6 +68,7 @@ const NAV_MODULES = [
 function NavLinks({ onLinkClick, isCollapsed = false }) {
     const navigate = useNavigate();
     const { canAny, isPrimaryAdmin } = usePermissions();
+    const { isDirty } = useDirtyFormStatus();
 
     // Filtramos los módulos según los permisos del usuario.
     const visibleModules = NAV_MODULES.filter(({ requiredPerms }) =>
@@ -94,6 +96,25 @@ function NavLinks({ onLinkClick, isCollapsed = false }) {
         </>
     );
 
+    // Intercepta el click en cualquier enlace del SideNav. Si hay un
+    // formulario sucio montado, bloquea la navegación por defecto y muestra
+    // el modal `cancelAlert`; solo al confirmar se navega al destino.
+    const handleGuardedNav = useCallback(
+        (e, to) => {
+            if (!isDirty()) return; // deja que NavLink navegue normalmente
+            e.preventDefault();
+            e.stopPropagation();
+            (async () => {
+                const result = await cancelAlert();
+                if (result.isConfirmed) {
+                    navigate(to);
+                    onLinkClick?.();
+                }
+            })();
+        },
+        [isDirty, navigate, onLinkClick]
+    );
+
     async function handleLogout() {
         const result = await cancelAlert({
             title: "¿Cerrar sesión?",
@@ -119,7 +140,7 @@ function NavLinks({ onLinkClick, isCollapsed = false }) {
                         <NavLink
                             to={to}
                             end={to === "/"}
-                            onClick={onLinkClick}
+                            onClick={(e) => handleGuardedNav(e, to)}
                             className={linkClass}
                             title={label}
                         >
@@ -134,7 +155,12 @@ function NavLinks({ onLinkClick, isCollapsed = false }) {
                     (Mi perfil por defecto, Marcas, Categorías, Roles, Grupos)
                     se muestran según el permiso de cada una. */}
                 <li>
-                    <NavLink to="/configuracion" onClick={onLinkClick} className={linkClass} title="Configuración">
+                    <NavLink
+                        to="/configuracion"
+                        onClick={(e) => handleGuardedNav(e, "/configuracion")}
+                        className={linkClass}
+                        title="Configuración"
+                    >
                         {({ isActive }) => renderNavContent(<Settings size={20} />, "Configuración", isActive)}
                     </NavLink>
                 </li>
@@ -142,7 +168,12 @@ function NavLinks({ onLinkClick, isCollapsed = false }) {
                 {/* Auditoría */}
                 {isPrimaryAdmin && (
                     <li>
-                        <NavLink to="/auditoria" onClick={onLinkClick} className={linkClass} title="Auditoría">
+                        <NavLink
+                            to="/auditoria"
+                            onClick={(e) => handleGuardedNav(e, "/auditoria")}
+                            className={linkClass}
+                            title="Auditoría"
+                        >
                             {({ isActive }) => renderNavContent(<ClipboardList size={20} />, "Auditoría", isActive)}
                         </NavLink>
                     </li>

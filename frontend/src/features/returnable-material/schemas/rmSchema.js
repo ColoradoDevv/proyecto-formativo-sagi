@@ -34,7 +34,7 @@ function isValidDateString(value) {
 // (name, senaPlate, brand, ...) para poder reutilizar el formulario.
 // rmBaseSchema es el objeto plano sin refinamientos — permite .pick() por
 // pasos en el wizard (mismo patrón que cmBaseSchema). rmSchema agrega las
-// reglas cruzadas (categoría, fechas, total) y es el que valida el submit.
+// reglas cruzadas (tipo, fechas, total) y es el que valida el submit.
 export const rmBaseSchema = z.object({
     senaPlate: z
         .string()
@@ -53,6 +53,16 @@ export const rmBaseSchema = z.object({
         .trim()
         .min(2, "El modelo debe tener mínimo 2 caracteres")
         .max(100, "El modelo es demasiado largo"),
+
+    // Tipo: enum cerrado que define las reglas de placa/dimensiones del
+    // material. Mismas claves que TIPO_CHOICES en el backend.
+    tipo: z
+        .string()
+        .min(1, "Debe seleccionar un tipo")
+        .refine(
+            (value) => ["herramientas", "maquinaria", "muebles"].includes(value),
+            { message: "Tipo inválido" }
+        ),
 
     state: z
         .string()
@@ -157,32 +167,24 @@ export const rmBaseSchema = z.object({
 
 // Validación completa de creación: base + reglas cruzadas.
 export const rmSchema = rmBaseSchema.superRefine((data, ctx) => {
-    const categoryName = String(data.categoryName || "").trim().toLowerCase();
-
     // El ingreso al inventario no puede ser anterior a la compra.
     if (data.purchaseDate && data.entryDate && data.entryDate < data.purchaseDate) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["entryDate"], message: "La fecha de ingreso no puede ser anterior a la de compra" });
     }
-    
-    let categoryRules = { requiresSenaPlate: false, requiresId: false, requiresDimensions: false };
-    
-    if (categoryName === "herramienta") {
-        categoryRules = { requiresSenaPlate: false, requiresId: false, requiresDimensions: false };
-    } else if (categoryName === "maquinaria y equipos") {
-        categoryRules = { requiresSenaPlate: true, requiresId: true, requiresDimensions: false };
-    } else if (categoryName === "muebles y enseres") {
-        categoryRules = { requiresSenaPlate: true, requiresId: true, requiresDimensions: true };
-    }
 
-    if (categoryRules.requiresSenaPlate && !String(data.senaPlate || "").trim()) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["senaPlate"], message: "La placa SENA es obligatoria para esta categoría" });
+    // Reglas derivadas del enum `tipo` (reemplaza las del nombre de categoría).
+    const tipo = String(data.tipo || "").trim().toLowerCase();
+    const requiresSenaPlate = tipo === "maquinaria" || tipo === "muebles";
+    const requiresDimensions = tipo === "muebles";
+
+    if (requiresSenaPlate && !String(data.senaPlate || "").trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["senaPlate"], message: "La placa SENA es obligatoria para este tipo de material" });
     }
-    if (categoryRules.requiresId && !String(data.serial || "").trim()) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["serial"], message: "El ID es obligatorio para esta categoría" });
-    }
-    if (categoryRules.requiresDimensions) {
+    // `serial` (S/N) siempre es opcional — el campo puede quedarse vacío sin
+    // disparar un error de validación.
+    if (requiresDimensions) {
         if (!String(data.width || "").trim() || !String(data.length || "").trim() || !String(data.depth || "").trim()) {
-            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["width"], message: "Las dimensiones son obligatorias para esta categoría" });
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["width"], message: "Las dimensiones son obligatorias para este tipo de material" });
         }
     }
 }).refine(
@@ -208,6 +210,16 @@ export const rmEditSchema = z.object({
         .trim()
         .min(2, "El modelo debe tener mínimo 2 caracteres")
         .max(100, "El modelo es demasiado largo"),
+
+    // Tipo: enum cerrado, requerido también al editar para mantener
+    // consistencia con la creación.
+    tipo: z
+        .string()
+        .min(1, "Debe seleccionar un tipo")
+        .refine(
+            (value) => ["herramientas", "maquinaria", "muebles"].includes(value),
+            { message: "Tipo inválido" }
+        ),
 
     senaPlate: z
         .string()
@@ -295,32 +307,24 @@ export const rmEditSchema = z.object({
         .max(3, "Máximo 3 cotizaciones por material")
         .optional(),
 }).superRefine((data, ctx) => {
-    const categoryName = String(data.categoryName || "").trim().toLowerCase();
-
     // El ingreso al inventario no puede ser anterior a la compra.
     if (data.purchaseDate && data.entryDate && data.entryDate < data.purchaseDate) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["entryDate"], message: "La fecha de ingreso no puede ser anterior a la de compra" });
     }
-    
-    let categoryRules = { requiresSenaPlate: false, requiresId: false, requiresDimensions: false };
-    
-    if (categoryName === "herramienta") {
-        categoryRules = { requiresSenaPlate: false, requiresId: false, requiresDimensions: false };
-    } else if (categoryName === "maquinaria y equipos") {
-        categoryRules = { requiresSenaPlate: true, requiresId: true, requiresDimensions: false };
-    } else if (categoryName === "muebles y enseres") {
-        categoryRules = { requiresSenaPlate: true, requiresId: true, requiresDimensions: true };
-    }
 
-    if (categoryRules.requiresSenaPlate && !String(data.senaPlate || "").trim()) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["senaPlate"], message: "La placa SENA es obligatoria para esta categoría" });
+    // Reglas derivadas del enum `tipo` (reemplaza las del nombre de categoría).
+    const tipo = String(data.tipo || "").trim().toLowerCase();
+    const requiresSenaPlate = tipo === "maquinaria" || tipo === "muebles";
+    const requiresDimensions = tipo === "muebles";
+
+    if (requiresSenaPlate && !String(data.senaPlate || "").trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["senaPlate"], message: "La placa SENA es obligatoria para este tipo de material" });
     }
-    if (categoryRules.requiresId && !String(data.serial || "").trim()) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["serial"], message: "El ID es obligatorio para esta categoría" });
-    }
-    if (categoryRules.requiresDimensions) {
+    // `serial` (S/N) siempre es opcional — el campo puede quedarse vacío sin
+    // disparar un error de validación.
+    if (requiresDimensions) {
         if (!String(data.width || "").trim() || !String(data.length || "").trim() || !String(data.depth || "").trim()) {
-            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["width"], message: "Las dimensiones son obligatorias para esta categoría" });
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["width"], message: "Las dimensiones son obligatorias para este tipo de material" });
         }
     }
 }).refine(

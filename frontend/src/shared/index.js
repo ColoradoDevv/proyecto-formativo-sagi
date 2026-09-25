@@ -39,3 +39,7 @@ export { default as cancelAlert } from "./alerts/CancelAlert"
 export { default as promptAlert } from "./alerts/PromptAlert"
 
 export { usePermissions, MODULE_PERMS } from "./hooks/usePermissions"
+
+export { DirtyFormProvider } from "./contexts/DirtyFormContext"
+export { useDirtyForm, useDirtyFormStatus } from "./hooks/useDirtyForm"
+export { default as isFormDirty } from "./utils/isFormDirty"

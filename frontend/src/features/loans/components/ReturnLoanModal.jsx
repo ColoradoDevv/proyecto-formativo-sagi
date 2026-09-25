@@ -227,7 +227,6 @@ export default function ReturnLoanModal({ isOpen, onClose, loan, onReturned }) {
                     value={formData.observations}
                     onChange={handleChange}
                     error={errors.observations}
-                    optional
                 />
 
                 {/* Condición del material */}
