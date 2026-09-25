@@ -1,7 +1,8 @@
 // Catálogo de módulos y permisos del sistema.
 // Los codenames deben coincidir con las migraciones del backend
-// (0002 + 0004 + 0007 + 0008 + 0009 + 0010 + 0011 + 0014 + 0015).
+// (0002 + 0004 + 0007 + 0008 + 0009 + 0010 + 0011 + 0014 + 0015 + 0016).
 // Fuente única de verdad para la UI de access.
+// Los módulos con exclusive: true solo admiten una opción activa a la vez.
 
 export const PERMISSION_MODULES = [
   {
@@ -135,6 +136,15 @@ export const PERMISSION_MODULES = [
     permissions: [
       { codename: "view_own_profile", label: "Ver perfil propio" },
       { codename: "change_password", label: "Cambiar contraseña" },
+    ],
+  },
+  {
+    title: "Notificaciones",
+    exclusive: true,
+    hint: "Solo se puede activar una opción: préstamos o tareas, no ambas.",
+    permissions: [
+      { codename: "view_loan_notifications", label: "Ver préstamos" },
+      { codename: "view_task_notifications", label: "Ver tareas asignadas" },
     ],
   },
 ];
