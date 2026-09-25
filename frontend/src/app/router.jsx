@@ -6,7 +6,7 @@ import { Suspense, lazy, useEffect } from "react";
 
 // Imports Auth (eager: primer pantallazo)
 import { LoginPage, ProtectedRoute, ForgotPasswordPage, ResetPasswordPage, PrivacyNoticePage } from "@/features/auth"
-import { RequirePerms } from "@/features/auth/components/ProtectedRoute"
+import { RequirePerms, RequirePrimaryAdmin } from "@/features/auth/components/ProtectedRoute"
 import { MODULE_PERMS } from "@/shared/hooks/usePermissions"
 
 // Páginas diferidas por módulo: cada una viaja en su propio chunk y solo
@@ -34,6 +34,7 @@ const TaskHomePage   = lazy(() => import("@/features/tasks/pages/TaskHomePage"))
 const InventoryHomePage = lazy(() => import("@/features/inventories/pages/InventoryHomePage"));
 const QuotationsPage = lazy(() => import("@/features/quotations/pages/QuotationsPage"));
 const AuditLogPage   = lazy(() => import("@/features/audit/pages/AuditLogPage"));
+const NotFoundPage   = lazy(() => import("./NotFoundPage"));
 
 import { ConfigLayout, MainLayout } from "@/shared";
 
@@ -134,7 +135,12 @@ export default function AppRouter() {
 
                 {/* Historial de Auditoría — solo superadministrador primigenio */}
                 <Route path="/auditoria" element={<MainLayout />}>
-                    <Route index element={<AuditLogPage />} />
+                    <Route index element={<RequirePrimaryAdmin><AuditLogPage /></RequirePrimaryAdmin>} />
+                </Route>
+
+                {/* 404 dentro de la zona privada (con el chrome de la app) */}
+                <Route path="*" element={<MainLayout />}>
+                    <Route index element={<NotFoundPage />} />
                 </Route>
 
             </Route>

@@ -9,6 +9,7 @@
 # https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -23,21 +24,28 @@ def _split_env_list(value):
     # Nos evita errores por espacios o comas extra.
     return [item.strip() for item in value.split(",") if item.strip()]
 
-# SECURITY WARNING: keep the secret key used in production secret!
-# Clave secreta usada por Django para firmar sesiones.
-# Para desarrollo local usamos un fallback seguro si no hay variable de entorno.
-SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-me-in-production')
-
 # SECURITY WARNING: don't run with debug turned on in production!
 # Activa el modo debug para ver errores detallados.
 # En produccion deberia ir en False.
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
+# SECURITY WARNING: keep the secret key used in production secret!
+# Clave secreta usada por Django para firmar sesiones y tokens.
+# Fail-closed: en producción es obligatoria y sin ella Django no arranca.
+# En local (DEBUG) se usa un fallback solo-dev.
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'dev-secret-key-change-me-in-production'
+    else:
+        raise ImproperlyConfigured(
+            'SECRET_KEY no está configurada. Defínela en backend/.env '
+            '(ver backend/.env.example).'
+        )
+
 # Lista de hosts permitidos.
 # Si el host no esta aqui, Django rechaza la peticion.
 ALLOWED_HOSTS = _split_env_list(os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1'))
-if "locahost" in ALLOWED_HOSTS and "localhost" not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append("localhost")
 if DEBUG:
     for host in ("localhost", "127.0.0.1"):
         if host not in ALLOWED_HOSTS:
@@ -184,9 +192,9 @@ CSRF_TRUSTED_ORIGINS = _split_env_list(
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es-co'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Bogota'
 
 USE_I18N = True
 
