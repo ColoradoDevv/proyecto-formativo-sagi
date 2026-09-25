@@ -335,7 +335,6 @@ export default function BatchReturnPage() {
                                                     placeholder="Estado del material…"
                                                     value={row.observations}
                                                     onChange={(e) => updateRow(row.loanId, "observations", e.target.value)}
-                                                    optional
                                                 />
                                             </div>
 

@@ -76,10 +76,15 @@ export default function CategoryListPage() {
 
     const handleToggle = async (id, newValue) => {
         try {
-            await toggleCategoryActive(id, newValue);
+            // Devolvemos el resultado del PATCH para que ActiveSwitch
+            // refleje el `is_active` que efectivamente persistió el backend
+            // (defensa contra discrepancias si el backend normaliza el
+            // valor o lo rechaza silenciosamente).
+            const updated = await toggleCategoryActive(id, newValue);
             setCategories((prev) =>
                 prev.map((b) => (b.id === id ? { ...b, is_active: newValue } : b))
             );
+            return updated;
         } catch {
             setNotification({
                 severity: "error",

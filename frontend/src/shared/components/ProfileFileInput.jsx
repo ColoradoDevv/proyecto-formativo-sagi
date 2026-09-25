@@ -10,7 +10,6 @@ export default function ProfileFileInput({
     value = [],
     onChange,
     label,
-    optional,
     required,
     description,
     placeholder = "Subir foto",
@@ -85,9 +84,6 @@ export default function ProfileFileInput({
                 <label className={`block place-self-start text-small mb-1 ${displayError ? "text-error" : "text-text-primary"}`}>
                     {label}
                     {required && <span className="text-error ml-1">*</span>}
-                    {!required && optional && (
-                        <span className="ml-1.5 text-small font-normal text-text-muted">(Opcional)</span>
-                    )}
                 </label>
             )}
 

@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, showAlert, cancelAlert, IconButton, AccordionItem } from "@/shared";
+import { Button, showAlert, cancelAlert, IconButton, AccordionItem, isFormDirty, useDirtyForm, useDirtyFormStatus } from "@/shared";
 import { getStoredUser } from "@/shared/services/api";
 import loanSchema, { loanBaseSchema } from "../../schemas/loanSchema";
 import { createLoanDraft, getDraftStatus } from "../../services/loanService";
@@ -64,6 +64,32 @@ export default function LoanRegisterForm() {
 
     const [errors, setErrors] = useState({});
 
+    // Snapshot inicial — se ignora `loanResponsableUser` porque se autocompleta
+    // con el id del usuario en sesión; considerarlo provocaría un falso "dirty".
+    const initialFormData = useMemo(() => ({
+        loanResponsableUser:     currentUserId,
+        loanReceptorUser:        "",
+        receptorIsRegistered:    true,
+        receptorName:            "",
+        receptorEmail:           "",
+        receptorDataConsent:     false,
+        loanMaterial:            [],
+        loanMaterialQuantities:  {},
+        loanGroup:               "",
+        loanType:                "",
+        loanJustification:       "",
+        loanReturnDate:          "",
+    }), [currentUserId]);
+
+    const formDataRef = useRef(formData);
+    formDataRef.current = formData;
+    const checkDirty = useCallback(
+        () => isFormDirty(formDataRef.current, initialFormData, ["loanResponsableUser"]),
+        [initialFormData]
+    );
+    useDirtyForm(checkDirty);
+    const { markClean } = useDirtyFormStatus();
+
     useEffect(() => { getUsers().then(setUsers); },         []);
     useEffect(() => { getMaterials().then(setMaterials); }, []);
 
@@ -88,6 +114,7 @@ export default function LoanRegisterForm() {
                         text: "Ambas partes firmaron. El préstamo ya está activo.",
                         timer: 3500,
                     });
+                    markClean();
                     navigate("/prestamos");
                 }
             } catch {
@@ -98,7 +125,7 @@ export default function LoanRegisterForm() {
         poll(); // llamada inmediata
         pollRef.current = setInterval(poll, POLL_INTERVAL_MS);
         return () => clearInterval(pollRef.current);
-    }, [draftCreated, navigate]);
+    }, [draftCreated, navigate, markClean]);
 
     const clearErrorsForFields = (fields) => {
         setErrors((prev) => {
@@ -210,7 +237,10 @@ export default function LoanRegisterForm() {
 
     async function handleCancel() {
         const result = await cancelAlert();
-        if (result.isConfirmed) navigate(-1);
+        if (result.isConfirmed) {
+            markClean();
+            navigate(-1);
+        }
     }
 
     const handleSubmit = async (e) => {

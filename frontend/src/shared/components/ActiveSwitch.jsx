@@ -21,14 +21,19 @@ export default function ActiveSwitch({ id, isActive, toggleFn, entity = "materia
 
         try {
             const updatedMaterial = await toggleFn(id, value, extraData);
-            setActive(updatedMaterial.is_active);
+            // Defensa: si el caller pasó una toggleFn que no devuelve
+            // el objeto actualizado (p.ej. handleToggle de CategoryListPage
+            // que solo dispara el PATCH y actualiza su propio estado),
+            // caemos al `value` que acabamos de solicitar. Antes esto
+            // reventaba con "Cannot read properties of undefined".
+            setActive(typeof updatedMaterial?.is_active === "boolean" ? updatedMaterial.is_active : value);
             await showAlert({
                 icon: "success",
                 iconColor: "var(--color-success)",
                 title: value ? "Activado correctamente" : "Desactivado correctamente",
                 timer: 2500,
             });
-            onToggled?.(updatedMaterial);
+            onToggled?.(updatedMaterial ?? { id, is_active: value });
         } catch (error) {
             console.error("Error al actualizar estado:", error);
             await showAlert({

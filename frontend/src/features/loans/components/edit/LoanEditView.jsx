@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, IconButton, showAlert, cancelAlert } from "@/shared";
+import { Button, IconButton, showAlert, cancelAlert, isFormDirty, useDirtyForm, useDirtyFormStatus } from "@/shared";
 import { Undo2 } from "lucide-react";
 import useLoan from "../../hooks/useLoan";
 import { getUsers, getMaterials } from "../../services/selectServices";
@@ -63,6 +63,19 @@ function LoanEditForm({ loan, users, materials }) {
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
 
+    // Snapshot inicial con los valores del backend. Solo se evalúa al
+    // montaje para que no se considere "dirty" al primer render.
+    const initialFormData = useMemo(() => ({ ...formData }), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const formDataRef = useRef(formData);
+    formDataRef.current = formData;
+    const checkDirty = useCallback(
+        () => isFormDirty(formDataRef.current, initialFormData),
+        [initialFormData]
+    );
+    useDirtyForm(checkDirty);
+    const { markClean } = useDirtyFormStatus();
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
@@ -89,6 +102,7 @@ function LoanEditForm({ loan, users, materials }) {
         try {
             await updateLoan(loan.id_loan, result.data);
             await showAlert({ icon: "success", iconColor: "var(--color-success)", title: "Préstamo actualizado exitosamente" });
+            markClean();
             navigate("/prestamos");
         } catch (err) {
             if (err.fieldErrors) setErrors((prev) => ({ ...prev, ...err.fieldErrors }));
@@ -100,7 +114,10 @@ function LoanEditForm({ loan, users, materials }) {
 
     async function handleCancel() {
         const result = await cancelAlert();
-        if (result.isConfirmed) navigate(-1);
+        if (result.isConfirmed) {
+            markClean();
+            navigate(-1);
+        }
     }
 
     return (

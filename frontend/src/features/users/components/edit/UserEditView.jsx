@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, IconButton, Input, StatusLabel, showAlert, cancelAlert } from "@/shared";
+import { Button, IconButton, Input, StatusLabel, showAlert, cancelAlert, isFormDirty, useDirtyForm, useDirtyFormStatus } from "@/shared";
 import { Undo2, ClipboardList, ShieldAlert } from "lucide-react";
 import useUser from "../../hooks/useUser.js";
 import useUserGroups from "../../hooks/useUserGroups";
@@ -87,7 +87,7 @@ export default function UserEditView() {
 function UserEditForm({ id, user, documentTypes, groups, allGroups, usersList, groupsList }) {
     const navigate = useNavigate();
 
-    const [formData, setFormData] = useState({
+    const initialFormData = useMemo(() => ({
         profilePicture:     user.profile_picture ? [user.profile_picture] : [],
         firstName:          user.first_name          ?? "",
         lastName:           user.last_name           ?? "",
@@ -105,7 +105,9 @@ function UserEditForm({ id, user, documentTypes, groups, allGroups, usersList, g
         isAccountable:        user.is_accountable        ?? false,
         startDate:            user.start_date            ?? "",
         endDate:              user.end_date              ?? "",
-    });
+    }), [user]);
+
+    const [formData, setFormData] = useState(initialFormData);
 
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
@@ -119,6 +121,16 @@ function UserEditForm({ id, user, documentTypes, groups, allGroups, usersList, g
     // evita el problema de StrictMode (React 18 monta→desmonta→monta en dev:
     // las refs persisten entre remontajes y pueden activar efectos prematuramente).
     const [groupsReady, setGroupsReady] = useState(false);
+
+    // Compara contra el estado precargado del usuario para detectar cambios.
+    const formDataRef = useRef(formData);
+    formDataRef.current = formData;
+    const checkDirty = useCallback(
+        () => isFormDirty(formDataRef.current, initialFormData),
+        [initialFormData]
+    );
+    useDirtyForm(checkDirty);
+    const { markClean } = useDirtyFormStatus();
 
     // Derivar flags de rol desde el estado actual — fuente de verdad única.
     // Se usa allGroups (lista completa, incluye SADMIN) para que usuarios con ese
@@ -193,6 +205,7 @@ function UserEditForm({ id, user, documentTypes, groups, allGroups, usersList, g
                 profilePicture: formData.profilePicture,
             });
             await showAlert({ icon: "success", iconColor: "var(--color-success)", title: "Usuario actualizado exitosamente" });
+            markClean();
             navigate(-1);
         } catch (error) {
             if (error.partialSuccess) {
@@ -204,6 +217,7 @@ function UserEditForm({ id, user, documentTypes, groups, allGroups, usersList, g
                     title: "Guardado parcial",
                     text: error.message,
                 });
+                markClean();
                 navigate(-1);
                 return;
             }
@@ -216,7 +230,10 @@ function UserEditForm({ id, user, documentTypes, groups, allGroups, usersList, g
 
     async function handleCancel() {
         const result = await cancelAlert();
-        if (result.isConfirmed) navigate(-1);
+        if (result.isConfirmed) {
+            markClean();
+            navigate(-1);
+        }
     }
 
     return (
@@ -279,12 +296,11 @@ function UserEditForm({ id, user, documentTypes, groups, allGroups, usersList, g
                             value={formData.additionalPhone}
                             onChange={handleChange}
                             error={errors.additionalPhone}
-                            optional
                         />
                     }
                     emailInst={
                         <div className="flex flex-col gap-2">
-                            <StatusLabel optional>Correo Institucional</StatusLabel>
+                            <StatusLabel>Correo Institucional</StatusLabel>
                             {!showEmailInst ? (
                                 <Button
                                     type="button"
@@ -298,7 +314,6 @@ function UserEditForm({ id, user, documentTypes, groups, allGroups, usersList, g
                                 <Input
                                     name="institutionalEmail"
                                     type="email"
-                                    optional
                                     placeholder="correo@sena.edu.co"
                                     onChange={handleChange}
                                     value={formData.institutionalEmail}

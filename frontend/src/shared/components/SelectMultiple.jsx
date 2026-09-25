@@ -32,7 +32,6 @@ export default function SelectMultiple({
     className = "",
     onChange,
     required,
-    optional,
     disabled = false,
     options = [],
 }) {
@@ -62,9 +61,6 @@ export default function SelectMultiple({
                 >
                     {label}
                     {required && <span className="text-error ml-1">*</span>}
-                    {!required && optional && (
-                        <span className="ml-1.5 text-small font-normal text-text-muted">(Opcional)</span>
-                    )}
                 </label>
                 {labelAction}
             </div>

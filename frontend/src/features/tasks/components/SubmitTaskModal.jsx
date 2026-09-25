@@ -104,7 +104,6 @@ export default function SubmitTaskModal({ isOpen, onClose, assignment, onSubmitt
                     maxFiles={5}
                     maxSizeMB={5}
                     required={requiresEvidence}
-                    optional={!requiresEvidence}
                     description="JPG, PNG, PDF, Excel o Word. Máximo 5MB por archivo, hasta 5 archivos."
                     className="w-full h-14 rounded-2xl"
                 />

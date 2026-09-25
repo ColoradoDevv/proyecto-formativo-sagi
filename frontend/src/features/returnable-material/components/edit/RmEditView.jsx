@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, IconButton, StatusBadge, showAlert, cancelAlert, FileInput, usePermissions } from "@/shared";
+import { Button, IconButton, StatusBadge, showAlert, cancelAlert, FileInput, usePermissions, isFormDirty, useDirtyForm, useDirtyFormStatus } from "@/shared";
 import { mediaUrl } from "@/shared/services/api";
 import { Undo2, Pencil, ImageOff, FileText, Trash2, Plus } from "lucide-react";
 import useRm from "../../hooks/useRm";
@@ -129,6 +129,7 @@ function RmEditForm({ RM, categories, brands, states, users, inventories, onCrea
         senaPlate:    RM.sena_plate ?? "",
         serial:       RM.serial ?? "",
         category:     RM.category?.id != null ? String(RM.category.id) : "",
+        tipo:         RM.tipo ?? "",
         brand:        RM.brand?.id != null ? String(RM.brand.id) : "",
         // Inventario: id como string. Vacio = sin asignar.
         inventory:     RM.inventory?.id != null ? String(RM.inventory.id) : "",
@@ -152,6 +153,20 @@ function RmEditForm({ RM, categories, brands, states, users, inventories, onCrea
         depth:        dimensions.depth,
     });
     const [errors, setErrors] = useState({});
+
+    // Snapshot inicial con los valores precargados del backend. Solo se
+    // congela al montaje: si React remontara el componente (cambio de ruta),
+    // useMemo([], []) tomaría los nuevos valores como referencia.
+    const initialFormData = useMemo(() => ({ ...formData }), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const formDataRef = useRef(formData);
+    formDataRef.current = formData;
+    const checkDirty = useCallback(
+        () => isFormDirty(formDataRef.current, initialFormData),
+        [initialFormData]
+    );
+    useDirtyForm(checkDirty);
+    const { markClean } = useDirtyFormStatus();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -220,6 +235,7 @@ function RmEditForm({ RM, categories, brands, states, users, inventories, onCrea
                 technicalSheet: newSheets,   // solo las nuevas se envían al PATCH
             });
             await showAlert({ icon: "success", iconColor: "var(--color-success)", title: "Material devolutivo actualizado exitosamente" });
+            markClean();
             navigate(-1);
         } catch (err) {
             if (err.fieldErrors) setErrors((prev) => ({ ...prev, ...err.fieldErrors }));
@@ -231,7 +247,10 @@ function RmEditForm({ RM, categories, brands, states, users, inventories, onCrea
 
     async function handleCancel() {
         const r = await cancelAlert();
-        if (r.isConfirmed) navigate(-1);
+        if (r.isConfirmed) {
+            markClean();
+            navigate(-1);
+        }
     }
 
     return (

@@ -284,7 +284,6 @@ export default function QuotationPickerModal({
                             type="date"
                             value={dateFrom}
                             onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
-                            optional
                         />
                         <Input
                             label="Hasta"
@@ -292,7 +291,6 @@ export default function QuotationPickerModal({
                             type="date"
                             value={dateTo}
                             onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
-                            optional
                         />
                     </div>
 

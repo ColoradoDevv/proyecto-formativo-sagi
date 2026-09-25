@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, IconButton, StatusBadge, showAlert, cancelAlert, FileInput, ProfileFileInput, usePermissions } from "@/shared";
+import { Button, IconButton, StatusBadge, showAlert, cancelAlert, FileInput, ProfileFileInput, usePermissions, isFormDirty, useDirtyForm, useDirtyFormStatus } from "@/shared";
 import { Undo2 } from "lucide-react";
 import useCm from "../../hooks/useCm";
 import { getBrands, getUsers, getInventories, getCategories, createBrand, createInventory, createCategory } from "@/shared/services/selectServices";
@@ -133,6 +133,43 @@ function CmEditForm({ id, CM, brands, users, inventories, categories, onCreateBr
 
     const [errors, setErrors] = useState({});
 
+    // Snapshot inicial con los valores cargados del backend — sirve para
+    // detectar cambios del usuario (comparación "dirty").
+    const initialFormData = useMemo(() => ({
+        name:         formData.name,
+        description:  formData.description,
+        senaPlate:    formData.senaPlate,
+        serial:       formData.serial,
+        quantity:     formData.quantity,
+        location:     formData.location,
+        brand:        formData.brand,
+        inventory:    formData.inventory,
+        category:     formData.category,
+        state:        formData.state,
+        unitPrice:    formData.unitPrice,
+        totalPrice:   formData.totalPrice,
+        user:         formData.user,
+        cuentadantes: formData.cuentadantes,
+        purchaseDate: formData.purchaseDate,
+        entryDate:    formData.entryDate,
+        quotations:   formData.quotations,
+        photo:        Array.isArray(photo) ? photo : [],
+        technicalSheet: Array.isArray(technicalSheet) ? technicalSheet : [],
+    }), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const formDataRef = useRef({ formData, photo, technicalSheet });
+    formDataRef.current = { formData, photo, technicalSheet };
+    const initialRef = useRef(initialFormData);
+    const checkDirty = useCallback(
+        () => isFormDirty(
+            { ...formDataRef.current.formData, photo: formDataRef.current.photo, technicalSheet: formDataRef.current.technicalSheet },
+            initialRef.current,
+        ),
+        []
+    );
+    useDirtyForm(checkDirty);
+    const { markClean } = useDirtyFormStatus();
+
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -186,6 +223,7 @@ function CmEditForm({ id, CM, brands, users, inventories, categories, onCreateBr
 
             await updateCm(id, { ...formData, photo: newPhoto, technicalSheet: newSheet });
             await showAlert({ icon: "success", iconColor: "var(--color-success)", title: "Material de consumo actualizado exitosamente" });
+            markClean();
             navigate(-1);
         } catch (error) {
             if (error.fieldErrors) setErrors((prev) => ({ ...prev, ...error.fieldErrors }));
@@ -197,7 +235,10 @@ function CmEditForm({ id, CM, brands, users, inventories, categories, onCreateBr
 
     async function handleCancel() {
         const result = await cancelAlert();
-        if (result.isConfirmed) navigate(-1);
+        if (result.isConfirmed) {
+            markClean();
+            navigate(-1);
+        }
     }
 
     return (
@@ -237,7 +278,6 @@ function CmEditForm({ id, CM, brands, users, inventories, categories, onCreateBr
                                 error={errors.photo}
                                 accept="image/*"
                                 className="w-full h-25 rounded-2xl"
-                                optional
                                 description="Formato JPG o PNG. Tamaño máximo: 2MB."
                             />
                             <StatusBadge active={CM.is_active} />
@@ -252,7 +292,6 @@ function CmEditForm({ id, CM, brands, users, inventories, categories, onCreateBr
                                 multiple={false}
                                 maxFiles={1}
                                 maxSizeMB={3}
-                                optional
                                 description="Formato PDF, Excel o PNG. Tamaño máximo: 3MB."
                                 className="w-full h-14 rounded-2xl"
                             />

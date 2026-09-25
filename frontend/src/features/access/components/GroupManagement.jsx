@@ -223,7 +223,6 @@ export default function GroupManagement({ onChanged }) {
                     name="description"
                     value={form.description}
                     onChange={(event) => setForm((previous) => ({ ...previous, description: event.target.value }))}
-                    optional
                     disabled={modalMode === "view"}
                 />
                 {modalMode === "view" && (

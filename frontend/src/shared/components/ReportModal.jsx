@@ -219,7 +219,6 @@ export default function ReportModal({
                         options={filterOptions(filter)}
                         value={columnFilters[filter.key] ?? ""}
                         onChange={(e) => setColumnFilters((prev) => ({ ...prev, [filter.key]: e.target.value }))}
-                        optional
                     />
                 ))}
             </div>
