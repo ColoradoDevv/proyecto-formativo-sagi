@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- módulo de columnas: las celdas viven junto a su definición */
 import { ActiveSwitch, promptAlert, StatusBadge, usePermissions } from "@/shared";
 import { toggleUserActive } from "@/features/users/services/userService"; // ajusta la ruta segun tu estructura real
 import UserRowActions from "@/features/users/components/list/UserRowActions"; // ajusta la ruta segun tu estructura real

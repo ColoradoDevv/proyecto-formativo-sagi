@@ -38,7 +38,6 @@ export default function TaskListPage() {
     // con ?scope=user&user=<yo>), así que "Mis tareas" es la entrada
     // por defecto para todos.
     const canViewDefs = can("view_task");
-    const canViewAsg  = can("view_task_assignment");
 
     // Vista administrativa vs. vista normal: solo quien gestiona (ver todo,
     // crear, editar o borrar) ve el toggle, destinatarios y botones de

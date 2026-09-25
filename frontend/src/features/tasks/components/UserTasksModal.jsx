@@ -33,7 +33,7 @@ export default function UserTasksModal({
     // Solo se listan las asignaciones de scope=user para este usuario concreto.
     // Las asignaciones a grupos se gestionan en otras vistas (TaskAssignmentsPanel,
     // TaskListPage), no en la vista individual de un usuario.
-    const { assignments, setAssignments, loading, reload } = useTaskAssignments(
+    const { assignments, setAssignments, loading } = useTaskAssignments(
         userId ? { user: userId, scope: "user" } : {}
     );
 

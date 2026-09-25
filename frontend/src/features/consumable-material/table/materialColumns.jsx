@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- módulo de columnas: las celdas viven junto a su definición */
 import { ActiveSwitch, StatusBadge, usePermissions } from "@/shared";
 import { joinCuentadantes } from "@/shared/utils/cuentadantes";
 import { toggleCmActive } from "../services/consumableService";

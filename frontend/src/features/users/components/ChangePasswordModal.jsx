@@ -26,8 +26,7 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
     const [form, setForm]           = useState(EMPTY_FORM);
     const [otpCode, setOtpCode]     = useState("");
     const [errors, setErrors]       = useState(EMPTY_ERRORS);
-    const [loading, setLoading]     = useState(false);
-    const [userEmail, setUserEmail] = useState("");
+    const [loading, setLoading] = useState(false);
 
     // Visibilidad de contraseñas
     const [showCurrent, setShowCurrent]     = useState(false);
@@ -60,12 +59,11 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
         setLoading(true);
 
         try {
-            const data = await requestPasswordChangeOtp({
+            await requestPasswordChangeOtp({
                 currentPassword: form.currentPassword,
                 newPassword: form.newPassword,
                 confirmNewPassword: form.confirmNewPassword,
             });
-            setUserEmail(data.email ?? "");
             setStep(STEP_OTP);
         } catch (err) {
             if (err.fieldErrors) {

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- módulo de columnas: las celdas viven junto a su definición */
 import { useNavigate } from "react-router-dom";
 import { IconButton, usePermissions } from "@/shared";
 import { Eye, Undo2 } from "lucide-react";

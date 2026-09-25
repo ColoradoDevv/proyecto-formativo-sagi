@@ -21,7 +21,9 @@ jobs:
 
       - name: Instalar dependencias
         working-directory: backend
-        run: poetry install --no-interaction --no-ansi
+        # --no-root: el pyproject declara packages inexistente ("backend/"),
+        # y solo necesitamos las dependencias, no instalar el proyecto.
+        run: poetry install --no-root --no-interaction --no-ansi
 
       - name: Django check
         working-directory: backend
