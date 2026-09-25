@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getBrands, getStates, getCategories, getUsers, getInventories, createBrand, createInventory, createCategory } from "@/shared/services/selectServices";
 import { createRM } from "../../services/returnableService";
-import { FileInput, Button, showAlert, cancelAlert, ProfileFileInput, IconButton, AccordionItem, EditCard, usePermissions } from "@/shared";
+import { FileInput, Button, showAlert, cancelAlert, ProfileFileInput, IconButton, AccordionItem, EditCard, usePermissions, isFormDirty, useDirtyForm, useDirtyFormStatus } from "@/shared";
 import { rmBaseSchema, rmSchema } from "../../schemas/rmSchema";
 import { ReturnableGeneralCard, ReturnableInventoryCard, ReturnableValuesCard, ReturnableAccountableCard } from "../ReturnableForm";
 import { QuotationPicker } from "@/features/quotations";
@@ -11,7 +11,7 @@ import { Undo2, Package, Layers, BadgeDollarSign, Paperclip, CheckCircle2 } from
 
 // Agrupación por pasos — mismo patrón que CmRegisterForm (crear consumible).
 // Solo cambia cómo se muestra el formulario; los campos y el submit son los mismos.
-const GENERAL_FIELDS = ["name", "model", "senaPlate", "category", "serial", "brand", "description", "width", "length", "depth"];
+const GENERAL_FIELDS = ["name", "model", "tipo", "senaPlate", "category", "serial", "brand", "description", "width", "length", "depth"];
 const INVENTORY_FIELDS = ["state", "quantity", "location", "purchaseDate", "entryDate"];
 const VALUES_FIELDS = ["unitPrice", "totalPrice"];
 const SUPPORT_FIELDS = ["photo", "technicalSheet", "quotations"];
@@ -19,6 +19,7 @@ const SUPPORT_FIELDS = ["photo", "technicalSheet", "quotations"];
 const generalStepSchema = rmBaseSchema.pick({
     name: true,
     model: true,
+    tipo: true,
     senaPlate: true,
     category: true,
     serial: true,
@@ -73,6 +74,7 @@ export default function RmRegisterForm() {
         model: "",
         state: "",
         category: "",
+        tipo: "",
         brand: "",
         inventory: "",
         serial: "",
@@ -93,6 +95,43 @@ export default function RmRegisterForm() {
         length: "",
         depth: "",
     });
+
+    // Snapshot inicial congelado para detectar "dirty".
+    const initialFormData = useMemo(() => ({
+        senaPlate: "",
+        name: "",
+        model: "",
+        state: "",
+        category: "",
+        tipo: "",
+        brand: "",
+        inventory: "",
+        serial: "",
+        quantity: "",
+        location: "",
+        unitPrice: "",
+        totalPrice: "",
+        description: "",
+        purchaseDate: "",
+        entryDate: "",
+        cuentadantes: [],
+        technicalSheet: [],
+        quotations: [],
+        photo: [],
+        width: "",
+        length: "",
+        depth: "",
+    }), []);
+
+    const formDataRef = useRef(formData);
+    formDataRef.current = formData;
+    const checkDirty = useCallback(
+        () => isFormDirty(formDataRef.current, initialFormData),
+        [initialFormData]
+    );
+    useDirtyForm(checkDirty);
+    const { markClean } = useDirtyFormStatus();
+
     const [errors, setErrors] = useState({});
 
     useEffect(() => { getCategories().then(setCategories); }, []);
@@ -227,7 +266,10 @@ export default function RmRegisterForm() {
 
     async function handleCancel() {
         const result = await cancelAlert();
-        if (result.isConfirmed) navigate(-1);
+        if (result.isConfirmed) {
+            markClean();
+            navigate(-1);
+        }
     }
 
     const handleSubmit = async (e) => {
@@ -272,6 +314,7 @@ export default function RmRegisterForm() {
                 cuentadantes: formData.cuentadantes,
             });
             await showAlert({ icon: "success", iconColor: "var(--color-success)", title: "Material devolutivo creado exitosamente" });
+            markClean();
             navigate("/devolutivos");
         } catch (err) {
             if (err.fieldErrors) setErrors((prev) => ({ ...prev, ...err.fieldErrors }));

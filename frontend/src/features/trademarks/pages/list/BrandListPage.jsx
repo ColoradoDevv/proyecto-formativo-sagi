@@ -77,10 +77,13 @@ export default function BrandListPage() {
 
     const handleToggle = async (id, newValue) => {
         try {
-            await toggleBrandActive(id, newValue);
+            // Devolvemos el resultado del PATCH para que ActiveSwitch
+            // refleje el `is_active` que efectivamente persistió el backend.
+            const updated = await toggleBrandActive(id, newValue);
             setBrands((prev) =>
                 prev.map((b) => (b.id === id ? { ...b, is_active: newValue } : b))
             );
+            return updated;
         } catch {
             setNotification({ severity: 'error', message: 'Error al cambiar el estado de la marca' });
         }

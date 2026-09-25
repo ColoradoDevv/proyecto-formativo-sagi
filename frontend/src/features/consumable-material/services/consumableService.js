@@ -58,7 +58,8 @@ export async function createCm(cmData) {
 
   // Inventario: opcional. Si llega "", no se manda (backend lo trata como null).
   if (cmData.inventory) formData.append("inventory_id", String(cmData.inventory));
-  // Categoria: opcional. "" = no se manda.
+  // Categoria: obligatoria (validado por schema Zod en cliente y por
+  // modelo NOT NULL + ValidationError en backend). Siempre se envia.
   if (cmData.category) formData.append("category_id", String(cmData.category));
 
   // Cuentadantes (M2M): se envian como multiples llaves con el mismo nombre
@@ -113,8 +114,13 @@ export async function updateCm(id, cmData) {
 
   // Inventario: opcional. "" = no se manda (backend interpreta como null).
   if (cmData.inventory) formData.append("inventory_id", String(cmData.inventory));
-  // Categoria: opcional. "" = no se manda.
-  if (cmData.category) formData.append("category_id", String(cmData.category));
+  // Categoria: obligatoria (validado por schema Zod). En update se envia
+  // siempre que venga en el form; si llega "" se envia cadena vacia para
+  // que el backend rechace con ValidationError en vez de quedarse con el
+  // valor anterior.
+  if (cmData.category !== undefined && cmData.category !== null) {
+    formData.append("category_id", String(cmData.category));
+  }
 
   // M2M: solo se envia si el formulario lo incluye (aunque sea array vacio
   // para "ninguno"). El backend interpretara lista vacia como "quitar todos".

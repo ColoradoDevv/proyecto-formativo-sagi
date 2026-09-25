@@ -31,7 +31,6 @@ export function UserPersonalCard({ formData, errors, onChange, onPhotoChange, do
                         onChange={onPhotoChange}
                         error={errors.profilePicture}
                         label="Foto de perfil"
-                        optional
                         description="Formato JPG o PNG. Tamaño máximo: 2MB."
                     />
                     {showStatus && <StatusBadge active={isActive} />}
@@ -287,7 +286,6 @@ export default function UserForm({
                             onChange={onPhotoChange}
                             error={errors.profilePicture}
                             label="Foto de perfil"
-                            optional
                             description="Formato JPG o PNG. Tamaño máximo: 2MB."
                         />
                         {showStatus && <StatusBadge active={formData.isActive === "true" || formData.isActive === true} />}

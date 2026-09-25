@@ -146,7 +146,6 @@ export function LoanDetailsCard({ formData, errors = {}, onChange, loan_type = [
                     value={formData.loanGroup}
                     onChange={onChange}
                     error={errors.loanGroup}
-                    optional
                     labelAction={<CreateOptionButton variant="spacer" />}
                 />
                 <Input
@@ -363,7 +362,6 @@ export default function LoanForm({
                     value={formData.loanGroup}
                     onChange={onChange}
                     error={errors.loanGroup}
-                    optional
                     labelAction={<CreateOptionButton variant="spacer" />}
                 />
                 <Input

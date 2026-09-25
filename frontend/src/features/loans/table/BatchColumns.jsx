@@ -42,7 +42,28 @@ function BatchRowActions({ batch }) {
     );
 }
 
+// Trunca el UUID del batch para que la celda no rompa el layout. Los UUIDs
+// de Django son de 36 caracteres (con guiones); mostrar los 8 primeros es
+// suficiente para identificar visualmente un préstamo en una lista.
+function shortBatchId(id) {
+    if (!id) return "—";
+    const clean = String(id);
+    return clean.length > 8 ? `${clean.slice(0, 8)}…` : clean;
+}
+
 export const batchColumns = () => [
+    {
+        accessorKey: "batch_id",
+        header: "ID",
+        cell: ({ row }) => (
+            <span
+                className="inline-flex items-center text-small font-mono text-text-secondary px-2 py-0.5 rounded-full border border-border bg-surface-muted"
+                title={row.original.batch_id ?? ""}
+            >
+                {shortBatchId(row.original.batch_id)}
+            </span>
+        ),
+    },
     {
         accessorKey: "usuario_responsable",
         header: "Responsable",

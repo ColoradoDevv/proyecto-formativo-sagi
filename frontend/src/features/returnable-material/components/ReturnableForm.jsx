@@ -1,5 +1,5 @@
 import { Input, Select, SelectMultiple, TextArea, EditCard, CreateOptionButton } from "@/shared";
-import { getReturnableCategoryRules } from "../utils/returnableCategoryRules";
+import { RETURNABLE_TIPO_OPTIONS, getReturnableTipoRules, getReturnableCategoryRules } from "../utils/returnableCategoryRules";
 import { Plus } from "lucide-react";
 
 // Cards independientes por paso (mismo patron que ConsumableForm:
@@ -21,9 +21,16 @@ export function ReturnableGeneralCard({
     const handleBrandCreated = (option) =>
         onChange({ target: { name: "brand", value: String(option.id) } });
 
+    // Las reglas (placa SENA, dimensiones) ahora se derivan del enum `tipo`,
+    // no del nombre de la categoria. `category` se conserva como dato auxiliar.
     const selectedCategory = categories.find((option) => String(option.id) === String(formData.category));
     const categoryName = selectedCategory?.label ?? selectedCategory?.name ?? "";
-    const categoryRules = getReturnableCategoryRules(categoryName);
+    const tipoRules = getReturnableTipoRules(formData.tipo);
+    // Mantener compat: si el formData trae un nombre de categoria conocido
+    // y tipo vacio, derivar reglas del nombre para no romper formularios
+    // preexistentes que aun no envian `tipo`.
+    const fallbackRules = !formData.tipo ? getReturnableCategoryRules(categoryName) : null;
+    const categoryRules = fallbackRules ?? tipoRules;
     const shouldShowDimensions = categoryRules.requiresDimensions;
 
     return (
@@ -51,6 +58,16 @@ export function ReturnableGeneralCard({
 
                     //required
                 />
+                <Select
+                    label="Tipo"
+                    name="tipo"
+                    options={RETURNABLE_TIPO_OPTIONS}
+                    value={formData.tipo ?? ""}
+                    onChange={onChange}
+                    error={errors.tipo}
+                    labelAction={<CreateOptionButton variant="spacer" />}
+                    required
+                />
                 <Input
                     label="Placa SENA"
                     name="senaPlate"
@@ -59,7 +76,6 @@ export function ReturnableGeneralCard({
                     onChange={onChange}
                     error={errors.senaPlate}
                     required={categoryRules.requiresSenaPlate}
-                    optional={!categoryRules.requiresSenaPlate}
                     labelAction={<CreateOptionButton variant="spacer" />}
 
                 />
@@ -93,8 +109,6 @@ export function ReturnableGeneralCard({
                     value={formData.serial}
                     onChange={onChange}
                     error={errors.serial}
-                    required={categoryRules.requiresId}
-                    optional={!categoryRules.requiresId}
                     labelAction={<CreateOptionButton variant="spacer" />}
                 />
 
@@ -106,7 +120,6 @@ export function ReturnableGeneralCard({
                         value={formData.brand}
                         onChange={onChange}
                         error={errors.brand}
-                        optional
                         labelAction={
                             <CreateOptionButton
                                 onCreate={onCreateBrand}
@@ -127,7 +140,6 @@ export function ReturnableGeneralCard({
                         value={formData.inventory}
                         onChange={onChange}
                         error={errors.inventory}
-                        optional
                         labelAction={
                             <CreateOptionButton
                                 onCreate={onCreateInventory}
@@ -237,7 +249,6 @@ export function ReturnableInventoryCard({ formData, errors = {}, onChange, state
                 value={formData.location}
                 onChange={onChange}
                 error={errors.location}
-                optional
                 labelAction={<CreateOptionButton variant="spacer" />}
             />
             <Input
@@ -339,9 +350,13 @@ export default function ReturnableForm({
     const handleBrandCreated = (option) =>
         onChange({ target: { name: "brand", value: String(option.id) } });
 
+    // Las reglas (placa SENA, dimensiones) ahora se derivan del enum `tipo`,
+    // no del nombre de la categoria. `category` se conserva como dato auxiliar.
     const selectedCategory = categories.find((option) => String(option.id) === String(formData.category));
     const categoryName = selectedCategory?.label ?? selectedCategory?.name ?? "";
-    const categoryRules = getReturnableCategoryRules(categoryName);
+    const tipoRules = getReturnableTipoRules(formData.tipo);
+    const fallbackRules = !formData.tipo ? getReturnableCategoryRules(categoryName) : null;
+    const categoryRules = fallbackRules ?? tipoRules;
     const shouldShowDimensions = categoryRules.requiresDimensions;
     const cuentasValue = Array.isArray(formData.cuentadantes) ? formData.cuentadantes : [];
     return (
@@ -381,6 +396,16 @@ export default function ReturnableForm({
 
                             //required
                         />
+                        <Select
+                            label="Tipo"
+                            name="tipo"
+                            options={RETURNABLE_TIPO_OPTIONS}
+                            value={formData.tipo ?? ""}
+                            onChange={onChange}
+                            error={errors.tipo}
+                            labelAction={<CreateOptionButton variant="spacer" />}
+                            required
+                        />
                         <Input
                             label="Placa SENA"
                             name="senaPlate"
@@ -389,7 +414,6 @@ export default function ReturnableForm({
                             onChange={onChange}
                             error={errors.senaPlate}
                             required={categoryRules.requiresSenaPlate}
-                            optional={!categoryRules.requiresSenaPlate}
                             labelAction={<CreateOptionButton variant="spacer" />}
 
                         />
@@ -423,8 +447,6 @@ export default function ReturnableForm({
                             value={formData.serial}
                             onChange={onChange}
                             error={errors.serial}
-                            required={categoryRules.requiresId}
-                            optional={!categoryRules.requiresId}
                             labelAction={<CreateOptionButton variant="spacer" />}
                         />
 
@@ -436,7 +458,6 @@ export default function ReturnableForm({
                                 value={formData.brand}
                                 onChange={onChange}
                                 error={errors.brand}
-                                optional
                                 labelAction={
                                     <CreateOptionButton
                                         onCreate={onCreateBrand}
@@ -457,7 +478,6 @@ export default function ReturnableForm({
                                 value={formData.inventory}
                                 onChange={onChange}
                                 error={errors.inventory}
-                                optional
                                 labelAction={
                                     <CreateOptionButton
                                         onCreate={onCreateInventory}
@@ -581,7 +601,6 @@ export default function ReturnableForm({
                         value={formData.location}
                         onChange={onChange}
                         error={errors.location}
-                        optional
                         labelAction={<CreateOptionButton variant="spacer" />}
                     />
                     <Input

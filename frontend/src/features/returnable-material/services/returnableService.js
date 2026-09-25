@@ -54,6 +54,8 @@ export async function createRM(rmData) {
     formData.append("description", rmData.description);
     formData.append("purchase_date", rmData.purchaseDate);
     formData.append("entry_date", rmData.entryDate);
+    // Tipo: nuevo campo enum que define las reglas de placa/dimensiones.
+    if (rmData.tipo) formData.append("tipo", rmData.tipo);
 
     // Inventario: opcional. "" = no se manda.
     if (rmData.inventory) formData.append("inventory_id", String(rmData.inventory));
@@ -115,6 +117,10 @@ export async function updateRM(id, rmData) {
     formData.append("purchase_date", rmData.purchaseDate);
     formData.append("entry_date", rmData.entryDate);
     formData.append("quantity", rmData.quantity);
+    // Tipo: nuevo campo enum que define las reglas de placa/dimensiones.
+    if (rmData.tipo !== undefined && rmData.tipo !== null) {
+        formData.append("tipo", String(rmData.tipo));
+    }
 
     // Inventario: opcional. "" = no se manda.
     if (rmData.inventory) formData.append("inventory_id", String(rmData.inventory));

@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getDocumentTypes } from "../../services/selectServices";
 import useUserGroups from "../../hooks/useUserGroups";
-import { Button, Input, StatusLabel, DataConsentCheckbox, showAlert, cancelAlert, IconButton, usePermissions, AccordionItem } from "@/shared";
+import { Button, Input, StatusLabel, DataConsentCheckbox, showAlert, cancelAlert, IconButton, usePermissions, AccordionItem, isFormDirty, useDirtyForm, useDirtyFormStatus } from "@/shared";
 import { userBaseSchema, userSchema } from "../../schemas/userSchema";
 import { createUser } from "../../services/userService";
 import { deriveRoleFlags } from "../../utils/userRoleUtils";
@@ -77,6 +77,39 @@ export default function UserRegisterForm() {
         isAccountable: false,
         dataConsent: false,
     });
+
+    // Snapshot inicial congelado para detectar cambios (Sidenav guard).
+    const initialFormData = useMemo(() => ({
+        firstName: "",
+        lastName: "",
+        email: "",
+        confirmEmail: "",
+        institutionalEmail: "",
+        profilePicture: [],
+        documentType: "",
+        groups: "",
+        documentNumber: "",
+        startDate: "",
+        endDate: "",
+        additionalPhone: "",
+        phone: "",
+        address: "",
+        isInstructorPlanta: false,
+        isAccountable: false,
+        dataConsent: false,
+    }), []);
+
+    // Registra el comparador "dirty" en el provider global. Se usa un ref
+    // para que la función lea siempre el `formData` actual sin re-registrarse
+    // en cada keystroke (más eficiente y garantiza frescura).
+    const formDataRef = useRef(formData);
+    formDataRef.current = formData;
+    const checkDirty = useCallback(
+        () => isFormDirty(formDataRef.current, initialFormData),
+        [initialFormData]
+    );
+    useDirtyForm(checkDirty);
+    const { markClean } = useDirtyFormStatus();
 
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
@@ -233,7 +266,10 @@ export default function UserRegisterForm() {
 
     async function handleCancel() {
         const result = await cancelAlert();
-        if (result.isConfirmed) navigate(-1);
+        if (result.isConfirmed) {
+            markClean();
+            navigate(-1);
+        }
     }
 
     async function handleSubmit(e) {
@@ -293,6 +329,7 @@ export default function UserRegisterForm() {
                 title: "Usuario creado exitosamente",
                 timer: 4000,
             });
+            markClean();
             navigate("/usuarios");
 
         } catch (error) {
@@ -306,6 +343,7 @@ export default function UserRegisterForm() {
                     title: "Usuario creado, pero con un problema",
                     text: error.message,
                 });
+                markClean();
                 navigate("/usuarios");
                 return;
             }
@@ -400,7 +438,7 @@ export default function UserRegisterForm() {
                                     }
                                     contactExtraSlot={
                                         <div className="flex flex-col gap-2">
-                                            <StatusLabel optional>Teléfono adicional</StatusLabel>
+                                            <StatusLabel>Teléfono adicional</StatusLabel>
                                             {!showAdditionalPhone ? (
                                                 <Button
                                                     type="button"
@@ -423,7 +461,7 @@ export default function UserRegisterForm() {
                                     }
                                     emailInst={
                                         <div className="flex flex-col gap-2">
-                                            <StatusLabel optional>Correo Institucional</StatusLabel>
+                                            <StatusLabel>Correo Institucional</StatusLabel>
                                             {!showEmailInst ? (
                                                 <Button
                                                     type="button"
@@ -437,7 +475,6 @@ export default function UserRegisterForm() {
                                                 <Input
                                                     name="institutionalEmail"
                                                     type="email"
-                                                    optional
                                                     placeholder="correo@sena.edu.co"
                                                     onChange={handleChange}
                                                     value={formData.institutionalEmail}
