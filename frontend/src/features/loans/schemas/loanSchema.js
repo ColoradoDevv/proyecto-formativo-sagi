@@ -28,7 +28,7 @@ function isValidDateString(value) {
 // Objeto base sin refinamientos — permite .pick() por pasos en el wizard
 // (mismo patrón que cmBaseSchema / rmBaseSchema). La validación completa
 // con reglas cruzadas (receptor, stock) vive en el default loanSchema.
-export function loanBaseSchema(materials = [], { multipleMaterials = false, originalReturnDate = null } = {}) {
+export function loanBaseSchema({ multipleMaterials = false, originalReturnDate = null } = {}) {
     const amountSchema = z
         .string()
         .trim()
@@ -107,7 +107,7 @@ export function loanBaseSchema(materials = [], { multipleMaterials = false, orig
 }
 
 export default function loanSchema(materials = [], { multipleMaterials = false, skipReceptorValidation = false, originalReturnDate = null } = {}) {
-    return loanBaseSchema(materials, { multipleMaterials, originalReturnDate }).superRefine((data, ctx) => {
+    return loanBaseSchema({ multipleMaterials, originalReturnDate }).superRefine((data, ctx) => {
         // En edición, el receptor es de solo lectura (no se puede reasignar
         // ni cambiar su tipo registrado/externo desde este formulario) —
         // no tiene sentido volver a exigir estos campos ahí.

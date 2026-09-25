@@ -315,7 +315,7 @@ export default function UserRegisterForm() {
         setSubmitting(true);
 
         try {
-            const user = await createUser({
+            await createUser({
                 ...result.data,
                 // Fusionar campos que Zod puede omitir si son undefined/optional.
                 profilePicture: formData.profilePicture,

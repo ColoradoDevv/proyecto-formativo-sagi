@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- módulo de columnas: las celdas viven junto a su definición */
 import TaskStateBadge from "../components/TaskStateBadge";
 import DefinitionRowActions from "../components/DefinitionRowActions";
 import AssignmentRowActions from "../components/AssignmentRowActions";

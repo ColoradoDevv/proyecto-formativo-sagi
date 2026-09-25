@@ -18,32 +18,35 @@ import { Button } from "@/shared";
 //
 
 export default function ProtectedRoute() {
-    const [ready, setReady] = useState(false);
     const location = useLocation();
+    // Listo de entrada si no hay sesión o si ya hay permisos en sesión;
+    // el fetch solo ocurre con token válido pero sin permisos guardados
+    // (pestaña recargada). Sin setState síncrono en el efecto.
+    const [ready, setReady] = useState(() => {
+        const stored = getStoredPermissions();
+        return !isAuthenticated() || (stored && stored.length > 0);
+    });
 
     useEffect(() => {
-        if (!isAuthenticated()) {
-            setReady(true);
-            return;
-        }
-
-        const stored = getStoredPermissions();
-        if (stored && stored.length > 0) {
-            setReady(true);
-            return;
-        }
+        if (ready) return;
 
         const token = getToken();
+        let cancelled = false;
         fetch("/api/permissions/permissions/my_permission_codes/", {
             headers: { Authorization: `Bearer ${token}` },
         })
             .then((res) => (res.ok ? res.json() : { permissions: [] }))
             .then((data) => {
-                setStoredPermissions(data.permissions ?? []);
+                if (!cancelled) setStoredPermissions(data.permissions ?? []);
             })
-            .catch(() => setStoredPermissions([]))
-            .finally(() => setReady(true));
-    }, []);
+            .catch(() => {
+                if (!cancelled) setStoredPermissions([]);
+            })
+            .finally(() => {
+                if (!cancelled) setReady(true);
+            });
+        return () => { cancelled = true; };
+    }, [ready]);
 
     if (!ready) return null;
 

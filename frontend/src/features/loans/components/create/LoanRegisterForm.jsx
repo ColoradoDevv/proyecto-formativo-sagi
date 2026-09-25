@@ -149,7 +149,7 @@ export default function LoanRegisterForm() {
         // reglas ni modificar campos — el .pick conserva la validación base
         // del paso; las reglas cruzadas (stock, receptor condicional) se
         // verifican en el submit final, igual que en CmRegisterForm.
-        const full = loanBaseSchema(materials, { multipleMaterials: true });
+        const full = loanBaseSchema({ multipleMaterials: true });
         const stepConfig = [
             { schema: full.pick({ loanMaterial: true, loanMaterialQuantities: true }), fields: MATERIAL_FIELDS },
             { schema: full.pick({ loanReceptorUser: true, receptorIsRegistered: true, receptorName: true, receptorEmail: true, receptorDataConsent: true }), fields: RECEPTOR_FIELDS },

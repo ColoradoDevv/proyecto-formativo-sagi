@@ -1,5 +1,4 @@
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { getStoredUser, getToken } from "@/shared/services/api";
 import { PDF_COLORS as C } from "./pdfColors";
 import { getSenaLogoBlanco } from "./senaLogo";
@@ -54,7 +53,6 @@ function _drawFields(doc, fields, startY, cols = 2) {
     const rowH    = 8;
     const padX    = 3;
 
-    let row = 0;
     let col = 0;
     let y   = startY;
 
@@ -84,7 +82,6 @@ function _drawFields(doc, fields, startY, cols = 2) {
         col++;
         if (col >= cols) {
             col = 0;
-            row++;
             y += rowH;
         }
     });
@@ -234,7 +231,7 @@ export async function generateUserProfileReport(user) {
             value: user.is_instructor_planta ? "Sí" : "No",
         });
     }
-    curY = _drawFields(doc, systemFields, curY, 2);
+    _drawFields(doc, systemFields, curY, 2);
 
     // ── Pie de página ──────────────────────────────────────────────────────
     const pageH = 297;

@@ -31,7 +31,7 @@ function useAuditLogs(filters = {}) {
         } finally {
             setLoading(false);
         }
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         const controller = new AbortController();
