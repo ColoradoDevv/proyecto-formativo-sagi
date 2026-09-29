@@ -1,8 +1,55 @@
 import { useState } from "react";
-import { Eye, EyeOff, KeyRound, ShieldCheck } from "lucide-react";
+import { Check, Eye, EyeOff, KeyRound, ShieldCheck } from "lucide-react";
 import { TailChase } from "ldrs/react";
 import { Button, Input, Modal, showAlert } from "@/shared";
 import { requestPasswordChangeOtp, confirmPasswordChange } from "../services/userService";
+
+// ── Política de contraseña (espejo del backend:
+// ResetPasswordView._password_is_valid + comparación con trim) ──────────
+const PASSWORD_RULES = [
+    { id: "length",  label: "Mínimo 10 caracteres", test: (v) => v.trim().length >= 10 },
+    { id: "upper",   label: "Una mayúscula (A-Z)",  test: (v) => /[A-Z]/.test(v) },
+    { id: "lower",   label: "Una minúscula (a-z)",  test: (v) => /[a-z]/.test(v) },
+    { id: "digit",   label: "Un número (0-9)",      test: (v) => /\d/.test(v) },
+    { id: "special", label: "Un carácter especial (!, -, _, ...)", test: (v) => /[^A-Za-z0-9]/.test(v) },
+];
+
+function PasswordChecklist({ newPassword, confirmPassword }) {
+    // Guía en vivo: el backend valida al enviar, esto solo orienta antes.
+    return (
+        <ul className="flex flex-col gap-1 text-small" aria-live="polite">
+            {PASSWORD_RULES.map((rule) => {
+                const met = rule.test(newPassword);
+                return (
+                    <li
+                        key={rule.id}
+                        className="flex items-center gap-1.5"
+                        style={{ color: met ? "var(--color-success)" : "var(--color-text-muted)" }}
+                    >
+                        <Check size={14} strokeWidth={met ? 3 : 2} opacity={met ? 1 : 0.4} />
+                        {rule.label}
+                    </li>
+                );
+            })}
+            <li
+                className="flex items-center gap-1.5"
+                style={{
+                    color:
+                        confirmPassword && newPassword.trim() === confirmPassword.trim()
+                            ? "var(--color-success)"
+                            : "var(--color-text-muted)",
+                }}
+            >
+                <Check
+                    size={14}
+                    strokeWidth={confirmPassword && newPassword.trim() === confirmPassword.trim() ? 3 : 2}
+                    opacity={confirmPassword && newPassword.trim() === confirmPassword.trim() ? 1 : 0.4}
+                />
+                Ambas contraseñas coinciden
+            </li>
+        </ul>
+    );
+}
 
 // ── Pasos del flujo ─────────────────────────────────────────────────────────
 const STEP_FORM = "form";   // Paso 1: contraseña actual + nueva + confirmación
@@ -156,6 +203,8 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
                     </button>
                 }
             />
+
+            <PasswordChecklist newPassword={form.newPassword} confirmPassword={form.confirmNewPassword} />
 
             <Input
                 label="Confirmar nueva contraseña"

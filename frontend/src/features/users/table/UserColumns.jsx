@@ -48,6 +48,16 @@ function UserActiveSwitch({ user, onToggled }) {
 
 export const getUserColumns = (onDeleted) => [
     {
+        // Número visible correlativo (1, 2, 3...): posición en el listado,
+        // que ya excluye al superadministrador primigenio (invisible).
+        // row.index es estable (posición en los datos, no en la vista).
+        id: "numero",
+        header: "N.º",
+        enableSorting: false,
+        enableColumnFilter: false,
+        cell: ({ row }) => <span className="tabular-nums">{row.index + 1}</span>,
+    },
+    {
         accessorFn: (row) => `${row.first_name} ${row.last_name}`,
         id: "nombre",
         header: "Nombre",
