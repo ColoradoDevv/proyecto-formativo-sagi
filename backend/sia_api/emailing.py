@@ -16,7 +16,7 @@ from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 
-LOGO_PATH = Path(__file__).resolve().parent / "email_assets" / "logo-sena-blanco.png"
+LOGO_PATH = Path(__file__).resolve().parent / "email_assets" / "logo-sena-verde.png"
 LOGO_CID = "logo_sena"
 
 
