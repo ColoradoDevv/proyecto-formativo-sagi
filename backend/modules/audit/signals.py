@@ -318,3 +318,193 @@ def handle_return_save(sender, instance, created, **kwargs):
 # (UserGroupView, UserPermissionView) porque son operaciones sin señal clara
 # en el ORM (M2M add/remove + UserGroup.objects.create/delete).
 # Se llama a audit.utils.log() directamente desde permissions/views.py.
+
+
+# ── Tareas ────────────────────────────────────────────────────────────────────
+
+from modules.tasks.models import TaskDefinition, TaskAssignment, TaskEvidence  # noqa: E402
+
+
+@receiver(post_save, sender=TaskDefinition)
+def handle_task_definition_save(sender, instance, created, **kwargs):
+    req = get_current_request()
+    if req is None:
+        return
+    actor = getattr(req, "user", None)
+    log(
+        actor=actor,
+        module=AuditLog.MODULE_TASKS,
+        action=AuditLog.ACTION_CREATE if created else AuditLog.ACTION_UPDATE,
+        target_id=instance.pk,
+        target_repr=instance.name,
+        request=req,
+    )
+
+
+@receiver(post_delete, sender=TaskDefinition)
+def handle_task_definition_delete(sender, instance, **kwargs):
+    req = get_current_request()
+    if req is None:
+        return
+    actor = getattr(req, "user", None)
+    log(
+        actor=actor,
+        module=AuditLog.MODULE_TASKS,
+        action=AuditLog.ACTION_DELETE,
+        target_id=instance.pk,
+        target_repr=instance.name,
+        request=req,
+    )
+
+
+@receiver(post_save, sender=TaskAssignment)
+def handle_task_assignment_save(sender, instance, created, **kwargs):
+    req = get_current_request()
+    if req is None:
+        return
+    actor = getattr(req, "user", None)
+    log(
+        actor=actor,
+        module=AuditLog.MODULE_TASKS,
+        action=AuditLog.ACTION_CREATE if created else AuditLog.ACTION_UPDATE,
+        target_id=instance.pk,
+        target_repr=f"Asignación #{instance.pk} — {instance.task} → {instance.recipient_name}",
+        detail=f"Estado: {instance.state}",
+        request=req,
+    )
+
+
+@receiver(post_delete, sender=TaskAssignment)
+def handle_task_assignment_delete(sender, instance, **kwargs):
+    req = get_current_request()
+    if req is None:
+        return
+    actor = getattr(req, "user", None)
+    log(
+        actor=actor,
+        module=AuditLog.MODULE_TASKS,
+        action=AuditLog.ACTION_DELETE,
+        target_id=instance.pk,
+        target_repr=f"Asignación #{instance.pk} — {instance.task}",
+        request=req,
+    )
+
+
+@receiver(post_save, sender=TaskEvidence)
+def handle_task_evidence_save(sender, instance, created, **kwargs):
+    req = get_current_request()
+    if req is None:
+        return
+    if not created:
+        return  # las evidencias solo se suben, nunca se editan
+    actor = getattr(req, "user", None)
+    log(
+        actor=actor,
+        module=AuditLog.MODULE_TASKS,
+        action=AuditLog.ACTION_CREATE,
+        target_id=instance.pk,
+        target_repr=f"Evidencia — Asignación #{instance.assignment_id}",
+        detail=instance.description or "—",
+        request=req,
+    )
+
+
+# ── Catálogos: Category / Inventory / Quotation ───────────────────────────────
+
+from modules.products.models import Category, Inventory, Quotation  # noqa: E402
+
+
+@receiver(post_save, sender=Category)
+def handle_category_save(sender, instance, created, **kwargs):
+    req = get_current_request()
+    if req is None:
+        return
+    actor = getattr(req, "user", None)
+    log(
+        actor=actor,
+        module=AuditLog.MODULE_CATEGORIES,
+        action=AuditLog.ACTION_CREATE if created else AuditLog.ACTION_UPDATE,
+        target_id=instance.pk,
+        target_repr=instance.name,
+        request=req,
+    )
+
+
+@receiver(post_delete, sender=Category)
+def handle_category_delete(sender, instance, **kwargs):
+    req = get_current_request()
+    if req is None:
+        return
+    actor = getattr(req, "user", None)
+    log(
+        actor=actor,
+        module=AuditLog.MODULE_CATEGORIES,
+        action=AuditLog.ACTION_DELETE,
+        target_id=instance.pk,
+        target_repr=instance.name,
+        request=req,
+    )
+
+
+@receiver(post_save, sender=Inventory)
+def handle_inventory_save(sender, instance, created, **kwargs):
+    req = get_current_request()
+    if req is None:
+        return
+    actor = getattr(req, "user", None)
+    log(
+        actor=actor,
+        module=AuditLog.MODULE_INVENTORIES,
+        action=AuditLog.ACTION_CREATE if created else AuditLog.ACTION_UPDATE,
+        target_id=instance.pk,
+        target_repr=instance.name,
+        request=req,
+    )
+
+
+@receiver(post_delete, sender=Inventory)
+def handle_inventory_delete(sender, instance, **kwargs):
+    req = get_current_request()
+    if req is None:
+        return
+    actor = getattr(req, "user", None)
+    log(
+        actor=actor,
+        module=AuditLog.MODULE_INVENTORIES,
+        action=AuditLog.ACTION_DELETE,
+        target_id=instance.pk,
+        target_repr=instance.name,
+        request=req,
+    )
+
+
+@receiver(post_save, sender=Quotation)
+def handle_quotation_save(sender, instance, created, **kwargs):
+    req = get_current_request()
+    if req is None:
+        return
+    actor = getattr(req, "user", None)
+    log(
+        actor=actor,
+        module=AuditLog.MODULE_QUOTATIONS,
+        action=AuditLog.ACTION_CREATE if created else AuditLog.ACTION_UPDATE,
+        target_id=instance.pk,
+        target_repr=instance.title,
+        request=req,
+    )
+
+
+@receiver(post_delete, sender=Quotation)
+def handle_quotation_delete(sender, instance, **kwargs):
+    req = get_current_request()
+    if req is None:
+        return
+    actor = getattr(req, "user", None)
+    log(
+        actor=actor,
+        module=AuditLog.MODULE_QUOTATIONS,
+        action=AuditLog.ACTION_DELETE,
+        target_id=instance.pk,
+        target_repr=instance.title,
+        request=req,
+    )

@@ -1,5 +1,5 @@
 import { Component } from "react";
-import { Button } from "./Button";
+import Button from "./Button";
 
 //
 // Red de seguridad de render: si cualquier página rompe al pintar,

@@ -35,6 +35,9 @@ class AuditLog(models.Model):
     MODULE_TASKS       = "tasks"
     MODULE_AUTH        = "auth"
     MODULE_PERMISSIONS = "permissions"
+    MODULE_CATEGORIES  = "categories"
+    MODULE_INVENTORIES = "inventories"
+    MODULE_QUOTATIONS  = "quotations"
 
     MODULE_CHOICES = [
         (MODULE_USERS,       "Usuarios"),
@@ -46,6 +49,9 @@ class AuditLog(models.Model):
         (MODULE_TASKS,       "Tareas"),
         (MODULE_AUTH,        "Autenticación"),
         (MODULE_PERMISSIONS, "Permisos / Grupos"),
+        (MODULE_CATEGORIES,  "Categorías"),
+        (MODULE_INVENTORIES, "Nombres de inventario"),
+        (MODULE_QUOTATIONS,  "Cotizaciones"),
     ]
 
     ACTION_CREATE           = "CREATE"
