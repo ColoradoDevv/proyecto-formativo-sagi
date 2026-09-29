@@ -8,7 +8,11 @@
 
 import os
 
+from dotenv import load_dotenv
+
 from django.core.wsgi import get_wsgi_application
+
+load_dotenv()  # P0-1: gunicorn entra por aquí, no por manage.py
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sia_api.settings')
 

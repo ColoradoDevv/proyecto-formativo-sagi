@@ -1,6 +1,13 @@
 .env
+.env.*
+!*.example
 .venv/
 venv/
 __pycache__/
 *.pyc
-media
+db.sqlite3
+*.sqlite3
+media/
+# NOTA P0-1: media/ contiene datos personales (Ley 1581) y ya hay 16
+# archivos versionados por error. No commitear más; ver docs/entornos.md
+# para des-versionarlos (git rm --cached) cuando el equipo lo apruebe.

@@ -21,11 +21,11 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Environment files
+# Environment files (P0-1: ningún .env real va a git, solo *.example)
 .env
-.env.local
-.env.*.local
-.env.production
+.env.*
+!.env.example
+!*.example
 
 # Database
 backend/db.sqlite3

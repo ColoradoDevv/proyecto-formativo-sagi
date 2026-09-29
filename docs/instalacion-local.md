@@ -51,13 +51,9 @@ Abre `backend/.env` y configura:
    ```bash
    poetry run python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
    ```
-2. **Base de datos** — elige una opción:
-   - **Opción A · SQLite local (recomendada para empezar).** Comenta el bloque Supabase y descomenta:
-     ```
-     DB_ENGINE=django.db.backends.sqlite3
-     DB_NAME=db.sqlite3
-     ```
-   - **Opción B · Supabase compartido (datos del equipo).** Deja el bloque Supabase y pide la `DB_PASSWORD` por canal privado al dueño del proyecto (nunca por git ni canales públicos).
+2. **Base de datos** — por defecto SQLite local (ya viene en `.env.example`, no tocar).
+   Para staging/prod ver [entornos](entornos.md): cada entorno usa su propio
+   proyecto Supabase, nunca uno compartido. No apuntes tu dev a PROD.
 3. **Correo (opcional).** Sin `EMAIL_*` no pasa nada: los correos (firmas, credenciales) se imprimen en consola.
 
 > El archivo `.env` **nunca** se sube a git (ya está en `.gitignore`).

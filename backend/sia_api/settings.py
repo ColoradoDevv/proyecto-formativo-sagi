@@ -24,32 +24,66 @@ def _split_env_list(value):
     # Nos evita errores por espacios o comas extra.
     return [item.strip() for item in value.split(",") if item.strip()]
 
+
+# ── Entornos: dev | staging | prod ─────────────────────────────────────
+# P0-1: una sola base compartida para todos es riesgo de pérdida de datos.
+# DJANGO_ENV decide el nivel de exigencia:
+#   dev     → SQLite local por defecto, DEBUG permitido, fallback de SECRET_KEY.
+#   staging → espejo de prod con datos desechables, DEBUG=False por defecto.
+#   prod    → fail-closed: exige Postgres + SECRET_KEY + hosts reales.
+DJANGO_ENV = os.getenv('DJANGO_ENV', 'dev').strip().lower() or 'dev'
+if DJANGO_ENV not in ('dev', 'staging', 'prod'):
+    raise ImproperlyConfigured(
+        f"DJANGO_ENV='{DJANGO_ENV}' no válido. Usa dev, staging o prod."
+    )
+IS_PROD = DJANGO_ENV == 'prod'
+IS_STAGING = DJANGO_ENV == 'staging'
+
 # SECURITY WARNING: don't run with debug turned on in production!
 # Activa el modo debug para ver errores detallados.
-# En produccion deberia ir en False.
-DEBUG = os.getenv('DEBUG', 'False') == 'True'
+# En produccion deberia ir en False (en prod se fuerza a False aunque el .env diga True).
+if IS_PROD:
+    if os.getenv('DEBUG', 'False') == 'True':
+        import warnings
+        warnings.warn('DEBUG=True ignorado en prod: se fuerza DEBUG=False.')
+    DEBUG = False
+elif IS_STAGING:
+    DEBUG = os.getenv('DEBUG', 'False') == 'True'
+else:
+    DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # Clave secreta usada por Django para firmar sesiones y tokens.
-# Fail-closed: en producción es obligatoria y sin ella Django no arranca.
-# En local (DEBUG) se usa un fallback solo-dev.
+# Fail-closed: en staging/prod es obligatoria y sin ella Django no arranca.
+# En dev (local) se usa un fallback solo-dev.
 SECRET_KEY = os.getenv('SECRET_KEY')
 if not SECRET_KEY:
-    if DEBUG:
+    if DJANGO_ENV == 'dev' and DEBUG:
         SECRET_KEY = 'dev-secret-key-change-me-in-production'
     else:
         raise ImproperlyConfigured(
-            'SECRET_KEY no está configurada. Defínela en backend/.env '
-            '(ver backend/.env.example).'
+            f'SECRET_KEY no está configurada para DJANGO_ENV={DJANGO_ENV}. '
+            'Defínela en backend/.env (ver backend/.env.example y docs/entornos.md).'
         )
 
 # Lista de hosts permitidos.
 # Si el host no esta aqui, Django rechaza la peticion.
+# En prod se exige lista explícita y real (no solo localhost).
 ALLOWED_HOSTS = _split_env_list(os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1'))
-if DEBUG:
+if DJANGO_ENV == 'dev' and DEBUG:
     for host in ("localhost", "127.0.0.1"):
         if host not in ALLOWED_HOSTS:
             ALLOWED_HOSTS.append(host)
+if IS_PROD and all(h in ('localhost', '127.0.0.1') for h in ALLOWED_HOSTS):
+    raise ImproperlyConfigured(
+        'ALLOWED_HOSTS en prod no puede ser solo localhost. '
+        'Define el dominio real (ej. ALLOWED_HOSTS=api.tu-dominio.edu.co).'
+    )
+
+
+# Detrás de nginx (TLS terminado en el proxy): confiar en
+# X-Forwarded-Proto para URLs y CSRF correctos en HTTPS.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition
@@ -82,6 +116,7 @@ AUTH_USER_MODEL = "users.User"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -115,10 +150,21 @@ WSGI_APPLICATION = 'sia_api.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 # Conexion a base de datos tomada del .env.
-# Si no se define, usamos SQLite para desarrollo local.
+# dev: SQLite local por defecto. staging/prod: Postgres obligatorio
+# (cada entorno con su propio proyecto Supabase; nunca compartir uno solo).
+DB_ENGINE = os.getenv('DB_ENGINE') or 'django.db.backends.sqlite3'
+if IS_PROD and 'postgresql' not in DB_ENGINE:
+    raise ImproperlyConfigured(
+        'En prod DB_ENGINE debe ser Postgres (django.db.backends.postgresql). '
+        'SQLite no es válido en producción.'
+    )
+if IS_PROD and not os.getenv('DB_PASSWORD'):
+    raise ImproperlyConfigured(
+        'En prod DB_PASSWORD es obligatoria. Inyéctala por secreto del PaaS, nunca por git.'
+    )
 DATABASES = {
     'default': {
-        'ENGINE': os.getenv('DB_ENGINE') or 'django.db.backends.sqlite3',
+        'ENGINE': DB_ENGINE,
         'NAME': os.getenv('DB_NAME') or str(BASE_DIR / 'db.sqlite3'),
         'USER': os.getenv('DB_USER', ''),
         'PASSWORD': os.getenv('DB_PASSWORD', ''),
@@ -126,11 +172,10 @@ DATABASES = {
         'PORT': os.getenv('DB_PORT', ''),
         # Supabase (Postgres + Pooler PgBouncer) exige SSL.
         # Si ENGINE es postgres, agregamos sslmode=require.
-        'OPTIONS': {'sslmode': 'require'} if 'postgresql' in (os.getenv('DB_ENGINE') or '') else {},
-        # Con PgBouncer en modo transaccion (puerto 6543) no mantener conexiones persistentes.
-        # Reutilizar la conexión con Supabase entre peticiones (evita un
-        # handshake TLS nuevo en cada request contra el pooler).
-        'CONN_MAX_AGE': 60,
+        'OPTIONS': {'sslmode': 'require'} if 'postgresql' in DB_ENGINE else {},
+        # Con PgBouncer en modo transacción (puerto 6543) no mantener
+        # conexiones persistentes: 0 por defecto, ajustable con CONN_MAX_AGE.
+        'CONN_MAX_AGE': int(os.getenv('CONN_MAX_AGE', '0')),
     }
 }
 
@@ -205,6 +250,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Carpeta donde collectstatic reúne los estáticos para producción
+# (los sirve WhiteNoise; STATIC_ROOT ajustable por env).
+STATIC_ROOT = os.getenv('STATIC_ROOT') or str(BASE_DIR / 'staticfiles')
 
 # Archivos subidos por usuarios (imagenes, documentos, etc).
 # MEDIA_ROOT: carpeta donde se guardan fisicamente en el servidor.
