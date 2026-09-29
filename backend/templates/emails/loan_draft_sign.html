@@ -1,0 +1,13 @@
+{% extends "emails/base.html" %}
+{# Firma de solicitud de préstamo, flujo draft (registrado o externo). #}
+{# Contexto: greeting_name, role_label, validity_hours, button, materials, materials_title, details, warning. #}
+{% block title %}Firma de préstamo requerida{% endblock %}
+{% block content %}
+<p style="margin:0 0 12px 0;color:#203F57;font-size:15px;line-height:1.6;">Se ha registrado una solicitud de préstamo en la que figuras como {{ role_label }}.</p>
+<p style="margin:0 0 12px 0;color:#203F57;font-size:15px;line-height:1.6;">El préstamo quedará registrado definitivamente una vez que ambas partes firmen.</p>
+<p style="margin:0 0 12px 0;color:#203F57;font-size:15px;line-height:1.6;">Para firmar, haz clic en el siguiente botón (válido por {{ validity_hours }} horas):</p>
+{% include "emails/_button.html" %}
+{% include "emails/_materials.html" %}
+{% include "emails/_details.html" %}
+{% include "emails/_warning.html" %}
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "emails/base.html" %}
+{# Firma de préstamo, flujo clásico (con objeto User). #}
+{# Contexto: greeting_name, role_label, validity_hours, button, materials, materials_title, details, warning. #}
+{% block title %}Firma de préstamo requerida{% endblock %}
+{% block content %}
+<p style="margin:0 0 12px 0;color:#203F57;font-size:15px;line-height:1.6;">Se ha registrado un préstamo en el que figuras como {{ role_label }}.</p>
+<p style="margin:0 0 12px 0;color:#203F57;font-size:15px;line-height:1.6;">Para confirmar la entrega, firma desde el siguiente botón (válido por {{ validity_hours }} horas):</p>
+{% include "emails/_button.html" %}
+{% include "emails/_materials.html" %}
+{% include "emails/_details.html" %}
+{% include "emails/_warning.html" %}
+{% endblock %}

@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Claude Code worktrees and internal files
+.claude/
+.vscode/
+.mcp.json
+.CLAUDE.md
+requerimientos
+
+# Build outputs
+dist/
+dist-ssr/
+*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Database
+backend/db.sqlite3
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# Added by code-review-graph
+.code-review-graph/
+CLAUDE.md

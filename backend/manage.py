@@ -1,12 +1,17 @@
 #!/usr/bin/env python
-"""Django's command-line utility for administrative tasks."""
+# Django's command-line utility for administrative tasks.
+# Nota rapida: este archivo es el punto de entrada para comandos como
+# `runserver` o `migrate`.
 import os
 import sys
+from dotenv import load_dotenv
 
+# Tip: carga variables del .env para no escribirlas en el codigo.
+load_dotenv()
 
 def main():
-    """Run administrative tasks."""
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
+    # Prepara el entorno y le pasa el comando a Django.
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sia_api.settings')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
@@ -18,5 +23,5 @@ def main():
     execute_from_command_line(sys.argv)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

@@ -1,0 +1,10 @@
+{% extends "emails/base.html" %}
+{# Código OTP para firmar, flujo clásico. #}
+{# Contexto: greeting_name, code, code_caption, materials, materials_title, warning. #}
+{% block title %}Código de verificación{% endblock %}
+{% block content %}
+<p style="margin:0 0 12px 0;color:#203F57;font-size:15px;line-height:1.6;">Tu código de verificación para firmar el siguiente préstamo es:</p>
+{% include "emails/_code.html" %}
+{% include "emails/_materials.html" %}
+{% include "emails/_warning.html" %}
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "emails/base.html" %}
+{# El asignado marcó la tarea como terminada: el revisor debe revisarla. #}
+{# Contexto: submitter, details, button. #}
+{% block title %}Tarea entregada para revisión{% endblock %}
+{% block content %}
+<p style="margin:0 0 12px 0;color:#203F57;font-size:15px;line-height:1.6;"><strong>{{ submitter }}</strong> marcó como terminada la siguiente tarea. Revísala y define su estado final:</p>
+{% include "emails/_details.html" %}
+{% include "emails/_button.html" %}
+{% endblock %}

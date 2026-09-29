@@ -1,0 +1,9 @@
+{# Caja de materiales. Requiere: materials_title, materials (lista de [nombre, cantidad]). #}
+<div style="background:#F0F5EE;border:1px solid #CAD5D3;border-radius:12px;padding:6px 16px;margin:16px 0;">
+<p style="margin:10px 0 4px 0;color:#0C2D48;font-size:14px;font-weight:bold;">{{ materials_title }}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+{% for name, qty in materials %}
+<tr><td style="padding:8px 0;border-bottom:1px solid #CAD5D3;color:#203F57;font-size:14px;">• {{ name }}</td>
+<td style="padding:8px 0 8px 12px;border-bottom:1px solid #CAD5D3;color:#526B7B;font-size:14px;text-align:right;white-space:nowrap;">{{ qty }}</td></tr>
+{% endfor %}
+</table></div>

@@ -1,0 +1,8 @@
+/* Quita los parches blancos que SweetAlert2 usa por defecto para tapar
+   la unión del icono de "success", ya que nuestros popups tienen fondo
+   semitransparente con blur y ese blanco solido se ve como un circulo. */
+.swal2-success-circular-line-left,
+.swal2-success-circular-line-right,
+.swal2-success-fix {
+    background-color: transparent !important;
+}

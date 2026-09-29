@@ -3,25 +3,29 @@ name = "backend"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "Your Name",email = "you@example.com"}
+    {name = "D4nxw",email = "dm510520@gmail.com"}
 ]
-requires-python = ">=3.14"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "django (>=6.0.3,<7.0.0)",
     "djangorestframework (>=3.16.1,<4.0.0)",
     "django-cors-headers (>=4.9.0,<5.0.0)",
-    "python-decouple (>=3.8,<4.0)",
-    "mongoengine (>=0.29.3,<0.30.0)",
+    "coreapi (>=2.3.3,<3.0.0)",
+    "setuptools (==81.0.0)",
+    "legacy-cgi (>=2.6.4,<3.0.0)",
+    "pillow (>=12.1.1,<13.0.0)",
     "python-dotenv (>=1.2.2,<2.0.0)",
-    "django-rest-framework-mongoengine (>=3.4.1,<4.0.0)"
+    "psycopg2-binary (>=2.9.11,<3.0.0)",
+    "pyjwt (>=2.13.0,<3.0.0)",
+    "django-filter (>=26.1,<27.0)",
+    "dotenv (>=0.9.9,<0.10.0)",
+    "sentry-sdk (>=2.70.0,<3.0.0)"
 ]
 
+[tool.poetry]
+packages = [{include = "backend"}]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-[dependency-groups]
-dev = [
-    "django-debug-toolbar (>=6.2.0,<7.0.0)"
-]

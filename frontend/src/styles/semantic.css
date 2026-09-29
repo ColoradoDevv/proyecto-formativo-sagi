@@ -1,0 +1,153 @@
+:root {
+    /* ============= LIGHT THEME ============= */
+
+    /* ========== BRAND =========== */
+    --semantic-brand: var(--color-secondary-900);              /* #203F57 */
+    --semantic-brand-hover: var(--color-secondary-950);       /* #0C2D48 */
+    --semantic-brand-soft: var(--color-secondary-300);        /* #62E8FA */
+    --semantic-brand-soft-hover: var(--color-secondary-400); /* #55E6F9 */
+    /* Texto sobre fondos brand: blanco en claro, navy en oscuro (9.4:1+). */
+    --semantic-on-brand: var(--color-white);                  /* #FFFFFF */
+
+    /* ========= BACKGROUND ========== */
+    --semantic-background: var(--color-secondary-100);         /* #F0F5EE */
+    --semantic-surface: var(--color-white);                    /* #FFFFFF */
+    --semantic-surface-muted: var(--color-secondary-200);      /* #E1EBE3 */
+    --semantic-background-inverse: var(--color-secondary-950); /* #0C2D48 */
+
+    /* ============= TEXT =============== */
+    --semantic-text-primary: var(--color-secondary-950);      /* #0C2D48 */
+    --semantic-text-secondary: var(--color-secondary-700);    /* #526B7B */
+    --semantic-text-muted: var(--color-secondary-700);        /* #526B7B — antes secondary-500, fallaba contraste (2.7:1) */
+    --semantic-text-inverse: var(--color-white);              /* #FFFFFF */
+
+    /* ============= BORDER ============ */
+    --semantic-border: var(--color-secondary-300);             /* #CAD5D3 */
+    --semantic-border-strong: var(--color-secondary-600);     /* #718691 */
+
+    /* ============== FOCUS ================*/
+    --semantic-focus-ring: var(--color-secondary-400);        /* #AFBCBF */
+    --semantic-focus-border: var(--color-secondary-500);      /* #90A1A9 */
+
+    /* ============= STATE ================ */
+    --semantic-success: var(--color-tertiary-950);             /* #007832 — antes primary-950, fallaba contraste (3.1:1) */
+    --semantic-success-soft: var(--color-primary-100);         /* #E1F2D8 — fondo suave estado activo */
+    --semantic-warning: var(--color-warning);                  /* #B45309 */
+    --semantic-warning-soft: var(--color-warning-soft);        /* #FEF3C7 — fondo suave estado pendiente */
+    --semantic-error: var(--color-error);                      /* #E53935 */
+    --semantic-error-soft: var(--color-error-soft);            /* #FDE7E7 — fondo suave estado inactivo */
+
+    /* ============= SHAPE ================ */
+    --semantic-radius-none: var(--radius-none);
+    --semantic-radius-xs:   var(--radius-xs);
+    --semantic-radius-sm:   var(--radius-sm);
+    --semantic-radius-md:   var(--radius-md);
+    --semantic-radius-lg:   var(--radius-lg);
+    --semantic-radius-xl:   var(--radius-xl);
+    --semantic-radius-2xl:  var(--radius-2xl);
+    --semantic-radius-3xl:  var(--radius-3xl);
+    --semantic-radius-full: var(--radius-full);
+
+    /* ========== SWITCH ========== */
+    --semantic-size-switch-sm-h:    var(--size-switch-sm-h);
+    --semantic-size-switch-sm-w:    var(--size-switch-sm-w);
+    --semantic-size-switch-sm-knob: var(--size-switch-sm-knob);
+    --semantic-size-switch-md-h:    var(--size-switch-md-h);
+    --semantic-size-switch-md-w:    var(--size-switch-md-w);
+    --semantic-size-switch-md-knob: var(--size-switch-md-knob);
+    --semantic-size-switch-lg-h:    var(--size-switch-lg-h);
+    --semantic-size-switch-lg-w:    var(--size-switch-lg-w);
+    --semantic-size-switch-lg-knob: var(--size-switch-lg-knob);
+
+    /* ========== CONTROL HEIGHTS ========== */
+    --semantic-size-control-xs: var(--size-control-xs);
+    --semantic-size-control-sm: var(--size-control-sm);
+    --semantic-size-control-md: var(--size-control-md);
+    --semantic-size-control-lg: var(--size-control-lg);
+    --semantic-size-control-xl:  var(--size-control-xl);
+    --semantic-size-control-2xl: var(--size-control-2xl);
+
+    /* ========== ICON BUTTON ========== */
+    --semantic-size-icon-sm: var(--size-icon-sm);
+    --semantic-size-icon-md: var(--size-icon-md);
+    --semantic-size-icon-lg: var(--size-icon-lg);
+
+    /* ========== FILE PREVIEW ========== */
+    --semantic-size-preview-sm: var(--size-preview-sm);
+    --semantic-size-preview-md: var(--size-preview-md);
+
+    /* ========== FIXED WIDTHS ========== */
+    --semantic-size-field-sm: var(--size-field-sm);
+    --semantic-size-field-md: var(--size-field-md);
+
+    /* ========= SHADOW (elevation) ======== */
+    --semantic-shadow-1: var(--shadow-1);
+    --semantic-shadow-2: var(--shadow-2);
+    --semantic-shadow-3: var(--shadow-3);
+    --semantic-shadow-4: var(--shadow-4);
+    --semantic-shadow-5: var(--shadow-5);
+
+    /* =========== DURATION ============== */
+    --semantic-duration-fast: var(--duration-fast);
+    --semantic-duration-base: var(--duration-base);
+    --semantic-duration-slow: var(--duration-slow);
+    --semantic-duration-lazy: var(--duration-lazy);
+
+    /* =========== TYPOGRAPHY ============== */
+    --semantic-font-size-display: var(--fs-xxl);
+    --semantic-font-size-h1: var(--fs-lg);
+    --semantic-font-size-h2: var(--fs-md);
+    --semantic-font-size-h3: var(--fs-sm);
+    --semantic-font-size-body: var(--fs-xs);
+    --semantic-font-size-medium: var(--fs-xxs);
+    --semantic-font-size-small: var(--fs-xxxs);
+    --semantic-font-size-caption: var(--fs-xxxxs);
+
+    /* ============= FONT WEIGHT ============== */
+    --semantic-font-weight-heading: var(--font-weight-bold);
+    --semantic-font-weight-medium: var(--font-weight-medium);
+    --semantic-font-weight-body: var(--font-weight-regular);
+    --semantic-font-weight-label: var(--font-weight-regular);
+
+    /* ============ DARK THEME ============== */
+}
+
+[data-theme="dark"] {
+    /* ========== BRAND =========== */
+    --semantic-brand: var(--color-secondary-300);              /* #CAD5D3 */
+    --semantic-brand-hover: var(--color-secondary-200);        /* #E1EBE3 */
+    --semantic-brand-soft: var(--color-secondary-800);         /* #375267 */
+    --semantic-brand-soft-hover: var(--color-secondary-700);   /* #526B7B */
+    --semantic-on-brand: var(--color-secondary-950);           /* #0C2D48 — texto sobre brand */
+
+    /* ========= BACKGROUND ========== */
+    --semantic-background: var(--color-secondary-950);         /* #0C2D48 */
+    --semantic-surface: var(--color-gray-100);                 /* #242424 */
+    --semantic-surface-muted: var(--color-gray-200);           /* #3D3D3D */
+    --semantic-background-inverse: var(--color-secondary-100); /* #F0F5EE */
+
+    /* ============= TEXT =============== */
+    --semantic-text-primary: var(--color-secondary-100);       /* #F0F5EE */
+    --semantic-text-secondary: var(--color-secondary-400);    /* #AFBCBF */
+    --semantic-text-muted: var(--color-secondary-500);         /* #90A1A9 */
+    --semantic-text-inverse: var(--color-secondary-950);       /* #0C2D48 */
+
+    /* ============= BORDER ============ */
+    --semantic-border: var(--color-secondary-800);             /* #375267 */
+    --semantic-border-strong: var(--color-secondary-600);     /* #718691 */
+
+    /* ============== FOCUS ================*/
+    --semantic-focus-ring: var(--color-secondary-500);         /* #90A1A9 */
+    --semantic-focus-border: var(--color-secondary-400);       /* #AFBCBF */
+
+    /* ============= STATE ================ */
+    --semantic-success: var(--color-tertiary-300);             /* #B2D6C1 — fg claro */
+    --semantic-success-soft: var(--color-tertiary-850);         /* bg oscuro (5.26:1 con success) */
+
+    /* Swap literal solid↔soft usando los mismos tokens */
+    --semantic-warning: var(--color-warning-soft);             /* #FEF3C7 — fg claro */
+    --semantic-warning-soft: var(--color-warning);             /* #B45309 — bg oscuro */
+
+    --semantic-error: var(--color-error-soft);                 /* #FDE7E7 — fg claro */
+    --semantic-error-soft: var(--color-error);                 /* #E53935 — bg oscuro */
+}

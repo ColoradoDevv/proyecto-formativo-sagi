@@ -1,0 +1,5 @@
+export { default as UserCreatePage } from "./pages/create/UserCreatePage"
+export { default as UserHomePage } from "./pages/UserHomePage"
+export { default as UserDetailPage } from "./pages/detail/UserDetailPage"
+export { default as UserEditPage } from "./pages/edit/UserEditPage"
+export { default as ProfileEditPage } from "./pages/profile/ProfileEditPage"

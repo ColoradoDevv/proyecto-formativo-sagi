@@ -1,0 +1,194 @@
+@import url("https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap");
+@import url(tokens.css);
+@import url(semantic.css);
+@import "tailwindcss";
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+
+
+
+
+@theme {
+
+/* ============ ANIMATIONS ============ */
+--animate-fade-in: fadeIn var(--duration-base) ease-out both;
+--animate-slide-up: slideUp var(--duration-slow) ease-out both;
+--animate-slide-down: slideDown var(--duration-slow) ease-out both;
+--animate-slide-in-left: slideInLeft var(--duration-slow) ease-out both;
+
+    /* =========== BRAND ============ */
+    --color-brand: var(--semantic-brand);
+    --color-brand-hover: var(--semantic-brand-hover);
+    --color-brand-soft: var(--semantic-brand-soft);
+    --color-brand-soft-hover: var(--semantic-brand-soft-hover);
+    --color-on-brand: var(--semantic-on-brand);
+
+    /* ======== BACKGROUND ============ */
+    --color-background: var(--semantic-background);
+    --color-surface-hover: var(--semantic-surface);
+    --color-surface-muted: var(--semantic-surface-muted);
+    --color-background-inverse: var(--semantic-background-inverse);
+
+    /* ============ TEXT ============== */
+    --color-text-primary: var(--semantic-text-primary);
+    --color-text-secondary: var(--semantic-text-secondary);
+    --color-text-muted: var(--semantic-text-muted);
+    --color-text-inverse: var(--semantic-text-inverse);
+
+    /* ============== BORDER =============== */
+    --color-border: var(--semantic-border);
+    --color-border-strong: var(--semantic-border-strong);
+
+    /* =============== FOCUS =============== */
+    --color-focus-ring: var(--semantic-focus-ring);
+    --color-focus-border: var(--semantic-focus-border);
+
+    /* =============== STATE =============== */
+    --color-success: var(--semantic-success);
+    --color-success-soft: var(--semantic-success-soft);
+    --color-warning: var(--semantic-warning);
+    --color-warning-soft: var(--semantic-warning-soft);
+    --color-error: var(--semantic-error);
+    --color-error-soft: var(--semantic-error-soft);
+
+    /* ============= SHAPE ================ */
+    --radius-none: var(--semantic-radius-none);
+    --radius-xs:   var(--semantic-radius-xs);
+    --radius-sm:   var(--semantic-radius-sm);
+    --radius-md:   var(--semantic-radius-md);
+    --radius-lg:   var(--semantic-radius-lg);
+    --radius-xl:   var(--semantic-radius-xl);
+    --radius-2xl:  var(--semantic-radius-2xl);
+    --radius-3xl:  var(--semantic-radius-3xl);
+    --radius-full: var(--semantic-radius-full);
+
+    /* =========== SWITCH ============= */
+    --size-switch-sm-h:    var(--semantic-size-switch-sm-h);
+    --size-switch-sm-w:    var(--semantic-size-switch-sm-w);
+    --size-switch-sm-knob: var(--semantic-size-switch-sm-knob);
+    --size-switch-md-h:    var(--semantic-size-switch-md-h);
+    --size-switch-md-w:    var(--semantic-size-switch-md-w);
+    --size-switch-md-knob: var(--semantic-size-switch-md-knob);
+    --size-switch-lg-h:    var(--semantic-size-switch-lg-h);
+    --size-switch-lg-w:    var(--semantic-size-switch-lg-w);
+    --size-switch-lg-knob: var(--semantic-size-switch-lg-knob);
+
+    /* ========= CONTROL HEIGHTS ========= */
+    --size-control-xs: var(--semantic-size-control-xs);
+    --size-control-sm: var(--semantic-size-control-sm);
+    --size-control-md: var(--semantic-size-control-md);
+    --size-control-lg: var(--semantic-size-control-lg);
+    --size-control-xl:  var(--semantic-size-control-xl);
+    --size-control-2xl: var(--semantic-size-control-2xl);
+
+    /* ========== ICON BUTTON ========== */
+    --size-icon-sm: var(--semantic-size-icon-sm);
+    --size-icon-md: var(--semantic-size-icon-md);
+    --size-icon-lg: var(--semantic-size-icon-lg);
+
+    /* ========== FILE PREVIEW ========== */
+    --size-preview-sm: var(--semantic-size-preview-sm);
+    --size-preview-md: var(--semantic-size-preview-md);
+
+    /* ========== FIXED WIDTHS ========== */
+    --size-field-sm: var(--semantic-size-field-sm);
+    --size-field-md: var(--semantic-size-field-md);
+
+    /* ======= SHADOW (elevation) ======= */
+    --shadow-elevation-1: var(--semantic-shadow-1);
+    --shadow-elevation-2: var(--semantic-shadow-2);
+    --shadow-elevation-3: var(--semantic-shadow-3);
+    --shadow-elevation-4: var(--semantic-shadow-4);
+    --shadow-elevation-5: var(--semantic-shadow-5);
+
+    /* =========== DURATION ============= */
+    --duration-fast: var(--semantic-duration-fast);
+    --duration-base: var(--semantic-duration-base);
+    --duration-slow: var(--semantic-duration-slow);
+    --duration-lazy: var(--semantic-duration-lazy);
+
+    /* ============ TYPOGRAPHY ============== */
+    --text-display: var(--semantic-font-size-display);
+    --text-h1: var(--semantic-font-size-h1);
+    --text-h2: var(--semantic-font-size-h2);
+    --text-h3: var(--semantic-font-size-h3);
+    --text-body: var(--semantic-font-size-body);
+    --text-medium: var(--semantic-font-size-medium);
+    --text-small: var(--semantic-font-size-small);
+    --text-caption: var(--semantic-font-size-caption);
+
+    /* ============= FONT WEIGHT ============== */
+    --font-heading: var(--semantic-font-weight-heading);
+    --font-medium: var(--semantic-font-weight-medium);
+    --font-body: var(--semantic-font-weight-body);
+    --font-label: var(--semantic-font-weight-label);
+
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+}
+
+@layer base {
+    :root {
+        font-family: 'Work Sans', 'Calibri', Helvetica, Arial, sans-serif;
+    }
+
+    /* Scrollbars y controles nativos del color-scheme del tema. */
+    [data-theme="dark"] {
+        color-scheme: dark;
+    }
+
+    html, body {
+        background-color: var(--semantic-background);
+        overflow-x: clip;
+        max-width: 100%;
+    }
+
+    body {
+        position: relative;
+    }
+
+    #root {
+        overflow-x: clip;
+        max-width: 100%;
+    }
+
+    ::selection {
+        background-color: var(--color-secondary-400);
+        color: var(--semantic-text-primary);
+    }
+
+    input[type="search"]::-webkit-search-decoration,
+    input[type="search"]::-webkit-search-cancel-button,
+    input[type="search"]::-webkit-search-results-button,
+    input[type="search"]::-webkit-search-results-decoration {
+        display: none;
+    }
+    input[type="date"]::-webkit-datetime-edit {
+        padding: 0;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator {
+        margin: 0;
+        padding: 0;
+    }
+    input[type="date"] {
+    line-height: normal;
+}
+}

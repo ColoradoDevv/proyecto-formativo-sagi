@@ -1,0 +1,12 @@
+{% extends "emails/base.html" %}
+{# Aviso de tarea recién asignada. #}
+{# Contexto: paragraphs, details, button, warning (opcional). #}
+{% block title %}Nueva tarea asignada{% endblock %}
+{% block content %}
+{% for p in paragraphs %}
+<p style="margin:0 0 12px 0;color:#203F57;font-size:15px;line-height:1.6;">{{ p }}</p>
+{% endfor %}
+{% include "emails/_details.html" %}
+{% include "emails/_button.html" %}
+{% if warning %}{% include "emails/_warning.html" %}{% endif %}
+{% endblock %}

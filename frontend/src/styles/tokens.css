@@ -1,0 +1,157 @@
+:root {
+    /*Primary color*/
+    --color-primary-50: #F5FAF2;
+    --color-primary-100: #E1F2D8;
+    --color-primary-200: #CDE9BF;
+    --color-primary-300: #B9E0A5;
+    --color-primary-400: #A5D88C;
+    --color-primary-500: #92CF72;
+    --color-primary-600: #7EC759;
+    --color-primary-700: #6ABE3F;
+    --color-primary-800: #56B526;
+    --color-primary-900: #42AD0C;
+    --color-primary-950: #39A900;
+
+    /*Secundary color*/
+    --color-secondary-50: #FFFFFF;
+    --color-secondary-100: #F0F5EE;
+    --color-secondary-200: #E1EBE3;
+    --color-secondary-300: #CAD5D3;
+    --color-secondary-400: #AFBCBF;
+    --color-secondary-500: #90A1A9;
+    --color-secondary-600: #718691;
+    --color-secondary-700: #526B7B;
+    --color-secondary-800: #375267;
+    --color-secondary-900: #203F57;
+    --color-secondary-950: #0C2D48;
+
+    /*Terciario color*/
+    --color-tertiary-50: #FFFFFF;
+    --color-tertiary-100: #E9F3ED;
+    --color-tertiary-200: #D0E6DA;
+    --color-tertiary-300: #B2D6C1;
+    --color-tertiary-400: #91C5A6;
+    --color-tertiary-500: #6EB28B;
+    --color-tertiary-600: #4DA170;
+    --color-tertiary-700: #2F9157;
+    --color-tertiary-800: #168444;
+    --color-tertiary-850: #0E5A30;   /* paso intermedio para fondos oscuros con texto claro */
+    --color-tertiary-900: #067B37;
+    --color-tertiary-950: #007832;
+
+    /*Quaternary color*/
+    --color-quaternary-50: #FFFFFF;
+    --color-quaternary-100: #FAFEFF;
+    --color-quaternary-200: #EDFCFE;
+    --color-quaternary-300: #D9F9FE;
+    --color-quaternary-400: #C1F6FD;
+    --color-quaternary-500: #A8F2FC;
+    --color-quaternary-600: #8EEEFB;
+    --color-quaternary-700: #76EBFA;
+    --color-quaternary-800: #62E8FA;
+    --color-quaternary-900: #55E6F9;
+    --color-quaternary-950: #50E5F9;
+
+    /* Error color */
+    --color-error: #D32F2F;  /* 4.98:1 sobre blanco — cumple WCAG AA (antes #E53935: 4.23:1) */
+    --color-error-soft: #FDE7E7;   /* fondo suave para estados de error/inactivo */
+
+    /* Warning color */
+    --color-warning: #B45309;
+    --color-warning-soft: #FEF3C7; /* fondo suave para estados de advertencia/pendiente */
+
+    /* Base/Basic color */
+    --color-white: #fff;
+    --color-black: #000000;
+    --color-gray-50: #181818;
+    --color-gray-100: #242424;
+    --color-gray-200: #3D3D3D;
+    --color-gray-300: #565656;
+    --color-gray-400: #6E6E6E;
+    --color-gray-500: #878787;
+    --color-gray-600: #9F9F9F;
+    --color-gray-700: #B8B8B8;
+    --color-gray-800: #D1D1D1;
+    --color-gray-900: #E9E9E9;
+    --color-gray-950: #F6F6F6;
+
+
+    /* ===== SHAPE (border-radius) ===== */
+    --radius-none: 0px;
+    --radius-xs:   2px;
+    --radius-sm:   4px;
+    --radius-md:   6px;
+    --radius-lg:   12px;
+    --radius-xl:   16px;
+    --radius-2xl:  20px;
+    --radius-3xl:  24px;
+    --radius-full: 9999px;
+
+    /* ===== CONTROL HEIGHTS ===== */
+    --size-control-xs:  32px;   /* h-8  — botón pequeño */
+    --size-control-sm:  36px;   /* h-9  — search pequeño */
+    --size-control-md:  40px;   /* h-10 — botón mediano */
+    --size-control-lg:  48px;   /* h-12 — input compacto */
+    --size-control-xl:  56px;   /* h-14 — input estándar */
+    --size-control-2xl: 64px;   /* h-16 — search grande */
+
+    /* ===== SWITCH ===== */
+    --size-switch-sm-h: 20px;  --size-switch-sm-w: 36px;  --size-switch-sm-knob: 16px;
+    --size-switch-md-h: 24px;  --size-switch-md-w: 44px;  --size-switch-md-knob: 20px;
+    --size-switch-lg-h: 28px;  --size-switch-lg-w: 56px;  --size-switch-lg-knob: 24px;
+
+    /* ===== ICON BUTTON ===== */
+    --size-icon-sm:  32px;   /* zona de toque pequeña */
+    --size-icon-md:  40px;   /* zona de toque mediana */
+    --size-icon-lg:  48px;   /* zona de toque estándar */
+
+    /* ===== FILE PREVIEW ===== */
+    --size-preview-sm: 160px;  /* h-40 — ficha técnica */
+    --size-preview-md: 192px;  /* h-48 — foto de producto */
+
+    /* ===== FIXED WIDTHS ===== */
+    --size-field-sm:  256px;  /* w-64 — campo/botón estrecho */
+    --size-field-md:  320px;  /* w-80 / w-[320px] — campo estándar */
+
+    /* ===== SHADOW (elevation) ===== */
+    --shadow-1: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-2: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-3: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-4: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-5: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+
+    /* ===== DURATION ===== */
+    --duration-fast:  150ms;
+    --duration-base:  200ms;
+    --duration-slow:  300ms;
+    --duration-lazy:  700ms;
+
+    /* Typography */
+    --main-font: 'Work Sans', Helvetica, Arial;
+    --secundary-font: 'Calibri', Helvetica, Arial;
+
+    /* Font weights */
+    --font-weight-light: 300;
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-bold: 700;
+
+    /* Font variants */
+    --light-variant: light;
+    --medium-variant: medium;
+    --regular-variant: regular;
+    --bold-variant: bold;
+
+    /* Font-size */
+    --fs-xxxxl: 5rem;    /* Ultra grande */
+    --fs-xxxl: 4rem;     /* Súper grande */
+    --fs-xxl: 3rem;      /* Extra grande */
+    --fs-xl: 2.5rem;     /* Muy grande */
+    --fs-lg: 2rem;       /* Grande */
+    --fs-md: 1.5rem;     /* Mediano */
+    --fs-sm: 1.25rem;    /* Pequeño */
+    --fs-xs: 1rem;       /* Base */
+    --fs-xxs: 0.875rem;  /* Muy pequeño 14px */
+    --fs-xxxs: 0.75rem;  /* Extra extra pequeño 12px */
+    --fs-xxxxs: 0.5rem;  /* Mínimo 8px */
+}

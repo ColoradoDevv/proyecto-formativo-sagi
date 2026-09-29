@@ -1,0 +1,10 @@
+{% extends "emails/base.html" %}
+{# Credenciales de cuenta recién creada (también se reutiliza al reenviar credenciales). #}
+{# Contexto: greeting_name, login_url, credentials ([Correo, Contraseña]). #}
+{% block title %}Bienvenido a SAGI{% endblock %}
+{% block content %}
+<p style="margin:0 0 12px 0;color:#203F57;font-size:15px;line-height:1.6;">Se ha creado una cuenta para ti en el sistema SAGI. Estas son tus credenciales de acceso:</p>
+{% include "emails/_credentials.html" %}
+{% include "emails/_button.html" %}
+{% include "emails/_warning.html" %}
+{% endblock %}
