@@ -8,7 +8,11 @@
 
 import os
 
+from dotenv import load_dotenv
+
 from django.core.asgi import get_asgi_application
+
+load_dotenv()  # P0-1: misma razón que wsgi.py
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sia_api.settings')
 
