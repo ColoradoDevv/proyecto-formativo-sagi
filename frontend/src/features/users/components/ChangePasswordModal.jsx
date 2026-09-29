@@ -269,7 +269,21 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
                 autoFocus
             />
 
-            <div className="flex gap-3 justify-between pt-1">
+            {/* Acciones en columna: en modal sm los 3 botones en fila
+                desbordan el ancho (scroll horizontal). Cancelar/Confirmar
+                a ancho completo y "Corregir datos" terciario debajo. */}
+            <div className="flex flex-col gap-2 pt-1">
+                <div className="flex gap-3">
+                    <Button type="button" variant="secondary" onClick={handleClose} disabled={loading} className="flex-1">
+                        Cancelar
+                    </Button>
+                    <Button type="submit" disabled={loading || otpCode.length !== 6} className="flex-1">
+                        {loading
+                            ? <TailChase size={16} speed="1.75" color="currentColor" />
+                            : <><ShieldCheck size={15} /> Confirmar</>
+                        }
+                    </Button>
+                </div>
                 {/* Vuelve al paso 1 para corregir los datos y volver a pedir un
                     código — este botón por sí solo no reenvía nada. */}
                 <Button
@@ -277,21 +291,10 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
                     variant="ghost"
                     onClick={() => { setStep(STEP_FORM); setOtpCode(""); setErrors(EMPTY_ERRORS); }}
                     disabled={loading}
-                    className="text-small"
+                    className="w-full text-small"
                 >
                     Corregir datos
                 </Button>
-                <div className="flex gap-3">
-                    <Button type="button" variant="secondary" onClick={handleClose} disabled={loading}>
-                        Cancelar
-                    </Button>
-                    <Button type="submit" disabled={loading || otpCode.length !== 6}>
-                        {loading
-                            ? <TailChase size="16" speed="1.75" color="currentColor" />
-                            : <><ShieldCheck size={15} /> Confirmar</>
-                        }
-                    </Button>
-                </div>
             </div>
         </form>
     );
