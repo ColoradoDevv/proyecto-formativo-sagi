@@ -1074,7 +1074,8 @@ class ResendCredentialsView(APIView):
 
     def post(self, request, pk):
         try:
-            user = User.objects.get(pk=pk)
+            # Al primigenio no se le reenvían credenciales (invisible).
+            user = User.objects.filter(is_primary_admin=False).get(pk=pk)
         except User.DoesNotExist:
             return Response(
                 {"error": "Usuario no encontrado"},

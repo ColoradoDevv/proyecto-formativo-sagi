@@ -1070,13 +1070,14 @@ class LoanDraftCreateView(APIView):
         User = get_user_model()
 
         try:
-            responsable = User.objects.get(pk=responsable_id)
+            # El primigenio no puede ser responsable ni receptor (invisible).
+            responsable = User.objects.filter(is_primary_admin=False).get(pk=responsable_id)
         except User.DoesNotExist:
             return Response({"id_responsable_user": "Usuario no encontrado."}, status=status.HTTP_400_BAD_REQUEST)
 
         if receptor_is_registered:
             try:
-                receptor = User.objects.get(pk=receptor_id)
+                receptor = User.objects.filter(is_primary_admin=False).get(pk=receptor_id)
             except User.DoesNotExist:
                 return Response({"id_receptor_user": "Usuario no encontrado."}, status=status.HTTP_400_BAD_REQUEST)
         else:
