@@ -946,6 +946,9 @@ class UserListCreateView(AuditMixin, generics.ListCreateAPIView):
     # contra el pooler antes de esto): tipo de documento y grupos con grupo.
     queryset = (
         User.objects
+        # El superadministrador primigenio no es visible para nadie:
+        # queda fuera de listados, conteos, reportes y selectores.
+        .filter(is_primary_admin=False)
         .select_related("document_type")
         .prefetch_related(
             Prefetch(
@@ -973,7 +976,8 @@ class UserDetailView(AuditMixin, generics.RetrieveUpdateDestroyAPIView):
     # Detalle: obtiene, actualiza y elimina un usuario.
     # Usa all_objects para que un administrador pueda acceder al registro
     # aunque esté marcado como eliminado (p.ej. para restaurarlo o auditarlo).
-    queryset = User.all_objects.all()
+    # El primigenio queda excluido: no es visible ni siquiera por detalle directo.
+    queryset = User.all_objects.filter(is_primary_admin=False)
     serializer_class = UserSerializer
 
     # Campos que no se pueden tocar en el admin primigenio bajo ninguna circunstancia.
@@ -1027,8 +1031,8 @@ class UserDocumentTypesListView(generics.ListAPIView):
     serializer_class = DocumentTypeSerializer  
 
 class UserTrashListView(generics.ListAPIView):
-    # Lista de usuarios eliminados (papelera)
-    queryset = User.all_objects.filter(is_deleted=True).order_by("-deleted_at")
+    # Lista de usuarios eliminados (papelera). El primigenio tampoco aparece aquí.
+    queryset = User.all_objects.filter(is_deleted=True, is_primary_admin=False).order_by("-deleted_at")
     serializer_class = UserTrashSerializer
 
     def get_permissions(self):

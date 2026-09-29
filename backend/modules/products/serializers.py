@@ -256,7 +256,8 @@ class ConsumableMaterialSerializer(serializers.ModelSerializer):
     #   - `cuentadantes`       -> read-only, serializa la lista de usuarios anidada
     #   - `cuentadante_ids`    -> write-only, recibe la lista de PKs en POST/PATCH
     cuentadante_ids = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(),
+        # El primigenio no puede asignarse como cuentadante (invisible).
+        queryset=User.objects.filter(is_primary_admin=False),
         write_only=True,
         many=True,
         required=False,
