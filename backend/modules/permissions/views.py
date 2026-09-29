@@ -248,7 +248,8 @@ class UserPermissionView(generics.GenericAPIView):
     def get_user(self, user_id):
         """Obtiene un usuario y lanza error si no existe"""
         try:
-            return User.objects.get(id=user_id)
+            # El primigenio no se gestiona por aquí (invisible e intocable).
+            return User.objects.filter(is_primary_admin=False).get(id=user_id)
         except User.DoesNotExist:
             raise Response(
                 {"error": "Usuario no encontrado"},
@@ -394,7 +395,8 @@ class UserGroupView(generics.GenericAPIView):
 
     def get_user(self, user_id):
         try:
-            return User.objects.get(id=user_id)
+            # El primigenio no se gestiona por aquí (invisible e intocable).
+            return User.objects.filter(is_primary_admin=False).get(id=user_id)
         except User.DoesNotExist:
             raise Response(
                 {"error": "Usuario no encontrado"},
