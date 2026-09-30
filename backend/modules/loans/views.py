@@ -197,11 +197,12 @@ class LoanViewSet(AuditMixin, viewsets.ModelViewSet):
     ordering_fields  = ['loan_date', 'return_date', 'state', 'id_loan']
 
     def _user_is_admin(self):
+        # Fase 6: el alcance lo decide la asignación (ALL = todo, SELF = lo propio).
+        # La migración 0024 conserva el comportamiento anterior (SADMIN/ADMIN → ALL).
+        from modules.permissions.ranking import effective_scope
+
         user = self.request.user
-        if user.is_superuser:
-            return True
-        from modules.permissions.models import UserGroup
-        return UserGroup.objects.filter(user=user, group__name__iexact='admin').exists()
+        return effective_scope(user, "view_loan") == "ALL"
 
     def get_queryset(self):
         base_qs = Loans.objects.select_related(
@@ -1632,12 +1633,10 @@ class LoanBatchListView(APIView):
         return loans[0].state
 
     def _user_is_admin(self, request):
-        if request.user.is_superuser:
-            return True
-        from modules.permissions.models import UserGroup
-        return UserGroup.objects.filter(
-            user=request.user, group__name__iexact='admin'
-        ).exists()
+        # Fase 6: ver _user_is_admin del otro viewset (alcance por asignación).
+        from modules.permissions.ranking import effective_scope
+
+        return effective_scope(request.user, "view_loan") == "ALL"
 
     def get(self, request):
         qs = Loans.objects.select_related(

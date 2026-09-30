@@ -42,14 +42,18 @@ export default function AccessPage() {
 
   // Guarda solo los cambios: compara el borrador contra lo original y llama a
   // los endpoints de asignar/remover unicamente para lo que cambio.
+  // Fase 6: en grupos también detecta cambios de alcance (mismo código,
+  // distinto scope) y los re-asigna (upsert en backend).
   async function handleSave() {
     if (!target || saving) return;
 
-    const originalCodes = new Set(groupPermissions.map((p) => p.codename));
-    const draftCodes = new Set(permissionsDraft.map((p) => p.codename));
+    const originalByCode = new Map(groupPermissions.map((p) => [p.codename, p.scope ?? "SELF"]));
+    const draftByCode = new Map(permissionsDraft.map((p) => [p.codename, p.scope ?? "SELF"]));
 
-    const toAssign = [...draftCodes].filter((code) => !originalCodes.has(code));
-    const toRemove = [...originalCodes].filter((code) => !draftCodes.has(code));
+    const toAssign = [...draftByCode.entries()]
+      .filter(([code, scope]) => !originalByCode.has(code) || originalByCode.get(code) !== scope)
+      .map(([code, scope]) => ({ codename: code, scope }));
+    const toRemove = [...originalByCode.keys()].filter((code) => !draftByCode.has(code));
 
     if (toAssign.length === 0 && toRemove.length === 0) {
       setIsEditing(false);
@@ -59,8 +63,8 @@ export default function AccessPage() {
     setSaving(true);
     try {
       const assign = selectedGroup
-        ? (code) => assignGroupPermission(selectedGroup, code)
-        : (code) => assignUserPermission(selectedUser, code);
+        ? (entry) => assignGroupPermission(selectedGroup, entry.codename, entry.scope)
+        : (entry) => assignUserPermission(selectedUser, entry.codename);
       const remove = selectedGroup
         ? (code) => removeGroupPermission(selectedGroup, code)
         : (code) => removeUserPermission(selectedUser, code);
@@ -75,7 +79,7 @@ export default function AccessPage() {
         toRemove.map((code) => remove(code)),
       );
       const assignResults = await Promise.allSettled(
-        toAssign.map((code) => assign(code)),
+        toAssign.map((entry) => assign(entry)),
       );
       const results = [...removeResults, ...assignResults];
 

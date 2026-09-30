@@ -120,6 +120,17 @@ class GroupPermission(models.Model):
     Relación many-to-many explícita entre grupos y permisos.
     Permite auditar cuándo se asignó cada permiso a cada grupo.
     """
+
+    # Alcance del permiso dentro del grupo (Fase 6): lo propio o todo.
+    # Solo aplica a permisos con objeto (préstamos, asignaciones de tareas);
+    # en el resto se ignora (= todo).
+    SCOPE_SELF = "SELF"
+    SCOPE_ALL = "ALL"
+    SCOPE_CHOICES = [
+        (SCOPE_SELF, "Lo propio"),
+        (SCOPE_ALL, "Todo"),
+    ]
+
     group = models.ForeignKey(
         Group,
         on_delete=models.CASCADE,
@@ -129,6 +140,12 @@ class GroupPermission(models.Model):
         Permission,
         on_delete=models.CASCADE,
         related_name='group_permissions'
+    )
+    scope = models.CharField(
+        max_length=4,
+        choices=SCOPE_CHOICES,
+        default=SCOPE_SELF,
+        help_text="Alcance: SELF (lo propio) o ALL (todo). Default seguro.",
     )
     assigned_at = models.DateTimeField(auto_now_add=True)
 
@@ -161,6 +178,12 @@ class UserPermission(models.Model):
     reason = models.TextField(
         blank=True,
         help_text="Razón por la cual se asignó este permiso específico"
+    )
+    scope = models.CharField(
+        max_length=4,
+        choices=GroupPermission.SCOPE_CHOICES,
+        default=GroupPermission.SCOPE_SELF,
+        help_text="Alcance: SELF (lo propio) o ALL (todo). Default seguro.",
     )
 
     def __str__(self):
