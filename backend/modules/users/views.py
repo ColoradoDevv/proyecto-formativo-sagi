@@ -881,38 +881,17 @@ class MFAVerifyView(APIView):
 
 
 class MFADisableView(APIView):
-    """Desactiva el MFA propio (sesión completa + contraseña)."""
+    """Desactivación deshabilitada: el 2FA es obligatorio para todos.
+
+    Se conserva la ruta para responder 403 explícito en vez de 404.
+    La única vía es el comando de consola mfa_reset (celular perdido).
+    """
 
     def post(self, request):
-        password = request.data.get("password", "")
-        if not password or not check_password(password, request.user.password):
-            return Response(
-                {"error": "Confirma tu contraseña actual."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        from .mfa import backup_codes_remaining, mfa_device_for
-
-        device = mfa_device_for(request.user)
-        if device is None:
-            return Response(
-                {"error": "No tienes verificación en dos pasos activa."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        remaining = backup_codes_remaining(request.user)
-        device.delete()
-        from .models import RecoveryCode
-
-        RecoveryCode.objects.filter(user=request.user).delete()
-        audit_log(
-            actor=request.user,
-            module=AuditLog.MODULE_AUTH,
-            action=AuditLog.ACTION_UPDATE,
-            target_id=request.user.pk,
-            target_repr=f"{request.user.first_name} {request.user.last_name} <{request.user.email}>",
-            detail=f"MFA desactivado ({remaining} códigos de respaldo eliminados).",
-            request=request,
+        return Response(
+            {"error": "La verificación en dos pasos es obligatoria y no se puede desactivar."},
+            status=status.HTTP_403_FORBIDDEN,
         )
-        return Response({"message": "Verificación en dos pasos desactivada."})
 
 
 class MFAStatusView(APIView):

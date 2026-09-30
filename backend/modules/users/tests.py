@@ -195,19 +195,10 @@ class MFATestCase(TestCase):
         )
         self.assertEqual(res.status_code, 401)
 
-    def test_status_y_disable(self):
-        self.enroll_and_confirm(self.login("mfa_admin@x.co").data["mfa_token"])
-        # Sesión completa vía recovery para gestionar.
-        from modules.users.mfa import generate_recovery_codes
-
-        user = User.objects.get(email="mfa_admin@x.co")
-        fresh = generate_recovery_codes(user)[0]
-        mfa_token = self.login("mfa_admin@x.co").data["mfa_token"]
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {mfa_token}")
-        res = self.client.post(
-            "/api/users/me/mfa/verify/", {"recovery_code": fresh}, format="json"
-        )
-        session = res.data["token"]
+    def test_status_y_disable_bloqueado(self):
+        # El 2FA es obligatorio: desactivar responde 403 y sigue activo.
+        data = self.enroll_and_confirm(self.login("mfa_admin@x.co").data["mfa_token"])
+        session = data["token"]
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {session}")
         res = self.client.get("/api/users/me/mfa/status/")
         self.assertTrue(res.data["enabled"])
@@ -215,9 +206,9 @@ class MFATestCase(TestCase):
         res = self.client.post(
             "/api/users/me/mfa/disable/", {"password": "x-Segura-123"}, format="json"
         )
-        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.status_code, 403)
         res = self.client.get("/api/users/me/mfa/status/")
-        self.assertFalse(res.data["enabled"])
+        self.assertTrue(res.data["enabled"])
 
     def test_reset_por_consola(self):
         from django.core.management import call_command

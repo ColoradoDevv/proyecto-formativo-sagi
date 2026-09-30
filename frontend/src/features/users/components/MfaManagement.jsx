@@ -33,16 +33,6 @@ async function confirmSession(code, password) {
     return response.json();
 }
 
-async function disableMfa(password) {
-    const response = await apiFetch("/api/users/me/mfa/disable/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-    });
-    if (!response.ok) await throwApiError(response);
-    return response.json();
-}
-
 // Gestión del segundo factor (propia).
 // embedded=true: sin encabezado, para incrustar en Mi perfil.
 export default function MfaManagement({ embedded = false }) {
@@ -94,21 +84,6 @@ export default function MfaManagement({ embedded = false }) {
             await showAlert({ icon: "success", iconColor: "var(--color-success)", title: "Verificación activada", text: "Guarda tus códigos de recuperación." });
         } catch (err) {
             await showAlert({ icon: "error", iconColor: "var(--color-error)", title: "No se pudo activar", text: err.message });
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const handleDisable = async (e) => {
-        e.preventDefault();
-        setSaving(true);
-        try {
-            await disableMfa(password);
-            setPassword("");
-            await reload();
-            await showAlert({ icon: "success", iconColor: "var(--color-success)", title: "Verificación desactivada" });
-        } catch (err) {
-            await showAlert({ icon: "error", iconColor: "var(--color-error)", title: "No se pudo desactivar", text: err.message });
         } finally {
             setSaving(false);
         }
@@ -178,25 +153,16 @@ export default function MfaManagement({ embedded = false }) {
                     </div>
                 </form>
             ) : (
-                <form onSubmit={handleDisable} className="flex flex-col gap-4 max-w-md">
-                    <p className="text-small text-text-muted">
-                        Al desactivarla, tu cuenta queda solo con contraseña
-                        {status?.required ? " (tu rol la exige: se pedirá de nuevo al entrar)" : ""}.
+                <div className="flex flex-col gap-2 max-w-md rounded-xl border border-border bg-surface p-4">
+                    <p className="flex items-center gap-2 text-medium text-text-primary">
+                        <ShieldCheck size={18} /> Verificación en dos pasos activa
                     </p>
-                    <Input
-                        label="Tu contraseña actual"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        autoComplete="current-password"
-                    />
-                    <div>
-                        <Button type="submit" variant="secondary" disabled={saving || !password}>
-                            {saving ? "Procesando..." : "Desactivar"}
-                        </Button>
-                    </div>
-                </form>
+                    <p className="text-small text-text-muted">
+                        Tu cuenta está protegida{status?.backup_remaining != null
+                            ? ` · te quedan ${status.backup_remaining} códigos de respaldo`
+                            : ""}. Es obligatoria y no se puede desactivar.
+                    </p>
+                </div>
             )}
         </div>
     );
