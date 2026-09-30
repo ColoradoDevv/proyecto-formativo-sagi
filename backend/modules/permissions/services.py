@@ -259,3 +259,18 @@ class PermissionService:
             bool
         """
         return Permission.objects.filter(codename=permission_codename).exists()
+
+    @staticmethod
+    def authority_for_group(group):
+        """Autoridad estimada de un grupo: suma de pesos de sus permisos.
+
+        Fase 1 del sistema dinámico de roles: es SOLO una métrica de
+        análisis y alertas. No decide jerarquía ni concede nada.
+        """
+        from django.db.models import Sum
+
+        from .models import GroupPermission
+
+        return GroupPermission.objects.filter(group=group).aggregate(
+            total=Sum("permission__weight")
+        )["total"] or 0
