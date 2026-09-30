@@ -1083,6 +1083,16 @@ class LoanDraftCreateView(APIView):
         else:
             receptor = None
 
+        # Fase 4: responsable y receptor de tu mismo nivel o inferior.
+        from modules.permissions.ranking import can_manage_user
+
+        for field, person in (("id_responsable_user", responsable), ("id_receptor_user", receptor)):
+            if person is not None and not can_manage_user(request.user, person):
+                return Response(
+                    {field: "Solo puedes asignar usuarios de tu nivel o inferior."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
         materials = {}
         for mid in material_ids:
             try:

@@ -43,7 +43,11 @@ class GroupDetailSerializer(serializers.ModelSerializer):
         return PermissionService.authority_for_group(obj)
 
     def validate_name(self, value):
-        value = value.strip()
+        import unicodedata
+
+        # Fase 4 §6.6: normaliza (NFKC + trim) contra homoglifos
+        # ("Súper Admin" con caracteres raros) antes de validar.
+        value = unicodedata.normalize("NFKC", value).strip()
         if value.upper() == SYSTEM_GROUP_NAME:
             raise serializers.ValidationError("Este es un grupo reservado del sistema.")
         # Unicidad insensible a mayúsculas/minúsculas: evita que "Admin" y

@@ -377,6 +377,14 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
         valid_users = User.objects.filter(pk__in=cleaned_cuentadante_ids, is_primary_admin=False)
         if valid_users.count() != len(set(cleaned_cuentadante_ids)):
             raise ValidationError({"cuentadante_ids": "Alguno de los cuentadantes indicados no existe."})
+        # Fase 4: cuentadantes de tu mismo nivel o inferior.
+        from modules.permissions.ranking import can_manage_user
+
+        for custodian in valid_users:
+            if not can_manage_user(request.user, custodian):
+                raise ValidationError(
+                    {"cuentadante_ids": "Solo puedes asignar usuarios de tu nivel o inferior."}
+                )
 
         try:
             with transaction.atomic():
@@ -566,6 +574,14 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
                     valid_users = User.objects.filter(pk__in=cleaned_cuentadante_ids, is_primary_admin=False)
                     if valid_users.count() != len(set(cleaned_cuentadante_ids)):
                         raise ValidationError({"cuentadante_ids": "Alguno de los cuentadantes indicados no existe."})
+                    # Fase 4: cuentadantes de tu mismo nivel o inferior.
+                    from modules.permissions.ranking import can_manage_user
+
+                    for custodian in valid_users:
+                        if not can_manage_user(request.user, custodian):
+                            raise ValidationError(
+                                {"cuentadante_ids": "Solo puedes asignar usuarios de tu nivel o inferior."}
+                            )
                     consumable.cuentadantes.set(valid_users)
 
                 if 'category_id' in data:
