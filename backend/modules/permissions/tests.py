@@ -182,3 +182,38 @@ class PermissionServiceTestCase(TestCase):
         self.assertFalse(
             PermissionService.has_permission(self.anon_user, 'list_users')
         )
+
+
+class GroupDestroyBlockedTestCase(TestCase):
+    """Fase 0: el DELETE de grupos está bloqueado (evita borrar
+    membresías en silencio por el CASCADE)."""
+
+    def setUp(self):
+        from rest_framework.test import APIClient
+
+        self.creator = User.objects.create_user(
+            email='sadmin_fase0@example.com',
+            password='secure123',
+            is_superuser=True,
+        )
+        self.group = Group.objects.create(name='Fase0Grupo')
+        self.member = User.objects.create_user(
+            email='miembro_fase0@example.com',
+            password='secure123',
+        )
+        PermissionService.add_user_to_group(self.member, 'Fase0Grupo')
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.creator)
+
+    def test_destroy_group_is_forbidden(self):
+        """DELETE /api/permissions/groups/<id>/ responde 403."""
+        response = self.client.delete(f"/api/permissions/groups/{self.group.id}/")
+        self.assertEqual(response.status_code, 403)
+
+    def test_destroy_group_keeps_memberships(self):
+        """Tras el intento, el grupo y sus membresías siguen intactos."""
+        self.client.delete(f"/api/permissions/groups/{self.group.id}/")
+        self.assertTrue(Group.objects.filter(pk=self.group.pk).exists())
+        self.assertEqual(
+            UserGroup.objects.filter(group=self.group).count(), 1
+        )
