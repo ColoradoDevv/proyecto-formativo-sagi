@@ -38,11 +38,13 @@ export default function LoginForm() {
 
     // Pasos altos del MFA (QR, códigos): pedir a AuthLayout que oculte el
     // encabezado SAGI para no desbordar la tarjeta; se restaura al salir.
+    // Solo códigos además ensancha (wide) para respirar sin tocar bordes.
     useEffect(() => {
         const compact = step === STEP_ENROLL || step === STEP_RECOVERY_CODES;
-        window.dispatchEvent(new CustomEvent("sagi:auth-compact", { detail: { compact } }));
+        const wide = step === STEP_RECOVERY_CODES;
+        window.dispatchEvent(new CustomEvent("sagi:auth-compact", { detail: { compact, wide } }));
         return () => {
-            window.dispatchEvent(new CustomEvent("sagi:auth-compact", { detail: { compact: false } }));
+            window.dispatchEvent(new CustomEvent("sagi:auth-compact", { detail: { compact: false, wide: false } }));
         };
     }, [step]);
 
@@ -137,8 +139,10 @@ export default function LoginForm() {
         setServerError("");
     };
 
+    const isWideStep = step === STEP_RECOVERY_CODES;
+
     return (
-        <div className="bg-surface-hover rounded-[var(--radius-3xl)] shadow-[var(--shadow-elevation-5)] px-6 sm:px-8 py-10 w-full sm:w-[var(--size-field-md)]   select-none animate-slide-up">
+        <div className={`bg-surface-hover rounded-[var(--radius-3xl)] shadow-[var(--shadow-elevation-5)] px-6 sm:px-8 py-10 w-full ${isWideStep ? "" : "sm:w-[var(--size-field-md)]"}   select-none animate-slide-up`}>
             <h2 className="text-center text-h2 font-heading mb-7 text-text-primary select-none">
                 {step === STEP_CREDENTIALS ? "Iniciar Sesión" : "Verificación en dos pasos"}
             </h2>

@@ -11,10 +11,16 @@ export default function AuthLayout({ children }) {
     // Modo compacto: los pasos altos del MFA (QR, códigos) ocultan el
     // encabezado SAGI para no desbordar la tarjeta; LoginForm lo pide
     // con el evento "sagi:auth-compact" y se restaura al salir del paso.
+    // Modo ancho: solo códigos de respaldo; ensancha la tarjeta para que
+    // el contenido respire sin tocar los bordes.
     const [compact, setCompact] = useState(false);
+    const [wide, setWide] = useState(false);
 
     useEffect(() => {
-        const sync = (event) => setCompact(Boolean(event.detail?.compact));
+        const sync = (event) => {
+            setCompact(Boolean(event.detail?.compact));
+            setWide(Boolean(event.detail?.wide));
+        };
         window.addEventListener("sagi:auth-compact", sync);
         return () => window.removeEventListener("sagi:auth-compact", sync);
     }, []);    return (
@@ -33,9 +39,9 @@ export default function AuthLayout({ children }) {
                 sin recortarlo; con mínimo para presencia y tope al viewport.
                 En oscuro el fondo se atenúa (ver img) y la tarjeta se vuelve
                 más sólida para mantener contraste AA. */}
-            <div className="
+            <div className={`
                 relative z-10
-                w-[min(28rem,100%)] h-auto min-h-[min(560px,100%)] max-h-full
+                ${wide ? "w-[min(36rem,100%)]" : "w-[min(28rem,100%)]"} h-auto min-h-[min(560px,100%)] max-h-full
                 rounded-[var(--radius-3xl)]
                 flex flex-col
                 backdrop-blur-md
@@ -43,7 +49,7 @@ export default function AuthLayout({ children }) {
                 border border-surface-hover/40 dark:border-border
                 shadow-[var(--shadow-elevation-5)]
                 overflow-hidden
-            ">
+            `}>
                     {/* Logo SENA oficial (vector): verde en claro, blanco en oscuro */}
                     <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 pointer-events-none ">
                         <img
@@ -61,7 +67,7 @@ export default function AuthLayout({ children }) {
 
                 {/* ── Lado derecho: formulario fijo y centrado (sin scroll) ── */}
                 <div className="relative w-full flex-1 min-h-0 grid items-center justify-center px-4 py-3 sm:p-6 overflow-hidden">
-                    <div className="w-full max-w-md min-w-0 m-auto px-4 py-4 sm:px-8 sm:py-10">
+                    <div className={`w-full min-w-0 m-auto px-4 py-4 sm:px-8 sm:py-10 ${wide ? "max-w-2xl" : "max-w-md"}`}>
                         {!compact && (
                         <div className="text-center mb-4 sm:mb-8">
                             <h1 className="text-h1 font-heading font-bold text-text-primary select-none pb-2 sm:pb-4">
