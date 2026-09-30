@@ -148,11 +148,13 @@ class MFATestCase(TestCase):
         self.assertTrue(res.data["enroll_required"])
         self.assertNotIn("token", res.data)
 
-    def test_usuario_comun_directo(self):
+    def test_usuario_comun_tambien_pide_mfa(self):
+        # Política: 2FA para todos los roles, sin excepciones por nivel.
         res = self.login("mfa_plain@x.co")
         self.assertEqual(res.status_code, 200)
-        self.assertIn("token", res.data)
-        self.assertNotIn("mfa_required", res.data)
+        self.assertTrue(res.data["mfa_required"])
+        self.assertTrue(res.data["enroll_required"])
+        self.assertNotIn("token", res.data)
 
     def test_temp_token_sin_acceso_api(self):
         mfa_token = self.login("mfa_admin@x.co").data["mfa_token"]

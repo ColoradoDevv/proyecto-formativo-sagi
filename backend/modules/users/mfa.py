@@ -58,15 +58,13 @@ def decrypt_secret(device):
 
 
 def mfa_required_for(user):
-    """True si el usuario debe pasar segundo factor en cada login."""
+    """True si el usuario debe pasar segundo factor en cada login.
+
+    Política: TODOS los grupos/roles/usuarios (sin excepciones por nivel).
+    """
     if not user or not user.is_authenticated:
         return False
-    if getattr(user, "is_primary_admin", False) or getattr(user, "is_superuser", False):
-        return True
-    from modules.permissions.services import PermissionService
-
-    level = PermissionService.effective_level(user)
-    return level is not None and level <= 200
+    return True
 
 
 def mfa_device_for(user):
