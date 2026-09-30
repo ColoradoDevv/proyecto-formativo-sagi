@@ -1,6 +1,6 @@
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, Asterisk, ShieldCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { loginSchemas } from "../schemas/loginSchemas";
 import { login } from "../services/authService";
 import { completeMfaSession, confirmMfa, enrollMfa, verifyMfa } from "../services/mfaService";
@@ -35,6 +35,30 @@ export default function LoginForm() {
     const [useRecovery, setUseRecovery] = useState(false);
     const [qrPng, setQrPng] = useState("");
     const [recoveryCodes, setRecoveryCodes] = useState([]);
+
+    // Progreso narrado: la espera se percibe más corta si se ve avance.
+    // Los mensajes describen etapas reales sin prometer fin antes de tiempo.
+    const [busyMessage, setBusyMessage] = useState("");
+    const busyTimers = useRef([]);
+
+    const startBusyProgress = (steps) => {
+        stopBusyProgress();
+        setBusyMessage(steps[0] ?? "");
+        steps.slice(1).forEach((message, index) => {
+            busyTimers.current.push(setTimeout(
+                () => setBusyMessage(message),
+                900 * (index + 1),
+            ));
+        });
+    };
+
+    const stopBusyProgress = () => {
+        busyTimers.current.forEach(clearTimeout);
+        busyTimers.current = [];
+        setBusyMessage("");
+    };
+
+    useEffect(() => () => stopBusyProgress(), []);
 
     // Pasos altos del MFA (QR, códigos): pedir a AuthLayout que oculte el
     // encabezado SAGI para no desbordar la tarjeta; se restaura al salir.
@@ -101,6 +125,7 @@ export default function LoginForm() {
         setServerError("");
         try {
             setLoading(true);
+            startBusyProgress(["Verificando código…", "Abriendo tu sesión…", "Cargando tus permisos…"]);
             const data = await verifyMfa(mfaToken, useRecovery
                 ? { recovery_code: mfaCode }
                 : { code: mfaCode });
@@ -109,6 +134,7 @@ export default function LoginForm() {
         } catch (err) {
             setServerError(err.message);
         } finally {
+            stopBusyProgress();
             setLoading(false);
         }
     };
@@ -118,6 +144,7 @@ export default function LoginForm() {
         setServerError("");
         try {
             setLoading(true);
+            startBusyProgress(["Activando verificación…", "Generando tus respaldos…", "Abriendo tu sesión…"]);
             const data = await confirmMfa(mfaToken, mfaCode);
             setRecoveryCodes(data.recovery_codes ?? []);
             await completeMfaSession(data);
@@ -125,6 +152,7 @@ export default function LoginForm() {
         } catch (err) {
             setServerError(err.message);
         } finally {
+            stopBusyProgress();
             setLoading(false);
         }
     };
@@ -248,7 +276,7 @@ export default function LoginForm() {
                 )}
 
                 <Button type="submit" disabled={loading} variant="primary" size="md">
-                    {loading ? "Verificando..." : "Verificar"}
+                    {loading ? (busyMessage || "Verificando...") : "Verificar"}
                 </Button>
 
                 <div className="flex flex-col gap-1 text-center">
@@ -299,7 +327,7 @@ export default function LoginForm() {
                 )}
 
                 <Button type="submit" disabled={loading} variant="primary" size="md">
-                    {loading ? "Activando..." : "Activar y entrar"}
+                    {loading ? (busyMessage || "Activando...") : "Activar y entrar"}
                 </Button>
 
                 <div className="text-center">
