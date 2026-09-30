@@ -373,7 +373,8 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
         if not cleaned_cuentadante_ids:
             cleaned_cuentadante_ids = [request.user.id]
         # Valida que existan y que sean usuarios unicos.
-        valid_users = User.objects.filter(pk__in=cleaned_cuentadante_ids)
+        # El primigenio no puede ser cuentadante (invisible): no cuenta como válido.
+        valid_users = User.objects.filter(pk__in=cleaned_cuentadante_ids, is_primary_admin=False)
         if valid_users.count() != len(set(cleaned_cuentadante_ids)):
             raise ValidationError({"cuentadante_ids": "Alguno de los cuentadantes indicados no existe."})
 
@@ -562,7 +563,7 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
                     raw_cuentadante_ids = [raw_cuentadante_ids]
                 cleaned_cuentadante_ids = [uid for uid in raw_cuentadante_ids if uid not in (None, "", "null")]
                 if cleaned_cuentadante_ids:
-                    valid_users = User.objects.filter(pk__in=cleaned_cuentadante_ids)
+                    valid_users = User.objects.filter(pk__in=cleaned_cuentadante_ids, is_primary_admin=False)
                     if valid_users.count() != len(set(cleaned_cuentadante_ids)):
                         raise ValidationError({"cuentadante_ids": "Alguno de los cuentadantes indicados no existe."})
                     consumable.cuentadantes.set(valid_users)

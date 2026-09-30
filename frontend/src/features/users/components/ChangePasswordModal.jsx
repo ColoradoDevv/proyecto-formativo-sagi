@@ -1,8 +1,55 @@
 import { useState } from "react";
-import { Eye, EyeOff, KeyRound, ShieldCheck } from "lucide-react";
+import { Check, Eye, EyeOff, KeyRound, ShieldCheck } from "lucide-react";
 import { TailChase } from "ldrs/react";
 import { Button, Input, Modal, showAlert } from "@/shared";
 import { requestPasswordChangeOtp, confirmPasswordChange } from "../services/userService";
+
+// ── Política de contraseña (espejo del backend:
+// ResetPasswordView._password_is_valid + comparación con trim) ──────────
+const PASSWORD_RULES = [
+    { id: "length",  label: "Mínimo 10 caracteres", test: (v) => v.trim().length >= 10 },
+    { id: "upper",   label: "Una mayúscula (A-Z)",  test: (v) => /[A-Z]/.test(v) },
+    { id: "lower",   label: "Una minúscula (a-z)",  test: (v) => /[a-z]/.test(v) },
+    { id: "digit",   label: "Un número (0-9)",      test: (v) => /\d/.test(v) },
+    { id: "special", label: "Un carácter especial (!, -, _, ...)", test: (v) => /[^A-Za-z0-9]/.test(v) },
+];
+
+function PasswordChecklist({ newPassword, confirmPassword }) {
+    // Guía en vivo: el backend valida al enviar, esto solo orienta antes.
+    return (
+        <ul className="flex flex-col gap-1 text-small" aria-live="polite">
+            {PASSWORD_RULES.map((rule) => {
+                const met = rule.test(newPassword);
+                return (
+                    <li
+                        key={rule.id}
+                        className="flex items-center gap-1.5"
+                        style={{ color: met ? "var(--color-success)" : "var(--color-text-muted)" }}
+                    >
+                        <Check size={14} strokeWidth={met ? 3 : 2} opacity={met ? 1 : 0.4} />
+                        {rule.label}
+                    </li>
+                );
+            })}
+            <li
+                className="flex items-center gap-1.5"
+                style={{
+                    color:
+                        confirmPassword && newPassword.trim() === confirmPassword.trim()
+                            ? "var(--color-success)"
+                            : "var(--color-text-muted)",
+                }}
+            >
+                <Check
+                    size={14}
+                    strokeWidth={confirmPassword && newPassword.trim() === confirmPassword.trim() ? 3 : 2}
+                    opacity={confirmPassword && newPassword.trim() === confirmPassword.trim() ? 1 : 0.4}
+                />
+                Ambas contraseñas coinciden
+            </li>
+        </ul>
+    );
+}
 
 // ── Pasos del flujo ─────────────────────────────────────────────────────────
 const STEP_FORM = "form";   // Paso 1: contraseña actual + nueva + confirmación
@@ -157,6 +204,8 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
                 }
             />
 
+            <PasswordChecklist newPassword={form.newPassword} confirmPassword={form.confirmNewPassword} />
+
             <Input
                 label="Confirmar nueva contraseña"
                 type={showConfirm ? "text" : "password"}
@@ -220,7 +269,21 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
                 autoFocus
             />
 
-            <div className="flex gap-3 justify-between pt-1">
+            {/* Acciones en columna: en modal sm los 3 botones en fila
+                desbordan el ancho (scroll horizontal). Cancelar/Confirmar
+                a ancho completo y "Corregir datos" terciario debajo. */}
+            <div className="flex flex-col gap-2 pt-1">
+                <div className="flex gap-3">
+                    <Button type="button" variant="secondary" onClick={handleClose} disabled={loading} className="flex-1">
+                        Cancelar
+                    </Button>
+                    <Button type="submit" disabled={loading || otpCode.length !== 6} className="flex-1">
+                        {loading
+                            ? <TailChase size={16} speed="1.75" color="currentColor" />
+                            : <><ShieldCheck size={15} /> Confirmar</>
+                        }
+                    </Button>
+                </div>
                 {/* Vuelve al paso 1 para corregir los datos y volver a pedir un
                     código — este botón por sí solo no reenvía nada. */}
                 <Button
@@ -228,21 +291,10 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
                     variant="ghost"
                     onClick={() => { setStep(STEP_FORM); setOtpCode(""); setErrors(EMPTY_ERRORS); }}
                     disabled={loading}
-                    className="text-small"
+                    className="w-full text-small"
                 >
                     Corregir datos
                 </Button>
-                <div className="flex gap-3">
-                    <Button type="button" variant="secondary" onClick={handleClose} disabled={loading}>
-                        Cancelar
-                    </Button>
-                    <Button type="submit" disabled={loading || otpCode.length !== 6}>
-                        {loading
-                            ? <TailChase size="16" speed="1.75" color="currentColor" />
-                            : <><ShieldCheck size={15} /> Confirmar</>
-                        }
-                    </Button>
-                </div>
             </div>
         </form>
     );
