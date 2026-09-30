@@ -138,14 +138,15 @@ def _inbox_url():
 
 
 def eligible_approvers(solicitud, proposed_level):
-    """Aprobadores elegibles con email (para avisar al enviar)."""
+    """Aprobadores elegibles con email (para avisar al enviar).
+
+    Temporal: solo el Primigenio (la bandeja está restringida hasta
+    reabrir la visibilidad a superiores con approve_elevation).
+    """
     User = get_user_model()
-    result = []
-    for user in User.objects.filter(is_active=True).exclude(email=""):
-        ok, _ = approver_eligible(user, solicitud, proposed_level)
-        if ok:
-            result.append(user)
-    return result
+    return list(
+        User.objects.filter(is_active=True, is_primary_admin=True).exclude(email="")
+    )
 
 
 def _send_safe(to_email, subject, template, context):
@@ -237,23 +238,14 @@ class SolicitudViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = super().get_queryset()
+        # Temporal: la bandeja es solo del Primigenio. Los demás operan
+        # únicamente sobre sus borradores propios (crear/enviar/cancelar);
+        # ver y decidir ajeno queda reservado hasta reabrir la visibilidad.
         if is_top(user):
             return qs
-        own = qs.filter(requester=user)
-        if not PermissionService.has_permission(user, "approve_elevation"):
-            return own
-        my_level = action_level(user)
-        pending = qs.filter(status=SolicitudCambioRol.STATUS_PENDIENTE).exclude(requester=user)
-        if my_level is None:
-            visible = pending
-        else:
-            visible = pending.filter(
-                group__level__gt=my_level,
-            ) | pending.filter(
-                group__isnull=True,
-                payload__level__gt=my_level,
-            )
-        return (own | visible).distinct().order_by("-created_at")
+        if self.action == "list":
+            return qs.none()
+        return qs.filter(requester=user)
 
     def perform_create(self, serializer):
         action = serializer.validated_data.get("action")
