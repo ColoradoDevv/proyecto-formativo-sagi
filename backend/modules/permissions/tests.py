@@ -248,3 +248,51 @@ class PermissionWeightTestCase(TestCase):
     def test_authority_empty_group_is_zero(self):
         group = Group.objects.create(name="Fase1Vacio")
         self.assertEqual(PermissionService.authority_for_group(group), 0)
+
+
+class GroupHierarchyFieldsTestCase(TestCase):
+    """Fase 2: level/is_system/template/ceiling y migración de los 4 grupos."""
+
+    def test_new_group_defaults_to_bottom(self):
+        group = Group.objects.create(name="Fase2Nuevo")
+        self.assertEqual(group.level, 900)
+        self.assertFalse(group.is_system)
+        self.assertIsNone(group.template_role)
+        self.assertIsNone(group.authority_ceiling)
+
+    def test_system_groups_have_levels(self):
+        expected = {
+            "SADMIN": (100, True, None),
+            "ADMIN": (200, True, 2600),
+            "INST": (300, True, 1000),
+            "INV": (400, True, 500),
+        }
+        for name, (level, is_system, ceiling) in expected.items():
+            group = Group.objects.get(name=name)
+            self.assertEqual(group.level, level, name)
+            self.assertEqual(group.is_system, is_system, name)
+            self.assertEqual(group.authority_ceiling, ceiling, name)
+
+    def test_hierarchy_fields_are_read_only_via_api(self):
+        """PATCH con level/is_system/ceiling se ignora (anti mass assignment)."""
+        from rest_framework.test import APIClient
+
+        creator = User.objects.create_user(
+            email="sadmin_fase2@example.com",
+            password="secure123",
+            is_superuser=True,
+        )
+        group = Group.objects.create(name="Fase2Editable")
+        client = APIClient()
+        client.force_authenticate(user=creator)
+        response = client.patch(
+            f"/api/permissions/groups/{group.pk}/",
+            {"name": "Fase2Editado", "level": 100, "is_system": True, "authority_ceiling": 9999},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        group.refresh_from_db()
+        self.assertEqual(group.name, "Fase2Editado")
+        self.assertEqual(group.level, 900)
+        self.assertFalse(group.is_system)
+        self.assertIsNone(group.authority_ceiling)

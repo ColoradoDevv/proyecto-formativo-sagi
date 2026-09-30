@@ -35,6 +35,7 @@ class GroupDetailSerializer(serializers.ModelSerializer):
     permissions = PermissionSerializer(many=True, read_only=True)
     group_permissions = GroupPermissionSerializer(many=True, read_only=True)
     authority = serializers.SerializerMethodField()
+    template_role = serializers.PrimaryKeyRelatedField(read_only=True)
 
     def get_authority(self, obj):
         from .services import PermissionService
@@ -61,13 +62,22 @@ class GroupDetailSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "is_active",
+            "level",
+            "is_system",
+            "template_role",
+            "authority_ceiling",
             "permissions",
             "group_permissions",
             "authority",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "authority", "created_at", "updated_at"]
+        # Fase 2: jerarquía visible pero no editable por API (anti mass
+        # assignment desde el día uno; la edición con guardias llega en Fase 4).
+        read_only_fields = [
+            "id", "level", "is_system", "template_role",
+            "authority_ceiling", "authority", "created_at", "updated_at",
+        ]
 
 
 class GroupListSerializer(serializers.ModelSerializer):
@@ -86,8 +96,8 @@ class GroupListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Group
-        fields = ["id", "name", "description", "permission_count", "authority", "is_active", "created_at"]
-        read_only_fields = ["id", "authority", "created_at"]
+        fields = ["id", "name", "description", "permission_count", "authority", "level", "is_system", "is_active", "created_at"]
+        read_only_fields = ["id", "authority", "level", "is_system", "created_at"]
 
 
 class UserPermissionSerializer(serializers.ModelSerializer):
