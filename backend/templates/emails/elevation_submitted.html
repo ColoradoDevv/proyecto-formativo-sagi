@@ -1,0 +1,11 @@
+{% extends "emails/base.html" %}
+{# Aviso de nueva solicitud de elevación pendiente de decisión. #}
+{# Contexto: paragraphs, details, button. #}
+{% block title %}Nueva solicitud de elevación{% endblock %}
+{% block content %}
+{% for p in paragraphs %}
+<p style="margin:0 0 12px 0;color:#203F57;font-size:15px;line-height:1.6;">{{ p }}</p>
+{% endfor %}
+{% include "emails/_details.html" %}
+{% if button %}{% include "emails/_button.html" %}{% endif %}
+{% endblock %}
