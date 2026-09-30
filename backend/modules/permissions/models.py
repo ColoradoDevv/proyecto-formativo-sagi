@@ -198,3 +198,91 @@ class UserGroup(models.Model):
         unique_together = ('user', 'group')
         verbose_name = 'Membresía de Usuario'
         verbose_name_plural = 'Membresías de Usuario'
+
+
+class SolicitudCambioRol(models.Model):
+    """Workflow de aprobación de elevaciones (Fase 5a del sistema dinámico).
+
+    Estados: BORRADOR → PENDIENTE → APROBADA | RECHAZADA | EXPIRADA |
+    CANCELADA → ACTIVA. La solicitud guarda snapshot + hash del contenido:
+    si el rol cambia después de enviar, la solicitud se invalida.
+    """
+
+    ACTION_CREATE_ROLE = "CREATE_ROLE"
+    ACTION_UPDATE_ROLE_PERMS = "UPDATE_ROLE_PERMS"
+    ACTION_CHOICES = [
+        (ACTION_CREATE_ROLE, "Crear rol"),
+        (ACTION_UPDATE_ROLE_PERMS, "Modificar permisos de rol"),
+    ]
+
+    STATUS_BORRADOR = "BORRADOR"
+    STATUS_PENDIENTE = "PENDIENTE"
+    STATUS_APROBADA = "APROBADA"
+    STATUS_RECHAZADA = "RECHAZADA"
+    STATUS_EXPIRADA = "EXPIRADA"
+    STATUS_CANCELADA = "CANCELADA"
+    STATUS_ACTIVA = "ACTIVA"
+    STATUS_CHOICES = [
+        (STATUS_BORRADOR, "Borrador"),
+        (STATUS_PENDIENTE, "Pendiente"),
+        (STATUS_APROBADA, "Aprobada"),
+        (STATUS_RECHAZADA, "Rechazada"),
+        (STATUS_EXPIRADA, "Expirada"),
+        (STATUS_CANCELADA, "Cancelada"),
+        (STATUS_ACTIVA, "Activa"),
+    ]
+
+    # Límite de solicitudes abiertas por usuario (anti-spam) y vigencia.
+    MAX_PENDING_PER_USER = 5
+    EXPIRY_DAYS = 7
+
+    requester = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="solicitudes_creadas",
+        help_text="Quien propone la elevación. No puede aprobar la propia.",
+    )
+    approver = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="solicitudes_decididas",
+        help_text="Quien aprobó o rechazó. Debe ser estrictamente superior.",
+    )
+    action = models.CharField(max_length=24, choices=ACTION_CHOICES)
+    group = models.ForeignKey(
+        Group,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="solicitudes",
+        help_text="Rol objetivo (null en CREATE_ROLE).",
+    )
+    # payload: CREATE → {name, description, level, template_id?, perm_codenames?};
+    # UPDATE → {add: [], remove: [], snapshot: [] (códigos resultantes al enviar)}.
+    payload = models.JSONField(default=dict)
+    content_hash = models.CharField(
+        max_length=64, blank=True, default="",
+        help_text="SHA256 canónico del contenido al enviar (anti A→A+).",
+    )
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=STATUS_BORRADOR)
+    security_level = models.CharField(
+        max_length=2, blank=True, default="",
+        help_text="N1/N2/N3 calculado al enviar.",
+    )
+    reason = models.TextField(blank=True, help_text="Motivo de la solicitud.")
+    decision_reason = models.TextField(blank=True, help_text="Motivo de la decisión.")
+    expires_at = models.DateTimeField(null=True, blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Solicitud #{self.pk} {self.action} ({self.status})"
+
+    class Meta:
+        db_table = "solicitudes_cambio_rol"
+        verbose_name = "Solicitud de cambio de rol"
+        verbose_name_plural = "Solicitudes de cambio de rol"
+        ordering = ["-created_at"]
