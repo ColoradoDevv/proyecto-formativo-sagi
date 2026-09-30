@@ -3,7 +3,6 @@ import  TmHomePage  from "../../features/trademarks/pages/TmHomePage";
 import {AccessPage} from "@/features/access"
 import GroupManagement from "../../features/access/components/GroupManagement";
 import { ElevationInbox } from "@/features/elevations";
-import MfaManagement from "../../features/users/components/MfaManagement";
 import { ProfileEditPage } from "@/features/users";
 import { CategoryHomePage } from "@/features/categories";
 import { usePermissions } from "@/shared/hooks/usePermissions";
@@ -25,8 +24,6 @@ const BASE_TABS = [
     // Solicitudes de elevación (Fase 5b): visible para todos los autenticados;
     // el backend filtra (propias + pendientes que puedes decidir).
     { id: "requests", label: "Solicitudes",       panel: <ElevationInbox /> },
-    // Segundo factor (Fase 7): gestión propia para todo autenticado.
-    { id: "security", label: "Seguridad",         panel: <MfaManagement /> },
 ];
 
 // Pestana adicional reservada a administradores / usuarios con permiso

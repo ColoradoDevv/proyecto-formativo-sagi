@@ -43,8 +43,9 @@ async function disableMfa(password) {
     return response.json();
 }
 
-// Gestión del segundo factor desde la sesión (Configuración / Seguridad).
-export default function MfaManagement() {
+// Gestión del segundo factor (propia).
+// embedded=true: sin encabezado, para incrustar en Mi perfil.
+export default function MfaManagement({ embedded = false }) {
     const [status, setStatus] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -123,6 +124,7 @@ export default function MfaManagement() {
 
     return (
         <div className="flex flex-col gap-4">
+            {!embedded && (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <h2 className="text-h2 text-text-primary font-heading">Seguridad</h2>
                 <span className="inline-flex items-center gap-2 text-small text-text-muted">
@@ -134,6 +136,7 @@ export default function MfaManagement() {
                             : "Inactiva"}
                 </span>
             </div>
+            )}
 
             {!status?.enabled ? (
                 <form onSubmit={qrPng ? handleConfirm : handleEnroll} className="flex flex-col gap-4 max-w-md">
