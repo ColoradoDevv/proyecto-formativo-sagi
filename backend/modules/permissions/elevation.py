@@ -8,9 +8,11 @@
 
 import hashlib
 import json
+import logging
 import unicodedata
 from datetime import timedelta
 
+from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password
 from django.db import transaction
 from django.utils import timezone
@@ -21,6 +23,7 @@ from rest_framework.response import Response
 
 from modules.audit.models import AuditLog
 from modules.audit.utils import log as audit_log
+from sia_api.emailing import send_sagi_email
 from .models import Group, GroupPermission, Permission, SolicitudCambioRol, UserGroup
 from .ranking import action_level, classify_role_change, is_top, role_authority
 from .serializers import GroupDetailSerializer
@@ -122,6 +125,82 @@ def cancel_pending_for_group(group_id, reason="El rol cambió después de enviar
         solicitud.save(update_fields=["status", "decision_reason", "updated_at"])
         count += 1
     return count
+
+
+logger = logging.getLogger(__name__)
+
+
+def _inbox_url():
+    from django.conf import settings
+
+    base = (getattr(settings, "FRONTEND_URL", "") or "").rstrip("/")
+    return f"{base}/configuracion" if base else ""
+
+
+def eligible_approvers(solicitud, proposed_level):
+    """Aprobadores elegibles con email (para avisar al enviar)."""
+    User = get_user_model()
+    result = []
+    for user in User.objects.filter(is_active=True).exclude(email=""):
+        ok, _ = approver_eligible(user, solicitud, proposed_level)
+        if ok:
+            result.append(user)
+    return result
+
+
+def _send_safe(to_email, subject, template, context):
+    """Notificar sin tumbar el flujo si el SMTP falla (se registra warning)."""
+    try:
+        send_sagi_email(to_email, subject, template, context)
+    except Exception:
+        logger.warning("No se pudo enviar correo a %s (%s)", to_email, subject)
+
+
+def notify_on_submit(solicitud, proposed_level, codes):
+    url = _inbox_url()
+    for approver in eligible_approvers(solicitud, proposed_level):
+        _send_safe(
+            approver.email,
+            f"[SAGI] Solicitud #{solicitud.pk} pendiente ({solicitud.security_level})",
+            "elevation_submitted.html",
+            {
+                "paragraphs": [
+                    f"Hola, {approver.first_name or approver.email}:",
+                    f"{solicitud.requester.email} solicita {solicitud.get_action_display().lower()} "
+                    f"(nivel {proposed_level}, {len(codes)} permisos).",
+                ],
+                "details": [
+                    ["Solicitud", f"#{solicitud.pk}"],
+                    ["Nivel de seguridad", solicitud.security_level],
+                    ["Expira", f"{solicitud.expires_at:%Y-%m-%d %H:%M}"],
+                ],
+                "button": {"label": "Revisar solicitudes", "url": url} if url else None,
+            },
+        )
+
+
+def notify_on_decision(solicitud, approved):
+    requester = solicitud.requester
+    if requester is None or not requester.email:
+        return
+    url = _inbox_url()
+    _send_safe(
+        requester.email,
+        f"[SAGI] Solicitud #{solicitud.pk} {'aprobada' if approved else 'rechazada'}",
+        "elevation_decided.html",
+        {
+            "paragraphs": [
+                f"Hola, {requester.first_name or requester.email}:",
+                f"Tu solicitud #{solicitud.pk} fue {'aprobada y aplicada' if approved else 'rechazada'}"
+                + (f" por {solicitud.approver.email}." if solicitud.approver else "."),
+            ],
+            "details": [
+                ["Estado", solicitud.status],
+                ["Motivo", solicitud.decision_reason or "—"],
+            ],
+            "button": {"label": "Ver solicitudes", "url": url} if url else None,
+        },
+    )
 
 
 class SolicitudCambioRolSerializer(serializers.ModelSerializer):
@@ -254,6 +333,7 @@ class SolicitudViewSet(viewsets.ModelViewSet):
         solicitud.status = SolicitudCambioRol.STATUS_PENDIENTE
         solicitud.expires_at = timezone.now() + timedelta(days=SolicitudCambioRol.EXPIRY_DAYS)
         solicitud.save()
+        notify_on_submit(solicitud, level, codes)
         audit_log(
             actor=request.user,
             module=AuditLog.MODULE_PERMISSIONS,
@@ -306,6 +386,7 @@ class SolicitudViewSet(viewsets.ModelViewSet):
             solicitud.decision_reason = decision_reason or "Sin motivo."
             solicitud.decided_at = timezone.now()
             solicitud.save()
+            notify_on_decision(solicitud, False)
             audit_log(
                 actor=request.user,
                 module=AuditLog.MODULE_PERMISSIONS,
@@ -331,6 +412,7 @@ class SolicitudViewSet(viewsets.ModelViewSet):
         solicitud.decision_reason = decision_reason or "Aprobada."
         solicitud.decided_at = timezone.now()
         solicitud.save()
+        notify_on_decision(solicitud, True)
         audit_log(
             actor=request.user,
             module=AuditLog.MODULE_PERMISSIONS,

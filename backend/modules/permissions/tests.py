@@ -635,6 +635,24 @@ class ElevationWorkflowTestCase(TestCase):
         res = self.submit(res.data["id"])
         self.assertEqual(res.status_code, 400)
 
+    def test_notifica_al_enviar_y_decidir(self):
+        """Fase 5b: al enviar avisa a elegibles; al decidir avisa al solicitante."""
+        from django.core import mail
+
+        res = self.draft(self.admin, payload={"name": "Fase5Mail", "level": 500})
+        sid = res.data["id"]
+        mail.outbox = []
+        self.submit(sid)
+        destinatarios = sorted({m.to[0] for m in mail.outbox})
+        self.assertIn("fase5_sadmin@x.co", destinatarios)
+        self.as_user(self.sadmin)
+        mail.outbox = []
+        self.client.post(
+            f"{self.base}{sid}/approve/", {"password": "x-Segura-123"}, format="json"
+        )
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["fase5_admin@x.co"])
+
 
 class GroupHierarchyFieldsTestCase(TestCase):
     """Fase 2: level/is_system/template/ceiling y migración de los 4 grupos."""

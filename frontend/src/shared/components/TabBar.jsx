@@ -2,6 +2,7 @@ import { Tab } from '@headlessui/react';
 import  TmHomePage  from "../../features/trademarks/pages/TmHomePage";
 import {AccessPage} from "@/features/access"
 import GroupManagement from "../../features/access/components/GroupManagement";
+import { ElevationInbox } from "@/features/elevations";
 import { ProfileEditPage } from "@/features/users";
 import { CategoryHomePage } from "@/features/categories";
 import { usePermissions } from "@/shared/hooks/usePermissions";
@@ -20,6 +21,9 @@ const BASE_TABS = [
     { id: "brands",   label: "Marcas",            panel: <TmHomePage />,        perm: ["view_brand"] },
     { id: "access",   label: "Roles y Permisos",  panel: <AccessPage />,        superOnly: true },
     { id: "groups",   label: "Grupos",            panel: <GroupManagement />,   superOnly: true },
+    // Solicitudes de elevación (Fase 5b): visible para todos los autenticados;
+    // el backend filtra (propias + pendientes que puedes decidir).
+    { id: "requests", label: "Solicitudes",       panel: <ElevationInbox /> },
 ];
 
 // Pestana adicional reservada a administradores / usuarios con permiso
