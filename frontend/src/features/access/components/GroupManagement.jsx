@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { CloudAlert, Eye, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
-import { TailChase } from "ldrs/react";
-import "ldrs/react/TailChase.css";
 import { Button, DataTable, IconButton, Input, Modal, Switch, showAlert, cancelAlert } from "@/shared";
 import { createGroup, deleteGroup, getGroups, toggleGroupActive, updateGroup } from "../services/groupService";
+import LoadingState from "@/shared/components/LoadingState";
 
 const EMPTY_FORM = { name: "", description: "" };
 
@@ -193,11 +192,7 @@ export default function GroupManagement({ onChanged }) {
     ];
 
     if (loading) {
-        return (
-            <div className="h-full flex items-center justify-center py-12">
-                <TailChase size="40" speed="1.75" color="var(--semantic-text-primary)" />
-            </div>
-        );
+        return <LoadingState label="Cargando grupos…" />;
     }
 
     if (error) {

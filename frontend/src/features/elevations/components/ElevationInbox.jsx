@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Inbox, Send, ShieldCheck, ShieldX, XCircle } from "lucide-react";
-import { TailChase } from "ldrs/react";
-import "ldrs/react/TailChase.css";
 import DataTable from "@/shared/components/DataTable";
+import LoadingState from "@/shared/components/LoadingState";
 import { Button, Input, Modal, showAlert, usePermissions } from "@/shared";
 import {
     approveSolicitud,
@@ -194,11 +193,7 @@ export default function ElevationInbox() {
     ];
 
     if (loading) {
-        return (
-            <div className="h-full flex items-center justify-center py-12">
-                <TailChase size="40" speed="1.75" color="var(--semantic-text-primary)" />
-            </div>
-        );
+        return <LoadingState label="Cargando solicitudes…" />;
     }
 
     if (error) {

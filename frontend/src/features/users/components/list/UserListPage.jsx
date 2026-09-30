@@ -3,10 +3,9 @@ import DataTable from "@/shared/components/DataTable";
 import { getUserColumns } from "../../table/UserColumns.jsx"; // antes: userColumns
 import { usersReportConfig } from "../../reports/usersReportConfig.js";
 import useUsers from "../../hooks/useUsers.js";
-import { TailChase } from 'ldrs/react'
-import 'ldrs/react/TailChase.css'
 import { CloudAlert, Plus, Download } from "lucide-react";
 import { Button, MODULE_PERMS, usePermissions } from "@/shared"
+import LoadingState from "@/shared/components/LoadingState";
 
 
 export default function ListUserPage() {
@@ -23,11 +22,7 @@ export default function ListUserPage() {
     const columns = getUserColumns(refetch);
 
     if (loading)
-        return (
-            <div className="h-full flex items-center justify-center">
-                <TailChase size="40" speed="1.75" color="var(--semantic-text-primary)"/>
-            </div>
-        )
+        return <LoadingState label="Cargando usuarios…" />;
 
     if (error) return (
         <div className="h-full flex items-center justify-center">

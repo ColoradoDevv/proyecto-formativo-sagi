@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { TailChase } from "ldrs/react";
 import { Undo2, AlertTriangle, CircleCheck, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { Button, IconButton, Input, TextArea,
 showAlert } from "@/shared";
 import { useBusyProgress } from "@/shared/hooks/useBusyProgress";
 import { apiFetch } from "@/shared/services/api";
 import { returnLoan } from "../../services/returnService";
+import LoadingState from "@/shared/components/LoadingState";
 
 const CONDITION_META = {
     Bueno:         { label: "Bueno",         style: "border-success text-success",  bg: "bg-success-soft" },
@@ -205,11 +205,7 @@ useState(false);
     };
 
     if (loading)
-        return (
-            <div className="h-full flex items-center justify-center">
-                <TailChase size="40" speed="1.75" color="var(--semantic-text-primary)" />
-            </div>
-        );
+        return <LoadingState label="Cargando lote…" />;
 
     if (fetchError)
         return (

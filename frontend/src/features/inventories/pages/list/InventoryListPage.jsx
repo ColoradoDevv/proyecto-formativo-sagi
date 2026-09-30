@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Button, SearchField, IconButton, ActiveSwitch, Notice, usePermissions } from "@/shared";
 import { Plus, ArrowLeft, ArrowRight, Pencil, CloudAlert, Boxes, Archive } from "lucide-react";
-import { TailChase } from "ldrs/react";
 import useInventories from "../../hooks/useInventories";
 import { toggleInventoryActive } from "../../services/inventoryService";
 import InventoryModal from "../../components/InventoryModal";
+import LoadingState from "@/shared/components/LoadingState";
 
 export default function InventoryListPage() {
     const { inventories, setInventories, loading, error } = useInventories();
@@ -41,11 +41,7 @@ export default function InventoryListPage() {
     };
 
     if (loading)
-        return (
-            <div className="h-full flex items-center justify-center">
-                <TailChase size="40" speed="1.75" color="var(--semantic-text-primary)" />
-            </div>
-        );
+        return <LoadingState label="Cargando inventarios…" />;
 
     if (error)
         return (

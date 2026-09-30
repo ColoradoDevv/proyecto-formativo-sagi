@@ -44,3 +44,4 @@ export { usePermissions, MODULE_PERMS, NOTIFICATION_PERMS } from "./hooks/usePer
 export { DirtyFormProvider } from "./contexts/DirtyFormContext"
 export { useDirtyForm, useDirtyFormStatus } from "./hooks/useDirtyForm"
 export { default as isFormDirty } from "./utils/isFormDirty"
+export { default as LoadingState } from "./components/LoadingState"
