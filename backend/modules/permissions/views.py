@@ -96,28 +96,174 @@ class GroupViewSet(viewsets.ModelViewSet):
             return GroupListSerializer
         return GroupDetailSerializer
 
-    def destroy(self, request, *args, **kwargs):
-        # Fase 0 del sistema dinámico de roles: el DELETE duro borraba
-        # membresías en silencio por el CASCADE de UserGroup/GroupPermission.
-        # Bloqueado hasta el soft delete de la Fase 4: use is_active=false.
-        return Response(
-            {
-                "error": (
-                    "Eliminar grupos está deshabilitado. Desactive el grupo "
-                    "con is_active=false en su lugar."
-                )
-            },
-            status=status.HTTP_403_FORBIDDEN,
-        )
+    # ── Fase 4: reglas duras sobre roles ─────────────────────────────
+    @staticmethod
+    def _system_forbidden(group):
+        """Roles de sistema inmutables por API (todos, incluido el Primigenio)."""
+        if group.is_system:
+            return Response(
+                {"error": "Los roles de sistema son inmutables por API."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return None
 
-    @action(detail=True, methods=["post"])
-    def assign_permission(self, request, pk=None):
+    @staticmethod
+    def _rank_forbidden(actor, group):
+        """Solo niveles estrictamente inferiores (el Primigenio, exento)."""
+        from .ranking import can_manage_group
+
+        if not can_manage_group(actor, group):
+            return Response(
+                {"error": "Solo puedes administrar roles de nivel inferior al tuyo."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return None
+
+    def _guard_group_action(self, request, group):
+        """Combina inmutabilidad de sistema + rango. Retorna Response o None."""
+        denied = self._system_forbidden(group)
+        if denied is not None:
+            return denied
+        return self._rank_forbidden(request.user, group)
+
+    def create(self, request, *args, **kwargs):
+        """Crea un rol dinámico con nivel y plantilla opcional (Fase 4).
+
+        - level: debe ser estrictamente inferior al del creador (el Primigenio, exento).
+        - template_role: id de grupo visible (mismo nivel o inferior) del que se copian permisos.
+        - N2/N3 sin workflow (Fase 5): solo el Primigenio, auditado.
+        """
+        from .ranking import action_level, classify_role_change, is_top
+        from .models import GroupPermission
+
+        # Nivel: default al fondo (900, lo menos poderoso).
+        try:
+            level = int(request.data.get("level", 900))
+            if level <= 0:
+                raise ValueError()
+        except (TypeError, ValueError):
+            return Response(
+                {"level": "Nivel inválido: entero positivo."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        actor_level = action_level(request.user)
+        if actor_level is not None and level <= actor_level:
+            return Response(
+                {"error": "Solo puedes crear roles de nivel inferior al tuyo."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Plantilla: debe existir y estar a tu nivel o por debajo.
+        template = None
+        template_id = request.data.get("template_role")
+        if template_id not in (None, ""):
+            from .models import Group
+
+            try:
+                template = Group.objects.get(pk=template_id)
+            except (Group.DoesNotExist, ValueError, TypeError):
+                return Response(
+                    {"template_role": "Plantilla no encontrada."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if actor_level is not None and template.level < actor_level:
+                return Response(
+                    {"error": "La plantilla debe ser de tu nivel o inferior."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        template_codes = (
+            list(template.permissions.values_list("codename", flat=True)) if template else []
+        )
+        sec_level, reasons = classify_role_change(request.user, level, template_codes)
+        if sec_level in ("N2", "N3") and not is_top(request.user):
+            return Response(
+                {
+                    "error": (
+                        f"Requiere aprobación ({sec_level}): "
+                        + "; ".join(reasons)
+                        + ". Disponible en Fase 5."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        group = serializer.save()
+        group.level = level
+        if template is not None:
+            group.template_role = template
+        group.save(update_fields=["level", "template_role"])
+        if template_codes:
+            GroupPermission.objects.bulk_create(
+                [GroupPermission(group=group, permission_id=pid) for pid in
+                 template.permissions.values_list("id", flat=True)],
+                ignore_conflicts=True,
+            )
+            for user_group in group.user_groups.all():
+                PermissionService.invalidate_user_cache(user_group.user.id)
+
+        audit_log(
+            actor=request.user,
+            module=AuditLog.MODULE_PERMISSIONS,
+            action=AuditLog.ACTION_CREATE,
+            target_id=group.pk,
+            target_repr=f"Rol '{group.name}' (nivel {level})",
+            detail=(
+                f"Plantilla: {template.name if template else 'ninguna'}; "
+                f"permisos copiados: {len(template_codes)}; nivel de seguridad: {sec_level}"
+                + (f" ({'; '.join(reasons)})" if reasons else "")
+            ),
+            request=request,
+        )
+        return Response(self.get_serializer(group).data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        # Fase 4: sistema inmutable + rango (nombres/descripción también).
+        group = self.get_object()
+        denied = self._guard_group_action(request, group)
+        if denied is not None:
+            return denied
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        # Fase 4: soft delete. Con usuarios → 403 (reasignar primero);
+        # sin usuarios → is_active=False (el registro se conserva).
+        group = self.get_object()
+        denied = self._guard_group_action(request, group)
+        if denied is not None:
+            return denied
+        members = group.user_groups.count()
+        if members > 0:
+            return Response(
+                {
+                    "error": (
+                        f"No se puede eliminar el grupo '{group.name}' porque tiene "
+                        f"{members} usuario(s) asignado(s). Reasígnelos primero."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        group.is_active = False
+        group.save(update_fields=["is_active"])
+        return Response(
+            {"message": f"Grupo '{group.name}' desactivado (borrado lógico)."},
+            status=status.HTTP_200_OK,
+        )
         """
         Asigna un permiso a un grupo.
         POST /groups/{id}/assign_permission/
         Body: {"permission_codename": "list_users"}
+        Fase 4: rol de sistema/rango/N2-N3 según reglas duras.
         """
+        from .ranking import classify_role_change, is_top
+
         group = self.get_object()
+        denied = self._guard_group_action(request, group)
+        if denied is not None:
+            return denied
         serializer = AssignPermissionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -145,6 +291,27 @@ class GroupViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Fase 4: clasificar ANTES de agregar. N2/N3 sin workflow (Fase 5):
+        # solo el Primigenio (auditado); los demás reciben 403.
+        resulting = list(
+            group.permissions.values_list("codename", flat=True)
+        ) + [permission.codename]
+        sec_level, reasons = classify_role_change(
+            request.user, group.level, resulting,
+            has_members=group.user_groups.exists(), touches_system=group.is_system,
+        )
+        if sec_level in ("N2", "N3") and not is_top(request.user):
+            return Response(
+                {
+                    "error": (
+                        f"Requiere aprobación ({sec_level}): "
+                        + "; ".join(reasons)
+                        + ". Disponible en Fase 5."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         # Agregar permiso al grupo
         group.permissions.add(permission)
 
@@ -168,8 +335,13 @@ class GroupViewSet(viewsets.ModelViewSet):
         Remueve un permiso de un grupo.
         POST /groups/{id}/remove_permission/
         Body: {"permission_codename": "list_users"}
+        Fase 4: quitar poder es N1 (revocar nunca necesita aprobación),
+        pero el rol debe ser de nivel inferior (sistema, nunca por API).
         """
         group = self.get_object()
+        denied = self._guard_group_action(request, group)
+        if denied is not None:
+            return denied
         serializer = AssignPermissionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -209,7 +381,12 @@ class GroupViewSet(viewsets.ModelViewSet):
         - Grupos que tienen usuarios activos asignados
         """
         group = self.get_object()
-        
+
+        # Fase 4: sistema inmutable + rango (el Primigenio, exento).
+        denied = self._guard_group_action(request, group)
+        if denied is not None:
+            return denied
+
         # Protección: no permitir desactivar grupos reservados.
         if group.name in ("Administrador", SYSTEM_GROUP_NAME):
             return Response(
@@ -291,6 +468,21 @@ class UserPermissionView(generics.GenericAPIView):
             return Response(
                 {"error": "Permiso no encontrado"},
                 status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Fase 4: no amplificación (solo das lo que posees) + rango sobre
+        # el usuario (mismo nivel o inferior). El Primigenio, exento.
+        from .ranking import can_grant_permission, can_manage_user
+
+        if not can_manage_user(request.user, user):
+            return Response(
+                {"error": "Solo puedes administrar usuarios de tu nivel o inferior."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not can_grant_permission(request.user, permission.codename):
+            return Response(
+                {"error": "No puedes asignar un permiso que no posees."},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         # Las notificaciones son excluyentes: ni directo ni heredado por grupo.
@@ -437,10 +629,21 @@ class UserGroupView(generics.GenericAPIView):
                 {"error": "Grupo no encontrado"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        
-        if group.name.upper() == SYSTEM_GROUP_NAME:
+
+        # Fase 4: solo niveles estrictamente inferiores (el Primigenio, exento:
+        # es el único que puede asignar roles SADMIN). Reemplaza el bloqueo
+        # total del grupo interno. Además el usuario objetivo debe ser de tu
+        # mismo nivel o inferior.
+        from .ranking import can_manage_group, can_manage_user
+
+        if not can_manage_group(request.user, group):
             return Response(
-                {"error": "El grupo solicitado es interno del sistema."},
+                {"error": "Solo puedes asignar roles de nivel inferior al tuyo."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not can_manage_user(request.user, user):
+            return Response(
+                {"error": "Solo puedes administrar usuarios de tu nivel o inferior."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -495,9 +698,17 @@ class UserGroupView(generics.GenericAPIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        if group.name.upper() == SYSTEM_GROUP_NAME:
+        # Fase 4: mismo rango que en post (grupo inferior + usuario mismo/inferior).
+        from .ranking import can_manage_group, can_manage_user
+
+        if not can_manage_group(request.user, group):
             return Response(
-                {"error": "El grupo solicitado es interno del sistema."},
+                {"error": "Solo puedes administrar roles de nivel inferior al tuyo."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not can_manage_user(request.user, user):
+            return Response(
+                {"error": "Solo puedes administrar usuarios de tu nivel o inferior."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 

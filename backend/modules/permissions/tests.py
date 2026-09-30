@@ -307,6 +307,136 @@ class HierarchyVisibilityTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
 
+class HardRulesTestCase(TestCase):
+    """Fase 4: reglas duras (rango, no amplificación, inmutables, soft delete)."""
+
+    def setUp(self):
+        from rest_framework.test import APIClient
+
+        def make_user(email, group_name=None, **extra):
+            user = User.objects.create_user(
+                email=email, password="x-Segura-123",
+                first_name="Fase4", last_name="Test", **extra
+            )
+            if group_name:
+                PermissionService.add_user_to_group(user, group_name)
+            return user
+
+        self.primary = make_user("fase4_prim@x.co", None, is_superuser=True)
+        self.primary.is_primary_admin = True
+        self.primary.save(update_fields=["is_primary_admin"])
+        self.sadmin = make_user("fase4_sadmin@x.co", "SADMIN")
+        self.admin = make_user("fase4_admin@x.co", "ADMIN")
+        self.inst = make_user("fase4_inst@x.co", "INST")
+        self.inv = make_user("fase4_inv@x.co", "INV")
+        self.client = APIClient()
+
+    def as_user(self, user):
+        self.client.force_authenticate(user=user)
+
+    def group_id(self, name):
+        return Group.objects.get(name=name).pk
+
+    # ── Asignación de grupos: primario sí puede dar SADMIN ──
+    def test_primary_asigna_sadmin(self):
+        self.as_user(self.primary)
+        response = self.client.post(
+            f"/api/permissions/users/{self.inv.pk}/groups/", {"group_name": "SADMIN"}, format="json"
+        )
+        self.assertEqual(response.status_code, 201)
+
+    def test_admin_no_asigna_sadmin(self):
+        self.as_user(self.admin)
+        response = self.client.post(
+            f"/api/permissions/users/{self.inv.pk}/groups/", {"group_name": "SADMIN"}, format="json"
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_si_asigna_inv(self):
+        self.as_user(self.admin)
+        response = self.client.post(
+            f"/api/permissions/users/{self.inst.pk}/groups/", {"group_name": "INV"}, format="json"
+        )
+        self.assertIn(response.status_code, (200, 201))
+
+    # ── Acciones sobre usuarios: mismo nivel o inferior ──
+    def test_admin_no_edita_sadmin(self):
+        # Ni siquiera lo ve (Fase 3): el detalle responde 404.
+        self.as_user(self.admin)
+        response = self.client.patch(
+            f"/api/users/{self.sadmin.pk}/", {"first_name": "X"}, format="json"
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_admin_si_edita_inst(self):
+        self.as_user(self.admin)
+        response = self.client.patch(
+            f"/api/users/{self.inst.pk}/", {"first_name": "InstEdit"}, format="json"
+        )
+        self.assertEqual(response.status_code, 200)
+
+    # ── Roles de sistema inmutables (todos, incluido primario) ──
+    def test_sistema_inmutable_hasta_primario(self):
+        self.as_user(self.primary)
+        response = self.client.patch(
+            f"/api/permissions/groups/{self.group_id('ADMIN')}/",
+            {"description": "cambio"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_grupo_normal_si_se_edita(self):
+        self.as_user(self.primary)
+        gid = Group.objects.create(name="Fase4Edit", level=500).pk
+        response = self.client.patch(
+            f"/api/permissions/groups/{gid}/", {"description": "cambio"}, format="json"
+        )
+        self.assertEqual(response.status_code, 200)
+
+    # ── Soft delete ──
+    def test_delete_grupo_con_usuarios_403(self):
+        self.as_user(self.primary)
+        response = self.client.delete(f"/api/permissions/groups/{self.group_id('INV')}/")
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Group.objects.filter(name="INV", is_active=True).exists())
+
+    def test_delete_grupo_vacio_soft(self):
+        self.as_user(self.primary)
+        gid = Group.objects.create(name="Fase4Borrar", level=500).pk
+        response = self.client.delete(f"/api/permissions/groups/{gid}/")
+        self.assertEqual(response.status_code, 200)
+        group = Group.objects.get(pk=gid)
+        self.assertFalse(group.is_active)
+
+    # ── No amplificación ──
+    def test_no_amplificacion(self):
+        from modules.permissions.ranking import can_grant_permission
+
+        self.assertFalse(can_grant_permission(self.inst, "delete_user"))
+        self.assertTrue(can_grant_permission(self.primary, "delete_user"))
+
+    # ── Clasificador N1/N2/N3 ──
+    def test_clasificador(self):
+        from modules.permissions.ranking import classify_role_change
+
+        level, _ = classify_role_change(self.admin, 500, ["view_user", "list_users"])
+        self.assertEqual(level, "N1")
+        level, _ = classify_role_change(self.admin, 500, ["view_user", "disable_user"])
+        self.assertEqual(level, "N2")
+        level, _ = classify_role_change(self.admin, 500, ["manage_role_permissions"])
+        self.assertEqual(level, "N3")
+
+    # ── NFKC contra homoglifos ──
+    def test_nombre_homoglifo_rechazado(self):
+        self.as_user(self.primary)
+        response = self.client.post(
+            "/api/permissions/groups/",
+            {"name": "ＡDMIN", "description": "x"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+
 class GroupHierarchyFieldsTestCase(TestCase):
     """Fase 2: level/is_system/template/ceiling y migración de los 4 grupos."""
 
@@ -339,6 +469,8 @@ class GroupHierarchyFieldsTestCase(TestCase):
             password="secure123",
             is_superuser=True,
         )
+        # Nivel SADMIN para pasar la regla de rango (Fase 4).
+        PermissionService.add_user_to_group(creator, "SADMIN")
         group = Group.objects.create(name="Fase2Editable")
         client = APIClient()
         client.force_authenticate(user=creator)

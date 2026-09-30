@@ -1007,6 +1007,14 @@ class UserDetailView(AuditMixin, generics.RetrieveUpdateDestroyAPIView):
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
+        from modules.permissions.ranking import can_manage_user
+
+        # Fase 4: mismo nivel o inferior (el Primigenio, exento).
+        if not can_manage_user(request.user, instance):
+            return Response(
+                {"error": "Solo puedes administrar usuarios de tu nivel o inferior."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         if is_primary_admin(instance):
             # Rechazar si el body intenta tocar algún campo protegido.
             blocked = self._PRIMARY_ADMIN_PROTECTED_FIELDS & set(request.data.keys())
@@ -1030,6 +1038,12 @@ class UserDetailView(AuditMixin, generics.RetrieveUpdateDestroyAPIView):
             raise PermissionDenied(
                 "No se puede eliminar al superadministrador primigenio del sistema."
             )
+        # Fase 4: mismo nivel o inferior (el Primigenio, exento).
+        from modules.permissions.ranking import can_manage_user
+        from rest_framework.exceptions import PermissionDenied as Denied
+
+        if not can_manage_user(self.request.user, instance):
+            raise Denied("Solo puedes administrar usuarios de tu nivel o inferior.")
         # En vez de instance.delete(), hacemos un borrado logico: marcamos is_deleted y fecha.
         instance.soft_delete()  # metodo definido en el modelo User
 
@@ -1070,6 +1084,14 @@ class UserRestoreView(APIView):
                 {"error": "Usuario no encontrado en la papelera"},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        # Fase 4: mismo nivel o inferior (el Primigenio, exento).
+        from modules.permissions.ranking import can_manage_user
+
+        if not can_manage_user(request.user, user):
+            return Response(
+                {"error": "Solo puedes administrar usuarios de tu nivel o inferior."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         user.restore()
         audit_log(
             actor=request.user,
@@ -1099,6 +1121,15 @@ class ResendCredentialsView(APIView):
             return Response(
                 {"error": "Usuario no encontrado"},
                 status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Fase 4: mismo nivel o inferior (el Primigenio, exento).
+        from modules.permissions.ranking import can_manage_user
+
+        if not can_manage_user(request.user, user):
+            return Response(
+                {"error": "Solo puedes administrar usuarios de tu nivel o inferior."},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         new_password = generate_secure_password()
