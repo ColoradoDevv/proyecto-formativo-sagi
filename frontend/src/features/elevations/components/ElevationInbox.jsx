@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Inbox, Send, ShieldCheck, ShieldX, XCircle } from "lucide-react";
-import { TailChase } from "ldrs/react";
-import "ldrs/react/TailChase.css";
 import DataTable from "@/shared/components/DataTable";
+import LoadingState from "@/shared/components/LoadingState";
 import { Button, Input, Modal, showAlert, usePermissions } from "@/shared";
 import {
     approveSolicitud,
@@ -51,6 +50,7 @@ export default function ElevationInbox() {
     const [selected, setSelected] = useState(null);
     const [decision, setDecision] = useState(null); // { mode: "approve"|"reject", solicitud }
     const [password, setPassword] = useState("");
+    const [totpCode, setTotpCode] = useState("");
     const [reason, setReason] = useState("");
     const [keptCodes, setKeptCodes] = useState([]);
     const [saving, setSaving] = useState(false);
@@ -88,6 +88,7 @@ export default function ElevationInbox() {
     const closeDecision = () => {
         setDecision(null);
         setPassword("");
+        setTotpCode("");
         setReason("");
         setKeptCodes([]);
     };
@@ -116,14 +117,18 @@ export default function ElevationInbox() {
         const { mode, solicitud } = decision;
         setSaving(true);
         try {
+            // Step-up: contraseña o código TOTP (Fase 7); el backend acepta cualquiera.
+            const stepUp = totpCode.trim()
+                ? { password: "", totp_code: totpCode.trim() }
+                : { password, totp_code: "" };
             if (mode === "approve") {
                 await approveSolicitud(solicitud.id, {
-                    password,
+                    ...stepUp,
                     perm_codenames: keptCodes,
                     decision_reason: reason.trim(),
                 });
             } else {
-                await rejectSolicitud(solicitud.id, { password, decision_reason: reason.trim() });
+                await rejectSolicitud(solicitud.id, { ...stepUp, decision_reason: reason.trim() });
             }
             closeDecision();
             setSelected(null);
@@ -188,11 +193,7 @@ export default function ElevationInbox() {
     ];
 
     if (loading) {
-        return (
-            <div className="h-full flex items-center justify-center py-12">
-                <TailChase size="40" speed="1.75" color="var(--semantic-text-primary)" />
-            </div>
-        );
+        return <LoadingState label="Cargando solicitudes…" />;
     }
 
     if (error) {
@@ -250,6 +251,8 @@ export default function ElevationInbox() {
                     solicitud={decision.solicitud}
                     password={password}
                     setPassword={setPassword}
+                    totpCode={totpCode}
+                    setTotpCode={setTotpCode}
                     reason={reason}
                     setReason={setReason}
                     keptCodes={keptCodes}
@@ -325,7 +328,7 @@ function SolicitudDetailModal({ solicitud, isMine, canDecide, saving, onClose, o
     );
 }
 
-function DecisionModal({ mode, solicitud, password, setPassword, reason, setReason, keptCodes, setKeptCodes, saving, onClose, onConfirm }) {
+function DecisionModal({ mode, solicitud, password, setPassword, totpCode, setTotpCode, reason, setReason, keptCodes, setKeptCodes, saving, onClose, onConfirm }) {
     const codes = snapshotCodes(solicitud);
     const toggleCode = (code) => setKeptCodes((prev) =>
         prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
@@ -370,12 +373,20 @@ function DecisionModal({ mode, solicitud, password, setPassword, reason, setReas
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    required
                     autoComplete="current-password"
+                />
+                <Input
+                    label="O código de tu app (en vez de contraseña)"
+                    type="text"
+                    inputMode="numeric"
+                    value={totpCode}
+                    onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    autoComplete="one-time-code"
+                    placeholder="000000"
                 />
                 <div className="flex justify-end gap-2">
                     <Button variant="secondary" onClick={onClose} disabled={saving}>Volver</Button>
-                    <Button onClick={onConfirm} disabled={saving || !password || (mode === "reject" && !reason.trim())}>
+                    <Button onClick={onConfirm} disabled={saving || (!password && totpCode.length !== 6) || (mode === "reject" && !reason.trim())}>
                         Confirmar
                     </Button>
                 </div>

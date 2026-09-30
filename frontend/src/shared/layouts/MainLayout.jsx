@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Sidenav from "./components/Sidenav";
+import MfaNudgeModal from "@/features/users/components/MfaNudgeModal";
 import { useInactivityLogout } from "@/shared/hooks/useInactivityLogout";
 import { getStoredUser, isAuthenticated } from "@/shared/services/api";
 
@@ -42,6 +43,7 @@ export default function MainLayout({ children }) {
                 Saltar al contenido principal
             </a>
             <Navbar onToggleSidebar={() => setSidebarOpen(prev => !prev)}/>
+            <MfaNudgeModal />
             <div className="flex flex-1 overflow-hidden min-w-0">
                 <Sidenav isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
                 <main id="contenido-principal" tabIndex={-1} className="flex-1 min-w-0 bg-background/70 text-text-primary overflow-y-auto overflow-x-clip p-4 sm:p-6">

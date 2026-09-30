@@ -1,5 +1,4 @@
 import { Link, useNavigate } from "react-router-dom";
-import { TailChase } from "ldrs/react";
 import { CloudAlert, Download, Plus } from "lucide-react";
 
 import { Button, MODULE_PERMS, usePermissions } from "@/shared";
@@ -7,6 +6,7 @@ import DataTable from "@/shared/components/DataTable";
 import { materialColumns } from "../../table/materialColumns.jsx";
 import { consumablesReportConfig } from "../../reports/consumablesReportConfig.js";
 import useProducts from "../../hooks/useCMs.js";
+import LoadingState from "@/shared/components/LoadingState";
 
 export default function ListCmPage() {
     const navigate = useNavigate();
@@ -17,11 +17,7 @@ export default function ListCmPage() {
     const { CMs, setCMs, loading, error } = useProducts();
 
     if (loading)
-        return (
-            <div className="h-full flex items-center justify-center">
-                <TailChase size="40" speed="1.75" color="var(--semantic-text-primary)" />
-            </div>
-        );
+        return <LoadingState label="Cargando materiales…" />;
 
     if (error)
         return (

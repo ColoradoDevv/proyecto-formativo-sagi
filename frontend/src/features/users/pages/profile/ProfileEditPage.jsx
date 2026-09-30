@@ -5,6 +5,7 @@ import { Button, EditCard, Input, ProfileFileInput, showAlert, SupportContact } 
 import { updateStoredUser } from "@/shared/services/api";
 import { getMyProfile, updateMyProfile, updateUserProfilePicture } from "../../services/userService";
 import ChangePasswordModal from "../../components/ChangePasswordModal";
+import MfaManagement from "../../components/MfaManagement";
 
 const readOnlyValue = (value) => value || "No registrado";
 
@@ -235,6 +236,9 @@ export default function ProfileEditPage() {
                             <Button variant="secondary" onClick={() => setChangePasswordOpen(true)}>
                                 <KeyRound size={16} /> Cambiar contraseña
                             </Button>
+                        </div>
+                        <div className="border-t border-border pt-3 mt-1">
+                            <MfaManagement embedded />
                         </div>
                     </EditCard>
                 </div>

@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button, DataTable, MODULE_PERMS, usePermissions } from "@/shared";
 import { Plus, ListChecks, ClipboardList, CloudAlert, Download } from "lucide-react";
-import { TailChase } from "ldrs/react";
-import "ldrs/react/TailChase.css";
 import useTaskDefinitions from "../hooks/useTaskDefinitions";
 import useTaskAssignments from "../hooks/useTaskAssignments";
 import { getUsers, getGroups } from "../services/selectServices";
@@ -12,6 +10,7 @@ import TaskAssignmentModal from "../components/TaskAssignmentModal";
 import TaskAssignmentsPanel from "../components/TaskAssignmentsPanel";
 import SubmitTaskModal from "../components/SubmitTaskModal";
 import { tasksAssignmentsReportConfig, tasksDefinitionsReportConfig } from "../reports/tasksReportConfig";
+import LoadingState from "@/shared/components/LoadingState";
 
 // Pagina principal de tareas.
 // Toggle entre dos vistas:
@@ -107,11 +106,7 @@ export default function TaskListPage() {
     const loading = effectiveView === "assignments" ? loadingAsg : loadingDefs;
 
     if (loading)
-        return (
-            <div className="h-full flex items-center justify-center py-12">
-                <TailChase size="40" speed="1.75" color="var(--semantic-text-primary)" />
-            </div>
-        );
+        return <LoadingState label="Cargando tareas…" />;
 
     if (errorAsg)
         return (

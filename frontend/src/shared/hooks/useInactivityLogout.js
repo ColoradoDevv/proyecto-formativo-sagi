@@ -44,7 +44,9 @@ export function useInactivityLogout() {
 
             if (elapsed >= INACTIVITY_TIMEOUT_MS) {
                 clearSession();
-                window.dispatchEvent(new CustomEvent("sia:session-expired"));
+                window.dispatchEvent(new CustomEvent("sia:session-expired", {
+                    detail: { cause: "inactivity" },
+                }));
             }
         }, CHECK_INTERVAL_MS);
 

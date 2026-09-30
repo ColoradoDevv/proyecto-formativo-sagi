@@ -14,6 +14,11 @@ urlpatterns = [
     path("me/change-password/confirm/", views.ConfirmPasswordChangeView.as_view(), name="change-password-confirm"),
     path("me/change-password/first-login/", views.FirstLoginPasswordChangeView.as_view(), name="change-password-first-login"),
     path("me/consent/", views.DataConsentView.as_view(), name="my-consent"),
+    path("me/mfa/enroll/", views.MFAEnrollView.as_view(), name="mfa-enroll"),
+    path("me/mfa/confirm/", views.MFAConfirmView.as_view(), name="mfa-confirm"),
+    path("me/mfa/verify/", views.MFAVerifyView.as_view(), name="mfa-verify"),
+    path("me/mfa/disable/", views.MFADisableView.as_view(), name="mfa-disable"),
+    path("me/mfa/status/", views.MFAStatusView.as_view(), name="mfa-status"),
 
     path("", views.UserListCreateView.as_view(), name="users-list"),
     path("trash/", views.UserTrashListView.as_view(), name="users-trash"),

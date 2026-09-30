@@ -111,6 +111,18 @@ def check_step_up(approver, password):
     return check_password(password, approver.password)
 
 
+def check_step_up_totp(approver, totp_code):
+    """Fase 7: el código TOTP reemplaza a la contraseña como step-up."""
+    if not totp_code:
+        return False
+    from modules.users.mfa import verify_totp_code
+
+    try:
+        return verify_totp_code(approver, totp_code)
+    except Exception:
+        return False
+
+
 def cancel_pending_for_group(group_id, reason="El rol cambió después de enviar."):
     """Invalida PENDIENTEs del grupo (anti A→A+). Retorna cuántas canceló."""
     pending = SolicitudCambioRol.objects.filter(
@@ -352,9 +364,11 @@ class SolicitudViewSet(viewsets.ModelViewSet):
                 {"error": f"La solicitud ya no está pendiente ({solicitud.status})."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if not check_step_up(request.user, request.data.get("password", "")):
+        if not check_step_up(request.user, request.data.get("password", "")) and not check_step_up_totp(
+            request.user, request.data.get("totp_code", "")
+        ):
             return Response(
-                {"error": "Confirma tu contraseña para decidir (step-up)."},
+                {"error": "Confirma con tu contraseña o tu código de app (step-up)."},
                 status=status.HTTP_403_FORBIDDEN,
             )
         level, codes = proposed_role_data(solicitud)

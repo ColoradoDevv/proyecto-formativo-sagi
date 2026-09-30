@@ -23,17 +23,17 @@ export function submitSolicitud(id) {
     return request(`${id}/submit/`, { method: "POST", body: "{}" });
 }
 
-export function approveSolicitud(id, { password, perm_codenames, decision_reason }) {
+export function approveSolicitud(id, { password, totp_code, perm_codenames, decision_reason }) {
     return request(`${id}/approve/`, {
         method: "POST",
-        body: JSON.stringify({ password, perm_codenames, decision_reason }),
+        body: JSON.stringify({ password, totp_code, perm_codenames, decision_reason }),
     });
 }
 
-export function rejectSolicitud(id, { password, decision_reason }) {
+export function rejectSolicitud(id, { password, totp_code, decision_reason }) {
     return request(`${id}/reject/`, {
         method: "POST",
-        body: JSON.stringify({ password, decision_reason }),
+        body: JSON.stringify({ password, totp_code, decision_reason }),
     });
 }
 
