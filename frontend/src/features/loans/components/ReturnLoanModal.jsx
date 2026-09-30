@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { Input, TextArea, Button, Modal, showAlert } from "@/shared";
+import { Input, TextArea, Button, Modal, showAlert } from
+"@/shared";
+import { useBusyProgress } from "@/shared/hooks/useBusyProgress";
 import { buildReturnSchema, VALID_CONDITIONS } from "../schemas/returnSchema";
 import { returnLoan } from "../services/returnService";
 import { AlertTriangle } from "lucide-react";
@@ -36,6 +38,7 @@ export default function ReturnLoanModal({ isOpen, onClose, loan, onReturned }) {
     });
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
+    const { busyMessage, startBusyProgress, stopBusyProgress } = useBusyProgress();
 
     // Limpia el formulario cada vez que se abre.
     useEffect(() => {
@@ -99,6 +102,7 @@ export default function ReturnLoanModal({ isOpen, onClose, loan, onReturned }) {
 
         setErrors({});
         setSubmitting(true);
+        startBusyProgress(["Registrando devolución…", "Actualizando stock…", "Notificando…"]);
 
         try {
             await returnLoan({
@@ -147,6 +151,7 @@ export default function ReturnLoanModal({ isOpen, onClose, loan, onReturned }) {
                 text: error.message,
             });
         } finally {
+            stopBusyProgress();
             setSubmitting(false);
         }
     };
@@ -157,7 +162,7 @@ export default function ReturnLoanModal({ isOpen, onClose, loan, onReturned }) {
                 Cancelar
             </Button>
             <Button type="submit" form="return-loan-form" variant="primary" size="md" disabled={submitting}>
-                {submitting ? "Procesando..." : "Confirmar devolución"}
+                {submitting ? (busyMessage || "Procesando...") : "Confirmar devolución"}
             </Button>
         </>
     );

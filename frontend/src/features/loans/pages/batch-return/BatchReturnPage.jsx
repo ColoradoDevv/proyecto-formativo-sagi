@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { TailChase } from "ldrs/react";
 import { Undo2, AlertTriangle, CircleCheck, ChevronDown, ChevronsUpDown } from "lucide-react";
-import { Button, IconButton, Input, TextArea, showAlert } from "@/shared";
+import { Button, IconButton, Input, TextArea,
+showAlert } from "@/shared";
+import { useBusyProgress } from "@/shared/hooks/useBusyProgress";
 import { apiFetch } from "@/shared/services/api";
 import { returnLoan } from "../../services/returnService";
 
@@ -34,7 +36,9 @@ export default function BatchReturnPage() {
     const [batch,      setBatch]      = useState(null);
     const [rows,       setRows]       = useState([]);
     const [errors,     setErrors]     = useState({});  // { [loanId]: { field: msg } }
-    const [submitting, setSubmitting] = useState(false);
+    const [submitting, setSubmitting] =
+useState(false);
+    const { busyMessage, startBusyProgress, stopBusyProgress } = useBusyProgress();
     const [loading,    setLoading]    = useState(true);
     const [fetchError, setFetchError] = useState(null);
     // Acordeón: solo se expande lo que se está trabajando (con 50 ítems la
@@ -119,6 +123,7 @@ export default function BatchReturnPage() {
             return;
         }
         setSubmitting(true);
+        startBusyProgress(["Devolviendo material…"]);
         try {
             await returnLoan({
                 loanId:            row.loanId,
@@ -133,6 +138,7 @@ export default function BatchReturnPage() {
         } catch (err) {
             await showAlert({ icon: "error", iconColor: "var(--color-error)", title: "Error al devolver", text: err.message });
         } finally {
+            stopBusyProgress();
             setSubmitting(false);
         }
     };
@@ -154,6 +160,7 @@ export default function BatchReturnPage() {
         }
 
         setSubmitting(true);
+        startBusyProgress(["Devolviendo materiales…", "Actualizando stock…", "Cerrando lote…"]);
         const results = await Promise.allSettled(
             pending.map((row) =>
                 returnLoan({
@@ -165,6 +172,7 @@ export default function BatchReturnPage() {
                 })
             )
         );
+        stopBusyProgress();
         setSubmitting(false);
 
         const failed = results
@@ -420,7 +428,7 @@ export default function BatchReturnPage() {
                         Cancelar
                     </Button>
                     <Button variant="primary" size="md" disabled={submitting} onClick={handleReturnAll}>
-                        {submitting ? "Procesando…" : `Devolver todo (${pendingRows.length})`}
+                        {submitting ? (busyMessage || "Procesando…") : `Devolver todo (${pendingRows.length})`}
                     </Button>
                 </div>
             )}

@@ -1,10 +1,11 @@
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, Asterisk, ShieldCheck } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { loginSchemas } from "../schemas/loginSchemas";
 import { login } from "../services/authService";
 import { completeMfaSession, confirmMfa, enrollMfa, verifyMfa } from "../services/mfaService";
 import { Button, Input, SupportContact } from "@/shared"
+import { useBusyProgress } from "@/shared/hooks/useBusyProgress";
 import RecoveryCodesPanel from "./RecoveryCodesPanel";
 
 // Pasos del login: credenciales → (código MFA | inscripción MFA | códigos de respaldo)
@@ -37,28 +38,7 @@ export default function LoginForm() {
     const [recoveryCodes, setRecoveryCodes] = useState([]);
 
     // Progreso narrado: la espera se percibe más corta si se ve avance.
-    // Los mensajes describen etapas reales sin prometer fin antes de tiempo.
-    const [busyMessage, setBusyMessage] = useState("");
-    const busyTimers = useRef([]);
-
-    const startBusyProgress = (steps) => {
-        stopBusyProgress();
-        setBusyMessage(steps[0] ?? "");
-        steps.slice(1).forEach((message, index) => {
-            busyTimers.current.push(setTimeout(
-                () => setBusyMessage(message),
-                900 * (index + 1),
-            ));
-        });
-    };
-
-    const stopBusyProgress = () => {
-        busyTimers.current.forEach(clearTimeout);
-        busyTimers.current = [];
-        setBusyMessage("");
-    };
-
-    useEffect(() => () => stopBusyProgress(), []);
+    const { busyMessage, startBusyProgress, stopBusyProgress } = useBusyProgress();
 
     // Pasos altos del MFA (QR, códigos): pedir a AuthLayout que oculte el
     // encabezado SAGI para no desbordar la tarjeta; se restaura al salir.
@@ -99,6 +79,7 @@ export default function LoginForm() {
         // 2. Llamar al backend
         try {
             setLoading(true);
+            startBusyProgress(["Verificando credenciales…"]);
             const result = await login(formData.userEmail, formData.userPassword);
             if (result.mfaRequired) {
                 // Segundo factor: guardar el temporal y pedir QR o código.
@@ -116,6 +97,7 @@ export default function LoginForm() {
         } catch (err) {
             setServerError(err.message);   // ej. "Credenciales inválidas"
         } finally {
+            stopBusyProgress();
             setLoading(false);
         }
     };
@@ -228,7 +210,7 @@ export default function LoginForm() {
                     variant="primary"
                     size="md"
                 >
-                    {loading ? "Entrando..." : "Entrar"}
+                    {loading ? (busyMessage || "Entrando...") : "Entrar"}
                 </Button>
 
                 {/* Aviso de privacidad (Ley 1581 de 2012) */}
