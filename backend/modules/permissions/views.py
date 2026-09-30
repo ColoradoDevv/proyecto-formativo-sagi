@@ -315,6 +315,11 @@ class GroupViewSet(viewsets.ModelViewSet):
         # Agregar permiso al grupo
         group.permissions.add(permission)
 
+        # Fase 5a: si el rol cambió, las PENDIENTEs sobre él se invalidan (anti A→A+).
+        from .elevation import cancel_pending_for_group
+
+        cancel_pending_for_group(group.pk)
+
         # Invalidar caché de usuarios en este grupo (igual que
         # remove_permission: si no, el permiso nuevo tarda hasta 5 min
         # en reflejarse por PermissionService.CACHE_TIMEOUT).
@@ -357,6 +362,11 @@ class GroupViewSet(viewsets.ModelViewSet):
 
         # Remover permiso del grupo
         group.permissions.remove(permission)
+
+        # Fase 5a: invalida PENDIENTEs sobre este rol (anti A→A+).
+        from .elevation import cancel_pending_for_group
+
+        cancel_pending_for_group(group.pk)
 
         # Invalidar caché de usuarios en este grupo
         for user_group in group.user_groups.all():

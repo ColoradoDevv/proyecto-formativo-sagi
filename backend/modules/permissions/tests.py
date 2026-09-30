@@ -437,6 +437,205 @@ class HardRulesTestCase(TestCase):
         self.assertEqual(response.status_code, 400)
 
 
+class ElevationWorkflowTestCase(TestCase):
+    """Fase 5a: borrador → pendiente → aprobada/rechazada → activa."""
+
+    def setUp(self):
+        from rest_framework.test import APIClient
+
+        def make_user(email, group_name=None, password="x-Segura-123", **extra):
+            user = User.objects.create_user(
+                email=email, password=password,
+                first_name="Fase5", last_name="Test", **extra
+            )
+            if group_name:
+                PermissionService.add_user_to_group(user, group_name)
+            return user
+
+        self.primary = make_user("fase5_prim@x.co", None, is_superuser=True)
+        self.primary.is_primary_admin = True
+        self.primary.save(update_fields=["is_primary_admin"])
+        self.sadmin = make_user("fase5_sadmin@x.co", "SADMIN")
+        self.sadmin2 = make_user("fase5_sadmin2@x.co", "SADMIN")
+        self.admin = make_user("fase5_admin@x.co", "ADMIN")
+        self.client = APIClient()
+        self.base = "/api/permissions/roles/requests/"
+
+    def as_user(self, user):
+        self.client.force_authenticate(user=user)
+
+    def draft(self, user, action="CREATE_ROLE", group=None, payload=None, reason="prueba"):
+        self.as_user(user)
+        body = {"action": action, "payload": payload or {}, "reason": reason}
+        if group:
+            body["group"] = group.pk
+        return self.client.post(self.base, body, format="json")
+
+    def submit(self, solicitud_id):
+        return self.client.post(f"{self.base}{solicitud_id}/submit/", {}, format="json")
+
+    def test_flujo_completo_crear_rol(self):
+        """ADMIN pide rol N1 con plantilla INV → SADMIN aprueba → ACTIVA y con permisos."""
+        res = self.draft(
+            self.admin,
+            payload={"name": "Fase5N1", "description": "d", "level": 500, "template_id": Group.objects.get(name="INV").pk},
+        )
+        self.assertEqual(res.status_code, 201)
+        sid = res.data["id"]
+        res = self.submit(sid)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data["status"], "PENDIENTE")
+        self.assertEqual(res.data["security_level"], "N1")
+        self.as_user(self.sadmin)
+        res = self.client.post(
+            f"{self.base}{sid}/approve/",
+            {"password": "x-Segura-123"},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data["status"], "ACTIVA")
+        group = Group.objects.get(name="Fase5N1")
+        self.assertEqual(group.level, 500)
+        self.assertEqual(
+            group.permissions.count(), Group.objects.get(name="INV").permissions.count()
+        )
+
+    def test_no_autoaprobacion(self):
+        res = self.draft(self.sadmin, payload={"name": "Fase5Auto", "level": 500})
+        sid = res.data["id"]
+        self.submit(sid)
+        res = self.client.post(
+            f"{self.base}{sid}/approve/", {"password": "x-Segura-123"}, format="json"
+        )
+        self.assertEqual(res.status_code, 403)
+
+    def test_par_no_aprueba_n3(self):
+        """Rol nivel SADMIN con críticos → N3: otro SADMIN (par) ni siquiera
+        lo ve en su bandeja (404); solo el Primigenio lo ve y decide."""
+        res = self.draft(
+            self.sadmin,
+            payload={"name": "Fase5N3", "level": 100, "perm_codenames": ["manage_role_permissions"]},
+        )
+        sid = res.data["id"]
+        res = self.submit(sid)
+        self.assertEqual(res.data["security_level"], "N3")
+        self.as_user(self.sadmin2)
+        res = self.client.post(
+            f"{self.base}{sid}/approve/", {"password": "x-Segura-123"}, format="json"
+        )
+        self.assertEqual(res.status_code, 404)
+        res = self.client.get(f"{self.base}{sid}/", format="json")
+        self.assertEqual(res.status_code, 404)
+
+    def test_primigenio_aprueba_n3(self):
+        res = self.draft(
+            self.sadmin,
+            payload={"name": "Fase5N3b", "level": 100, "perm_codenames": ["manage_role_permissions"]},
+        )
+        sid = res.data["id"]
+        self.submit(sid)
+        self.as_user(self.primary)
+        res = self.client.post(
+            f"{self.base}{sid}/approve/", {"password": "x-Segura-123"}, format="json"
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data["status"], "ACTIVA")
+
+    def test_step_up_incorrecto(self):
+        res = self.draft(self.admin, payload={"name": "Fase5Step", "level": 500})
+        sid = res.data["id"]
+        self.submit(sid)
+        self.as_user(self.sadmin)
+        res = self.client.post(
+            f"{self.base}{sid}/approve/", {"password": "clave-mala"}, format="json"
+        )
+        self.assertEqual(res.status_code, 403)
+
+    def test_rechazo(self):
+        res = self.draft(self.admin, payload={"name": "Fase5Rech", "level": 500})
+        sid = res.data["id"]
+        self.submit(sid)
+        self.as_user(self.sadmin)
+        res = self.client.post(
+            f"{self.base}{sid}/reject/",
+            {"password": "x-Segura-123", "decision_reason": "No justificado."},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data["status"], "RECHAZADA")
+        self.assertFalse(Group.objects.filter(name="Fase5Rech").exists())
+
+    def test_expirada_no_se_aprueba(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        from modules.permissions.models import SolicitudCambioRol
+
+        res = self.draft(self.admin, payload={"name": "Fase5Exp", "level": 500})
+        sid = res.data["id"]
+        self.submit(sid)
+        SolicitudCambioRol.objects.filter(pk=sid).update(
+            expires_at=timezone.now() - timedelta(days=1)
+        )
+        self.as_user(self.sadmin)
+        res = self.client.post(
+            f"{self.base}{sid}/approve/", {"password": "x-Segura-123"}, format="json"
+        )
+        self.assertEqual(res.status_code, 400)
+
+    def test_tamper_invalida(self):
+        """Si el rol cambia tras enviar, aprobar se invalida."""
+        from modules.permissions.models import GroupPermission, Permission, SolicitudCambioRol
+
+        target = Group.objects.create(name="Fase5Tamper", level=500)
+        res = self.draft(
+            self.admin, action="UPDATE_ROLE_PERMS", group=target, payload={"add": [], "remove": []}
+        )
+        sid = res.data["id"]
+        self.submit(sid)
+        perm = Permission.objects.get(codename="view_user")
+        GroupPermission.objects.create(group=target, permission=perm)
+        self.as_user(self.sadmin)
+        res = self.client.post(
+            f"{self.base}{sid}/approve/", {"password": "x-Segura-123"}, format="json"
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(
+            SolicitudCambioRol.objects.get(pk=sid).status, "CANCELADA"
+        )
+
+    def test_recortes_solo_quitan(self):
+        res = self.draft(
+            self.admin, payload={"name": "Fase5Rec", "level": 500, "perm_codenames": ["view_user", "list_users"]}
+        )
+        sid = res.data["id"]
+        self.submit(sid)
+        self.as_user(self.sadmin)
+        res = self.client.post(
+            f"{self.base}{sid}/approve/",
+            {"password": "x-Segura-123", "perm_codenames": ["view_user", "delete_user"]},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 400)
+        res = self.client.post(
+            f"{self.base}{sid}/approve/",
+            {"password": "x-Segura-123", "perm_codenames": ["view_user"]},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 200)
+        group = Group.objects.get(name="Fase5Rec")
+        self.assertEqual(
+            set(group.permissions.values_list("codename", flat=True)), {"view_user"}
+        )
+
+    def test_limite_pendientes(self):
+        for i in range(5):
+            res = self.draft(self.admin, payload={"name": f"Fase5Lim{i}", "level": 500})
+            self.submit(res.data["id"])
+        res = self.draft(self.admin, payload={"name": "Fase5LimX", "level": 500})
+        res = self.submit(res.data["id"])
+        self.assertEqual(res.status_code, 400)
+
+
 class GroupHierarchyFieldsTestCase(TestCase):
     """Fase 2: level/is_system/template/ceiling y migración de los 4 grupos."""
 
