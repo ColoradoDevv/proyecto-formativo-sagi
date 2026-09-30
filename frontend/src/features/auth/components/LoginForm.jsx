@@ -5,6 +5,7 @@ import { loginSchemas } from "../schemas/loginSchemas";
 import { login } from "../services/authService";
 import { completeMfaSession, confirmMfa, enrollMfa, verifyMfa } from "../services/mfaService";
 import { Button, Input, SupportContact } from "@/shared"
+import RecoveryCodesPanel from "./RecoveryCodesPanel";
 
 // Pasos del login: credenciales → (código MFA | inscripción MFA | códigos de respaldo)
 const STEP_CREDENTIALS = "credentials";
@@ -311,16 +312,7 @@ export default function LoginForm() {
 
             {step === STEP_RECOVERY_CODES && (
             <div className="flex flex-col gap-4">
-                <p className="text-small text-text-muted text-center">
-                    Guárdalos ahora: no se muestran de nuevo y cada uno sirve una sola vez.
-                    Los necesitarás si pierdes tu celular.
-                </p>
-
-                <ul className="grid grid-cols-1 gap-1.5 rounded-xl border border-border bg-surface p-4 font-mono text-medium text-center">
-                    {recoveryCodes.map((code) => (
-                        <li key={code} className="tracking-[0.2em]">{code}</li>
-                    ))}
-                </ul>
+                <RecoveryCodesPanel codes={recoveryCodes} />
 
                 <Button
                     type="button"

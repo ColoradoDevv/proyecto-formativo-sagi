@@ -3,6 +3,7 @@ import { ShieldCheck, ShieldOff } from "lucide-react";
 import { TailChase } from "ldrs/react";
 import "ldrs/react/TailChase.css";
 import { Button, Input, showAlert } from "@/shared";
+import RecoveryCodesPanel from "@/features/auth/components/RecoveryCodesPanel";
 import { apiFetch, throwApiError } from "@/shared/services/api";
 import { completeMfaSession } from "@/features/auth/services/mfaService";
 
@@ -165,11 +166,7 @@ export default function MfaManagement() {
                         </>
                     )}
                     {recoveryCodes.length > 0 && (
-                        <ul className="grid grid-cols-1 gap-1.5 rounded-xl border border-border bg-surface p-4 font-mono text-medium text-center">
-                            {recoveryCodes.map((recovery) => (
-                                <li key={recovery} className="tracking-[0.2em]">{recovery}</li>
-                            ))}
-                        </ul>
+                        <RecoveryCodesPanel codes={recoveryCodes} />
                     )}
                     <div>
                         <Button type="submit" disabled={saving || !password || (qrPng && code.length !== 6)}>
