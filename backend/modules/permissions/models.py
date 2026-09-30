@@ -28,6 +28,13 @@ class Permission(models.Model):
         blank=True,
         help_text="Descripción detallada de qué permite este permiso"
     )
+    weight = models.PositiveIntegerField(
+        default=10,
+        help_text=(
+            "Peso de autoridad (Fase 1: solo métrica de análisis, no decide "
+            "jerarquía). Solo lo edita el Primigenio; cambios auditados."
+        )
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

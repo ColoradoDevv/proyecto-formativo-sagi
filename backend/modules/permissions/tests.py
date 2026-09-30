@@ -217,3 +217,34 @@ class GroupDestroyBlockedTestCase(TestCase):
         self.assertEqual(
             UserGroup.objects.filter(group=self.group).count(), 1
         )
+
+
+class PermissionWeightTestCase(TestCase):
+    """Fase 1: tiers de peso y autoridad calculada (solo métrica)."""
+
+    def test_weight_tiers(self):
+        from modules.permissions.authority import permission_weight_for
+
+        self.assertEqual(permission_weight_for("view_user"), 10)
+        self.assertEqual(permission_weight_for("list_users"), 10)
+        self.assertEqual(permission_weight_for("export_users"), 20)
+        self.assertEqual(permission_weight_for("create_user"), 30)
+        self.assertEqual(permission_weight_for("disable_user"), 50)
+        self.assertEqual(permission_weight_for("delete_user"), 100)
+        self.assertEqual(permission_weight_for("manage_role_permissions"), 150)
+        self.assertEqual(permission_weight_for("approve_elevation"), 150)
+
+    def test_authority_for_group_sums_weights(self):
+        p_view = Permission.objects.create(codename="fase1_view_x", name="Ver X")
+        p_del = Permission.objects.create(codename="fase1_delete_x", name="Borrar X")
+        p_view.weight = 10
+        p_view.save(update_fields=["weight"])
+        p_del.weight = 100
+        p_del.save(update_fields=["weight"])
+        group = Group.objects.create(name="Fase1Grupo")
+        group.permissions.add(p_view, p_del)
+        self.assertEqual(PermissionService.authority_for_group(group), 110)
+
+    def test_authority_empty_group_is_zero(self):
+        group = Group.objects.create(name="Fase1Vacio")
+        self.assertEqual(PermissionService.authority_for_group(group), 0)

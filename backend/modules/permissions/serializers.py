@@ -11,8 +11,8 @@ class PermissionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Permission
-        fields = ["id", "codename", "name", "description", "created_at", "updated_at"]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        fields = ["id", "codename", "name", "description", "weight", "created_at", "updated_at"]
+        read_only_fields = ["id", "weight", "created_at", "updated_at"]
 
 
 class GroupPermissionSerializer(serializers.ModelSerializer):
@@ -34,6 +34,12 @@ class GroupDetailSerializer(serializers.ModelSerializer):
 
     permissions = PermissionSerializer(many=True, read_only=True)
     group_permissions = GroupPermissionSerializer(many=True, read_only=True)
+    authority = serializers.SerializerMethodField()
+
+    def get_authority(self, obj):
+        from .services import PermissionService
+
+        return PermissionService.authority_for_group(obj)
 
     def validate_name(self, value):
         value = value.strip()
@@ -57,24 +63,31 @@ class GroupDetailSerializer(serializers.ModelSerializer):
             "is_active",
             "permissions",
             "group_permissions",
+            "authority",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "authority", "created_at", "updated_at"]
 
 
 class GroupListSerializer(serializers.ModelSerializer):
     """Serializer simplificado para listado de grupos"""
 
     permission_count = serializers.SerializerMethodField()
+    authority = serializers.SerializerMethodField()
 
     def get_permission_count(self, obj):
         return obj.permissions.count()
 
+    def get_authority(self, obj):
+        from .services import PermissionService
+
+        return PermissionService.authority_for_group(obj)
+
     class Meta:
         model = Group
-        fields = ["id", "name", "description", "permission_count", "is_active", "created_at"]
-        read_only_fields = ["id", "created_at"]
+        fields = ["id", "name", "description", "permission_count", "authority", "is_active", "created_at"]
+        read_only_fields = ["id", "authority", "created_at"]
 
 
 class UserPermissionSerializer(serializers.ModelSerializer):
