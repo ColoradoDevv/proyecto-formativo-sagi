@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CloudAlert, Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { CloudAlert, Eye, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { TailChase } from "ldrs/react";
 import "ldrs/react/TailChase.css";
 import { Button, DataTable, IconButton, Input, Modal, Switch, showAlert, cancelAlert } from "@/shared";
@@ -128,6 +128,36 @@ export default function GroupManagement({ onChanged }) {
         { accessorKey: "name", header: "Nombre" },
         { accessorKey: "description", header: "Descripción" },
         { accessorKey: "permission_count", header: "Permisos" },
+        {
+            // Autoridad estimada vs techo del nivel (Fase 1-2: solo métrica).
+            // Si supera el techo, alerta visual: revisar en Fase 4/5.
+            id: "authority",
+            header: "Autoridad",
+            enableSorting: false,
+            enableColumnFilter: false,
+            cell: ({ row }) => {
+                const group = row.original;
+                const overCeiling = group.authority_ceiling != null
+                    && (group.authority ?? 0) > group.authority_ceiling;
+                return (
+                    <span
+                        className="inline-flex items-center gap-1.5 tabular-nums"
+                        title={overCeiling
+                            ? `Autoridad ${group.authority} supera el techo ${group.authority_ceiling} del nivel`
+                            : `Autoridad estimada: ${group.authority ?? "—"}`
+                        }
+                    >
+                        {overCeiling && (
+                            <TriangleAlert size={14} style={{ color: "var(--color-warning)" }} />
+                        )}
+                        <span style={overCeiling ? { color: "var(--color-warning)", fontWeight: 600 } : undefined}>
+                            {group.authority ?? "—"}
+                            {group.authority_ceiling != null ? ` / ${group.authority_ceiling}` : ""}
+                        </span>
+                    </span>
+                );
+            },
+        },
         {
             accessorFn: (row) => row.is_active ? "Activo" : "Inactivo",
             id: "is_active",

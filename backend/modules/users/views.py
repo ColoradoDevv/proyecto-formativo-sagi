@@ -971,14 +971,27 @@ class UserListCreateView(AuditMixin, generics.ListCreateAPIView):
         # GET (list) — cualquier usuario autenticado puede listar
         return [HasPermission("view_user")]
 
+    def get_queryset(self):
+        # Fase 3: cada rol lista su mismo nivel o inferiores.
+        from modules.permissions.services import PermissionService
+
+        return PermissionService.visible_users_queryset(self.request.user, super().get_queryset())
+
 
 class UserDetailView(AuditMixin, generics.RetrieveUpdateDestroyAPIView):
     # Detalle: obtiene, actualiza y elimina un usuario.
     # Usa all_objects para que un administrador pueda acceder al registro
     # aunque esté marcado como eliminado (p.ej. para restaurarlo o auditarlo).
     # El primigenio queda excluido: no es visible ni siquiera por detalle directo.
+    # Fase 3: además solo se ve el mismo nivel o inferiores.
     queryset = User.all_objects.filter(is_primary_admin=False)
     serializer_class = UserSerializer
+
+    def get_queryset(self):
+        # Fase 3: detalle visible solo mismo nivel o inferior (si no, 404).
+        from modules.permissions.services import PermissionService
+
+        return PermissionService.visible_users_queryset(self.request.user, super().get_queryset())
 
     # Campos que no se pueden tocar en el admin primigenio bajo ninguna circunstancia.
     _PRIMARY_ADMIN_PROTECTED_FIELDS = {"is_active", "is_staff", "is_superuser", "is_primary_admin"}
@@ -1034,6 +1047,12 @@ class UserTrashListView(generics.ListAPIView):
     # Lista de usuarios eliminados (papelera). El primigenio tampoco aparece aquí.
     queryset = User.all_objects.filter(is_deleted=True, is_primary_admin=False).order_by("-deleted_at")
     serializer_class = UserTrashSerializer
+
+    def get_queryset(self):
+        # Fase 3: papelera visible solo mismo nivel o inferior.
+        from modules.permissions.services import PermissionService
+
+        return PermissionService.visible_users_queryset(self.request.user, super().get_queryset())
 
     def get_permissions(self):
         return [HasPermission("view_user")]
