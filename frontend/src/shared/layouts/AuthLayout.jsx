@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import bgLogin from "@/assets/images/auth/bg-login.png";
 import senaLogoVerde from "@/assets/images/sena/logo-sena-verde.svg";
@@ -7,7 +8,16 @@ import senaLogoBlanco from "@/assets/images/sena/logo-sena-blanco.svg";
 // Centraliza el fondo, la tarjeta glassmorphism, el logo SENA y la ilustracion;
 // el formulario concreto (login, recuperar contraseña, etc.) llega como children.
 export default function AuthLayout({ children }) {
-    return (
+    // Modo compacto: los pasos altos del MFA (QR, códigos) ocultan el
+    // encabezado SAGI para no desbordar la tarjeta; LoginForm lo pide
+    // con el evento "sagi:auth-compact" y se restaura al salir del paso.
+    const [compact, setCompact] = useState(false);
+
+    useEffect(() => {
+        const sync = (event) => setCompact(Boolean(event.detail?.compact));
+        window.addEventListener("sagi:auth-compact", sync);
+        return () => window.removeEventListener("sagi:auth-compact", sync);
+    }, []);    return (
         <div className="relative w-full h-svh overflow-hidden flex items-center justify-center p-4">
 
             {/* Fondo */}
@@ -52,6 +62,7 @@ export default function AuthLayout({ children }) {
                 {/* ── Lado derecho: formulario fijo y centrado (sin scroll) ── */}
                 <div className="relative w-full flex-1 min-h-0 grid items-center justify-center px-4 py-3 sm:p-6 overflow-hidden">
                     <div className="w-full max-w-md min-w-0 m-auto px-4 py-4 sm:px-8 sm:py-10">
+                        {!compact && (
                         <div className="text-center mb-4 sm:mb-8">
                             <h1 className="text-h1 font-heading font-bold text-text-primary select-none pb-2 sm:pb-4">
                                 SAGI
@@ -60,6 +71,7 @@ export default function AuthLayout({ children }) {
                                 Sistema Administrativo de Gestión de Inventarios — SENA
                             </p>
                         </div>
+                        )}
                         {children ?? <Outlet />}
                     </div>
                 </div>

@@ -1,6 +1,6 @@
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, Asterisk, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { loginSchemas } from "../schemas/loginSchemas";
 import { login } from "../services/authService";
 import { completeMfaSession, confirmMfa, enrollMfa, verifyMfa } from "../services/mfaService";
@@ -34,6 +34,16 @@ export default function LoginForm() {
     const [useRecovery, setUseRecovery] = useState(false);
     const [qrPng, setQrPng] = useState("");
     const [recoveryCodes, setRecoveryCodes] = useState([]);
+
+    // Pasos altos del MFA (QR, códigos): pedir a AuthLayout que oculte el
+    // encabezado SAGI para no desbordar la tarjeta; se restaura al salir.
+    useEffect(() => {
+        const compact = step === STEP_ENROLL || step === STEP_RECOVERY_CODES;
+        window.dispatchEvent(new CustomEvent("sagi:auth-compact", { detail: { compact } }));
+        return () => {
+            window.dispatchEvent(new CustomEvent("sagi:auth-compact", { detail: { compact: false } }));
+        };
+    }, [step]);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
