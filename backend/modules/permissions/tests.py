@@ -615,7 +615,7 @@ class ElevationWorkflowTestCase(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.data["status"], "PENDIENTE")
         self.assertEqual(res.data["security_level"], "N1")
-        self.as_user(self.sadmin)
+        self.as_user(self.primary)
         res = self.client.post(
             f"{self.base}{sid}/approve/",
             {"password": "x-Segura-123"},
@@ -674,7 +674,7 @@ class ElevationWorkflowTestCase(TestCase):
         res = self.draft(self.admin, payload={"name": "Fase5Step", "level": 500})
         sid = res.data["id"]
         self.submit(sid)
-        self.as_user(self.sadmin)
+        self.as_user(self.primary)
         res = self.client.post(
             f"{self.base}{sid}/approve/", {"password": "clave-mala"}, format="json"
         )
@@ -684,7 +684,7 @@ class ElevationWorkflowTestCase(TestCase):
         res = self.draft(self.admin, payload={"name": "Fase5Rech", "level": 500})
         sid = res.data["id"]
         self.submit(sid)
-        self.as_user(self.sadmin)
+        self.as_user(self.primary)
         res = self.client.post(
             f"{self.base}{sid}/reject/",
             {"password": "x-Segura-123", "decision_reason": "No justificado."},
@@ -705,7 +705,7 @@ class ElevationWorkflowTestCase(TestCase):
         SolicitudCambioRol.objects.filter(pk=sid).update(
             expires_at=timezone.now() - timedelta(days=1)
         )
-        self.as_user(self.sadmin)
+        self.as_user(self.primary)
         res = self.client.post(
             f"{self.base}{sid}/approve/", {"password": "x-Segura-123"}, format="json"
         )
@@ -723,7 +723,7 @@ class ElevationWorkflowTestCase(TestCase):
         self.submit(sid)
         perm = Permission.objects.get(codename="view_user")
         GroupPermission.objects.create(group=target, permission=perm)
-        self.as_user(self.sadmin)
+        self.as_user(self.primary)
         res = self.client.post(
             f"{self.base}{sid}/approve/", {"password": "x-Segura-123"}, format="json"
         )
@@ -738,7 +738,7 @@ class ElevationWorkflowTestCase(TestCase):
         )
         sid = res.data["id"]
         self.submit(sid)
-        self.as_user(self.sadmin)
+        self.as_user(self.primary)
         res = self.client.post(
             f"{self.base}{sid}/approve/",
             {"password": "x-Segura-123", "perm_codenames": ["view_user", "delete_user"]},
@@ -765,7 +765,7 @@ class ElevationWorkflowTestCase(TestCase):
         self.assertEqual(res.status_code, 400)
 
     def test_notifica_al_enviar_y_decidir(self):
-        """Fase 5b: al enviar avisa a elegibles; al decidir avisa al solicitante."""
+        """Solo el Primigenio es avisado al enviar; el solicitante al decidir."""
         from django.core import mail
 
         res = self.draft(self.admin, payload={"name": "Fase5Mail", "level": 500})
@@ -773,8 +773,8 @@ class ElevationWorkflowTestCase(TestCase):
         mail.outbox = []
         self.submit(sid)
         destinatarios = sorted({m.to[0] for m in mail.outbox})
-        self.assertIn("fase5_sadmin@x.co", destinatarios)
-        self.as_user(self.sadmin)
+        self.assertEqual(destinatarios, ["fase5_prim@x.co"])
+        self.as_user(self.primary)
         mail.outbox = []
         self.client.post(
             f"{self.base}{sid}/approve/", {"password": "x-Segura-123"}, format="json"

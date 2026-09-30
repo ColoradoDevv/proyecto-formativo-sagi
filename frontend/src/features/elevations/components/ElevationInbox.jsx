@@ -43,7 +43,7 @@ function levelChip(level) {
 }
 
 export default function ElevationInbox() {
-    const { user, isSuper, can } = usePermissions();
+    const { user, isPrimaryAdmin } = usePermissions();
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -81,7 +81,7 @@ export default function ElevationInbox() {
     const canDecideHint = (solicitud) =>
         solicitud.status === "PENDIENTE"
         && solicitud.requester_email !== user?.email
-        && (isSuper || can("approve_elevation"));
+        && Boolean(isPrimaryAdmin);
 
     const openDetail = (solicitud) => setSelected(solicitud);
 
