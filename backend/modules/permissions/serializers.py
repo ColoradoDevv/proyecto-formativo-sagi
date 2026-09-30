@@ -11,8 +11,8 @@ class PermissionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Permission
-        fields = ["id", "codename", "name", "description", "created_at", "updated_at"]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        fields = ["id", "codename", "name", "description", "weight", "created_at", "updated_at"]
+        read_only_fields = ["id", "weight", "created_at", "updated_at"]
 
 
 class GroupPermissionSerializer(serializers.ModelSerializer):
@@ -25,7 +25,7 @@ class GroupPermissionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GroupPermission
-        fields = ["id", "permission", "permission_codename", "permission_name", "assigned_at"]
+        fields = ["id", "permission", "permission_codename", "permission_name", "scope", "assigned_at"]
         read_only_fields = ["id", "assigned_at"]
 
 
@@ -34,9 +34,20 @@ class GroupDetailSerializer(serializers.ModelSerializer):
 
     permissions = PermissionSerializer(many=True, read_only=True)
     group_permissions = GroupPermissionSerializer(many=True, read_only=True)
+    authority = serializers.SerializerMethodField()
+    template_role = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    def get_authority(self, obj):
+        from .services import PermissionService
+
+        return PermissionService.authority_for_group(obj)
 
     def validate_name(self, value):
-        value = value.strip()
+        import unicodedata
+
+        # Fase 4 §6.6: normaliza (NFKC + trim) contra homoglifos
+        # ("Súper Admin" con caracteres raros) antes de validar.
+        value = unicodedata.normalize("NFKC", value).strip()
         if value.upper() == SYSTEM_GROUP_NAME:
             raise serializers.ValidationError("Este es un grupo reservado del sistema.")
         # Unicidad insensible a mayúsculas/minúsculas: evita que "Admin" y
@@ -55,26 +66,42 @@ class GroupDetailSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "is_active",
+            "level",
+            "is_system",
+            "template_role",
+            "authority_ceiling",
             "permissions",
             "group_permissions",
+            "authority",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        # Fase 2: jerarquía visible pero no editable por API (anti mass
+        # assignment desde el día uno; la edición con guardias llega en Fase 4).
+        read_only_fields = [
+            "id", "level", "is_system", "template_role",
+            "authority_ceiling", "authority", "created_at", "updated_at",
+        ]
 
 
 class GroupListSerializer(serializers.ModelSerializer):
     """Serializer simplificado para listado de grupos"""
 
     permission_count = serializers.SerializerMethodField()
+    authority = serializers.SerializerMethodField()
 
     def get_permission_count(self, obj):
         return obj.permissions.count()
 
+    def get_authority(self, obj):
+        from .services import PermissionService
+
+        return PermissionService.authority_for_group(obj)
+
     class Meta:
         model = Group
-        fields = ["id", "name", "description", "permission_count", "is_active", "created_at"]
-        read_only_fields = ["id", "created_at"]
+        fields = ["id", "name", "description", "permission_count", "authority", "authority_ceiling", "level", "is_system", "is_active", "created_at"]
+        read_only_fields = ["id", "authority", "authority_ceiling", "level", "is_system", "created_at"]
 
 
 class UserPermissionSerializer(serializers.ModelSerializer):
@@ -96,6 +123,7 @@ class UserPermissionSerializer(serializers.ModelSerializer):
             "permission_codename",
             "permission_name",
             "reason",
+            "scope",
             "assigned_at",
         ]
         read_only_fields = ["id", "assigned_at"]
@@ -118,9 +146,11 @@ class AssignPermissionSerializer(serializers.Serializer):
 
     permission_codename = serializers.CharField(max_length=100)
     reason = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    # Fase 6: alcance (SELF/ALL). Default SELF (mínimo privilegio).
+    scope = serializers.ChoiceField(choices=["SELF", "ALL"], required=False, default="SELF")
 
     class Meta:
-        fields = ["permission_codename", "reason"]
+        fields = ["permission_codename", "reason", "scope"]
 
 
 class AssignGroupSerializer(serializers.Serializer):

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { TailChase } from "ldrs/react";
 import { CloudAlert, Plus, Download } from "lucide-react";
 
 import { Button, MODULE_PERMS, Notice, usePermissions } from "@/shared";
@@ -8,6 +7,7 @@ import DataTable from "@/shared/components/DataTable";
 import { RmColumns } from "../../table/RmColumns";
 import { returnablesReportConfig } from "../../reports/returnablesReportConfig.js";
 import useRMs from "../../hooks/useRMs";
+import LoadingState from "@/shared/components/LoadingState";
 
 export default function RmListPage() {
     const navigate = useNavigate();
@@ -20,11 +20,7 @@ export default function RmListPage() {
 
 
     if (loading)
-        return (
-            <div className="h-full flex items-center justify-center">
-                <TailChase size="40" speed="1.75" color="var(--semantic-text-primary)" />
-            </div>
-        );
+        return <LoadingState label="Cargando materiales…" />;
 
     if (error)
         return (

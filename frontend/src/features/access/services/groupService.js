@@ -44,12 +44,14 @@ export async function deleteGroup(groupId) {
     if (!response.ok) await throwApiError(response);
 }
 
-// METODO POST (asignar un permiso a un grupo)
-export async function assignGroupPermission(groupId, permissionCodename) {
+// METODO POST (asignar un permiso a un grupo; scope opcional, default SELF)
+export async function assignGroupPermission(groupId, permissionCodename, scope) {
+    const body = { permission_codename: permissionCodename };
+    if (scope) body.scope = scope;
     const response = await apiFetch(`/api/permissions/groups/${groupId}/assign_permission/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ permission_codename: permissionCodename }),
+        body: JSON.stringify(body),
     });
     if (!response.ok) await throwApiError(response);
     return response.json();

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Check, Eye, EyeOff, KeyRound, ShieldCheck } from "lucide-react";
 import { TailChase } from "ldrs/react";
 import { Button, Input, Modal, showAlert } from "@/shared";
+import { useBusyProgress } from "@/shared/hooks/useBusyProgress";
 import { requestPasswordChangeOtp, confirmPasswordChange } from "../services/userService";
 
 // ── Política de contraseña (espejo del backend:
@@ -79,6 +80,7 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
     const [showCurrent, setShowCurrent]     = useState(false);
     const [showNew, setShowNew]             = useState(false);
     const [showConfirm, setShowConfirm]     = useState(false);
+    const { busyMessage, startBusyProgress, stopBusyProgress } = useBusyProgress();
 
     const reset = () => {
         setStep(STEP_FORM);
@@ -104,6 +106,7 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
         e.preventDefault();
         setErrors(EMPTY_ERRORS);
         setLoading(true);
+        startBusyProgress(["Enviando código a tu correo…"]);
 
         try {
             await requestPasswordChangeOtp({
@@ -124,6 +127,7 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
                 });
             }
         } finally {
+            stopBusyProgress();
             setLoading(false);
         }
     };
@@ -230,12 +234,12 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
                 <Button type="button" variant="secondary" onClick={handleClose} disabled={loading}>
                     Cancelar
                 </Button>
-                <Button type="submit" disabled={loading}>
-                    {loading
-                        ? <TailChase size="16" speed="1.75" color="currentColor" />
-                        : <><KeyRound size={15} /> Enviar código</>
-                    }
-                </Button>
+                    <Button type="submit" disabled={loading}>
+                        {loading
+                            ? <><TailChase size={16} speed={1.75} color="currentColor" /> {busyMessage || "Enviando..."}</>
+                            : <><KeyRound size={15} /> Enviar código</>
+                        }
+                    </Button>
             </div>
         </form>
     );

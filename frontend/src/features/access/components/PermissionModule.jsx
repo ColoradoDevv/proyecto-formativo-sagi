@@ -1,6 +1,7 @@
 import { Pencil } from "lucide-react";
 import { Checkbox, AccordionItem, Button, IconButton } from "@/shared";
 import { PERMISSION_MODULES } from "../constants/permissionModules";
+import { SCOPED_PERMISSIONS, SCOPE_OPTIONS, SCOPE_SELF } from "../constants/scopes";
 
 // Contador "X/Y" mostrado junto al título de cada módulo.
 function ModuleHeader({ title, active, total }) {
@@ -32,9 +33,15 @@ export default function PermissionModule({
   onSave,
 }) {
   const target = selectedGroup || selectedUser;
+  // Alcance solo en flujo de grupos (Fase 6): las asignaciones directas
+  // a usuarios usan SELF. El borrador lleva {codename, scope?}.
+  const showScope = Boolean(selectedGroup);
 
   const hasPermission = (codename) =>
     permissionsDraft.some((permission) => permission.codename === codename);
+
+  const scopeOf = (codename) =>
+    permissionsDraft.find((permission) => permission.codename === codename)?.scope ?? SCOPE_SELF;
 
   const countActive = (permissions) =>
     permissions.filter((permission) => hasPermission(permission.codename)).length;
@@ -47,13 +54,21 @@ export default function PermissionModule({
       if (!checked) {
         return prev.filter((permission) => permission.codename !== codename);
       }
-      const next = [...prev, { codename }];
+      const next = [...prev, { codename, scope: SCOPE_SELF }];
       if (module?.exclusive) {
         const peerCodes = new Set(module.permissions.map((p) => p.codename));
         return next.filter((p) => p.codename === codename || !peerCodes.has(p.codename));
       }
       return next;
     });
+  }
+
+  function handleScopeChange(codename, scope) {
+    setPermissionsDraft((prev) =>
+      prev.map((permission) =>
+        permission.codename === codename ? { ...permission, scope } : permission
+      )
+    );
   }
 
   if (!target) {
@@ -105,15 +120,29 @@ export default function PermissionModule({
             )}
             <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 pt-4">
               {module.permissions.map(({ codename, label }) => (
-                <Checkbox
-                  key={codename}
-                  id={codename}
-                  name={codename}
-                  label={label}
-                  checked={hasPermission(codename)}
-                  disable={!isEditing}
-                  onChange={(e) => handlePermissionChange(codename, e.target.checked, module)}
-                />
+                <div key={codename} className="flex items-center gap-2 min-w-0">
+                  <Checkbox
+                    id={codename}
+                    name={codename}
+                    label={label}
+                    checked={hasPermission(codename)}
+                    disable={!isEditing}
+                    onChange={(e) => handlePermissionChange(codename, e.target.checked, module)}
+                  />
+                  {showScope && SCOPED_PERMISSIONS.has(codename) && hasPermission(codename) && (
+                    <select
+                      aria-label={`Alcance de ${label}`}
+                      value={scopeOf(codename)}
+                      disabled={!isEditing}
+                      onChange={(e) => handleScopeChange(codename, e.target.value)}
+                      className="ml-auto shrink-0 rounded-md border border-border bg-surface px-1.5 py-1 text-small text-text-secondary"
+                    >
+                      {SCOPE_OPTIONS.map((option) => (
+                        <option key={option.id} value={option.id}>{option.label}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               ))}
             </div>
           </AccordionItem>

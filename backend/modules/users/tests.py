@@ -92,3 +92,130 @@ class UserSerializerTests(TestCase):
         self.assertIn("deactivation_reason", serializer.errors)
 
 # Create your tests here.
+
+
+class MFATestCase(TestCase):
+    """Fase 7: TOTP en login (puerta, inscripción, verificación, respaldo)."""
+
+    @classmethod
+    def setUpClass(cls):
+        import os
+
+        from cryptography.fernet import Fernet
+
+        os.environ["MFA_ENCRYPTION_KEY"] = Fernet.generate_key().decode()
+        super().setUpClass()
+
+    def setUp(self):
+        from rest_framework.test import APIClient
+
+        self.creator = User.objects.create_user(
+            email="mfa_admin@x.co", password="x-Segura-123",
+            first_name="M", last_name="F", is_superuser=True,
+        )
+        self.plain = User.objects.create_user(
+            email="mfa_plain@x.co", password="x-Segura-123",
+            first_name="M", last_name="F",
+        )
+        self.client = APIClient()
+
+    def login(self, email, password="x-Segura-123"):
+        return self.client.post(
+            "/api/users/login/", {"email": email, "password": password}, format="json"
+        )
+
+    def enroll_and_confirm(self, mfa_token):
+        import pyotp
+
+        from modules.users.mfa import decrypt_secret, mfa_device_for
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {mfa_token}")
+        res = self.client.post("/api/users/me/mfa/enroll/", {}, format="json")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("qr_png", res.data)
+        user = User.objects.get(email="mfa_admin@x.co")
+        secret = decrypt_secret(mfa_device_for(user))
+        code = pyotp.TOTP(secret).now()
+        res = self.client.post("/api/users/me/mfa/confirm/", {"code": code}, format="json")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(res.data["recovery_codes"]), 10)
+        return res.data
+
+    def test_superuser_pide_mfa(self):
+        res = self.login("mfa_admin@x.co")
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.data["mfa_required"])
+        self.assertTrue(res.data["enroll_required"])
+        self.assertNotIn("token", res.data)
+
+    def test_usuario_comun_tambien_pide_mfa(self):
+        # Política: 2FA para todos los roles, sin excepciones por nivel.
+        res = self.login("mfa_plain@x.co")
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.data["mfa_required"])
+        self.assertTrue(res.data["enroll_required"])
+        self.assertNotIn("token", res.data)
+
+    def test_temp_token_sin_acceso_api(self):
+        mfa_token = self.login("mfa_admin@x.co").data["mfa_token"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {mfa_token}")
+        res = self.client.get("/api/users/me/")
+        self.assertEqual(res.status_code, 401)
+
+    def test_flujo_completo_y_verify(self):
+        data = self.enroll_and_confirm(self.login("mfa_admin@x.co").data["mfa_token"])
+        session_token = data["token"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {session_token}")
+        res = self.client.get("/api/users/me/")
+        self.assertEqual(res.status_code, 200)
+        # Segundo login exige código (ya inscrito).
+        mfa_token = self.login("mfa_admin@x.co").data["mfa_token"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {mfa_token}")
+        res = self.client.post("/api/users/me/mfa/verify/", {"code": "000000"}, format="json")
+        self.assertEqual(res.status_code, 401)
+
+    def test_recovery_un_solo_uso(self):
+        import pyotp
+
+        from modules.users.mfa import decrypt_secret, mfa_device_for
+
+        data = self.enroll_and_confirm(self.login("mfa_admin@x.co").data["mfa_token"])
+        code = data["recovery_codes"][0]
+        mfa_token = self.login("mfa_admin@x.co").data["mfa_token"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {mfa_token}")
+        res = self.client.post(
+            "/api/users/me/mfa/verify/", {"recovery_code": code}, format="json"
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("token", res.data)
+        mfa_token = self.login("mfa_admin@x.co").data["mfa_token"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {mfa_token}")
+        res = self.client.post(
+            "/api/users/me/mfa/verify/", {"recovery_code": code}, format="json"
+        )
+        self.assertEqual(res.status_code, 401)
+
+    def test_status_y_disable_bloqueado(self):
+        # El 2FA es obligatorio: desactivar responde 403 y sigue activo.
+        data = self.enroll_and_confirm(self.login("mfa_admin@x.co").data["mfa_token"])
+        session = data["token"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {session}")
+        res = self.client.get("/api/users/me/mfa/status/")
+        self.assertTrue(res.data["enabled"])
+        self.assertTrue(res.data["required"])
+        res = self.client.post(
+            "/api/users/me/mfa/disable/", {"password": "x-Segura-123"}, format="json"
+        )
+        self.assertEqual(res.status_code, 403)
+        res = self.client.get("/api/users/me/mfa/status/")
+        self.assertTrue(res.data["enabled"])
+
+    def test_reset_por_consola(self):
+        from django.core.management import call_command
+
+        self.enroll_and_confirm(self.login("mfa_admin@x.co").data["mfa_token"])
+        call_command("mfa_reset", "mfa_admin@x.co")
+        from modules.users.mfa import mfa_device_for
+
+        user = User.objects.get(email="mfa_admin@x.co")
+        self.assertIsNone(mfa_device_for(user))

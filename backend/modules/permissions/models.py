@@ -28,6 +28,13 @@ class Permission(models.Model):
         blank=True,
         help_text="Descripción detallada de qué permite este permiso"
     )
+    weight = models.PositiveIntegerField(
+        default=10,
+        help_text=(
+            "Peso de autoridad (Fase 1: solo métrica de análisis, no decide "
+            "jerarquía). Solo lo edita el Primigenio; cambios auditados."
+        )
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -65,6 +72,36 @@ class Group(models.Model):
         default=True,
         help_text="Indica si el grupo está activo. Los grupos inactivos no pueden recibir nuevos usuarios."
     )
+    # ── Fase 2 del sistema dinámico de roles ──────────────────────────
+    # level: posición jerárquica explícita. MENOR número = MÁS poder.
+    # Con huecos (100, 200, ...) para insertar roles intermedios después.
+    # Nunca se calcula a partir de los pesos.
+    level = models.PositiveIntegerField(
+        default=900,
+        help_text="Nivel jerárquico (menor = más poder). Roles nuevos nacen abajo (900)."
+    )
+    # is_system: roles del sistema (SADMIN/ADMIN/INST/INV). Inmutables por API (Fase 4).
+    is_system = models.BooleanField(
+        default=False,
+        help_text="Si es rol de sistema: inmutable por API. Reemplaza el nombre hardcodeado."
+    )
+    # template_role: solo referencia al rol usado como PLANTILLA al crear
+    # (copia de permisos, sin vínculo vivo). Solo informativo.
+    template_role = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="templated_roles",
+        help_text="Rol usado como plantilla al crear este (referencia, sin herencia viva)."
+    )
+    # authority_ceiling: techo de autoridad del nivel. Vacío = sin techo.
+    authority_ceiling = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Techo de autoridad estimada del nivel. Vacío = sin techo."
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -83,6 +120,17 @@ class GroupPermission(models.Model):
     Relación many-to-many explícita entre grupos y permisos.
     Permite auditar cuándo se asignó cada permiso a cada grupo.
     """
+
+    # Alcance del permiso dentro del grupo (Fase 6): lo propio o todo.
+    # Solo aplica a permisos con objeto (préstamos, asignaciones de tareas);
+    # en el resto se ignora (= todo).
+    SCOPE_SELF = "SELF"
+    SCOPE_ALL = "ALL"
+    SCOPE_CHOICES = [
+        (SCOPE_SELF, "Lo propio"),
+        (SCOPE_ALL, "Todo"),
+    ]
+
     group = models.ForeignKey(
         Group,
         on_delete=models.CASCADE,
@@ -92,6 +140,12 @@ class GroupPermission(models.Model):
         Permission,
         on_delete=models.CASCADE,
         related_name='group_permissions'
+    )
+    scope = models.CharField(
+        max_length=4,
+        choices=SCOPE_CHOICES,
+        default=SCOPE_SELF,
+        help_text="Alcance: SELF (lo propio) o ALL (todo). Default seguro.",
     )
     assigned_at = models.DateTimeField(auto_now_add=True)
 
@@ -124,6 +178,12 @@ class UserPermission(models.Model):
     reason = models.TextField(
         blank=True,
         help_text="Razón por la cual se asignó este permiso específico"
+    )
+    scope = models.CharField(
+        max_length=4,
+        choices=GroupPermission.SCOPE_CHOICES,
+        default=GroupPermission.SCOPE_SELF,
+        help_text="Alcance: SELF (lo propio) o ALL (todo). Default seguro.",
     )
 
     def __str__(self):
@@ -161,3 +221,91 @@ class UserGroup(models.Model):
         unique_together = ('user', 'group')
         verbose_name = 'Membresía de Usuario'
         verbose_name_plural = 'Membresías de Usuario'
+
+
+class SolicitudCambioRol(models.Model):
+    """Workflow de aprobación de elevaciones (Fase 5a del sistema dinámico).
+
+    Estados: BORRADOR → PENDIENTE → APROBADA | RECHAZADA | EXPIRADA |
+    CANCELADA → ACTIVA. La solicitud guarda snapshot + hash del contenido:
+    si el rol cambia después de enviar, la solicitud se invalida.
+    """
+
+    ACTION_CREATE_ROLE = "CREATE_ROLE"
+    ACTION_UPDATE_ROLE_PERMS = "UPDATE_ROLE_PERMS"
+    ACTION_CHOICES = [
+        (ACTION_CREATE_ROLE, "Crear rol"),
+        (ACTION_UPDATE_ROLE_PERMS, "Modificar permisos de rol"),
+    ]
+
+    STATUS_BORRADOR = "BORRADOR"
+    STATUS_PENDIENTE = "PENDIENTE"
+    STATUS_APROBADA = "APROBADA"
+    STATUS_RECHAZADA = "RECHAZADA"
+    STATUS_EXPIRADA = "EXPIRADA"
+    STATUS_CANCELADA = "CANCELADA"
+    STATUS_ACTIVA = "ACTIVA"
+    STATUS_CHOICES = [
+        (STATUS_BORRADOR, "Borrador"),
+        (STATUS_PENDIENTE, "Pendiente"),
+        (STATUS_APROBADA, "Aprobada"),
+        (STATUS_RECHAZADA, "Rechazada"),
+        (STATUS_EXPIRADA, "Expirada"),
+        (STATUS_CANCELADA, "Cancelada"),
+        (STATUS_ACTIVA, "Activa"),
+    ]
+
+    # Límite de solicitudes abiertas por usuario (anti-spam) y vigencia.
+    MAX_PENDING_PER_USER = 5
+    EXPIRY_DAYS = 7
+
+    requester = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="solicitudes_creadas",
+        help_text="Quien propone la elevación. No puede aprobar la propia.",
+    )
+    approver = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="solicitudes_decididas",
+        help_text="Quien aprobó o rechazó. Debe ser estrictamente superior.",
+    )
+    action = models.CharField(max_length=24, choices=ACTION_CHOICES)
+    group = models.ForeignKey(
+        Group,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="solicitudes",
+        help_text="Rol objetivo (null en CREATE_ROLE).",
+    )
+    # payload: CREATE → {name, description, level, template_id?, perm_codenames?};
+    # UPDATE → {add: [], remove: [], snapshot: [] (códigos resultantes al enviar)}.
+    payload = models.JSONField(default=dict)
+    content_hash = models.CharField(
+        max_length=64, blank=True, default="",
+        help_text="SHA256 canónico del contenido al enviar (anti A→A+).",
+    )
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=STATUS_BORRADOR)
+    security_level = models.CharField(
+        max_length=2, blank=True, default="",
+        help_text="N1/N2/N3 calculado al enviar.",
+    )
+    reason = models.TextField(blank=True, help_text="Motivo de la solicitud.")
+    decision_reason = models.TextField(blank=True, help_text="Motivo de la decisión.")
+    expires_at = models.DateTimeField(null=True, blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Solicitud #{self.pk} {self.action} ({self.status})"
+
+    class Meta:
+        db_table = "solicitudes_cambio_rol"
+        verbose_name = "Solicitud de cambio de rol"
+        verbose_name_plural = "Solicitudes de cambio de rol"
+        ordering = ["-created_at"]

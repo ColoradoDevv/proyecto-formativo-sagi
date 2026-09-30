@@ -228,7 +228,11 @@ export async function apiFetch(url, options = {}) {
         if (!alreadyExpired) {
             // Solo disparamos el evento la primera vez que detectamos el 401
             // (las peticiones paralelas no deben abrir el modal varias veces).
-            window.dispatchEvent(new CustomEvent("sia:session-expired"));
+            // Causa "expired": el token murió (8h) o fue reemplazado; la
+            // inactividad (1h) avisa con su propia causa desde el hook.
+            window.dispatchEvent(new CustomEvent("sia:session-expired", {
+                detail: { cause: "expired" },
+            }));
         }
     }
 

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, showAlert, cancelAlert, IconButton, AccordionItem, isFormDirty, useDirtyForm, useDirtyFormStatus } from "@/shared";
+import { Button, showAlert, cancelAlert,
+IconButton, AccordionItem, isFormDirty, useDirtyForm, useDirtyFormStatus } from "@/shared";
+import { useBusyProgress } from "@/shared/hooks/useBusyProgress";
 import { getStoredUser } from "@/shared/services/api";
 import loanSchema, { loanBaseSchema } from "../../schemas/loanSchema";
 import { createLoanDraft, getDraftStatus } from "../../services/loanService";
@@ -40,7 +42,9 @@ export default function LoanRegisterForm() {
 
     const [users,      setUsers]      = useState([]);
     const [materials,  setMaterials]  = useState([]);
-    const [submitting, setSubmitting] = useState(false);
+    const [submitting, setSubmitting] =
+useState(false);
+    const { busyMessage, startBusyProgress, stopBusyProgress } = useBusyProgress();
     const [draftCreated, setDraftCreated] = useState(null);
     const [draftStatus, setDraftStatus]   = useState(null);
     const [activeStep, setActiveStep] = useState(0);
@@ -275,6 +279,7 @@ export default function LoanRegisterForm() {
 
         setErrors({});
         setSubmitting(true);
+        startBusyProgress(["Creando borrador…", "Reservando stock…", "Enviando firmas…"]);
 
         try {
             const draft = await createLoanDraft(result.data);
@@ -289,6 +294,7 @@ export default function LoanRegisterForm() {
                 text: err.message,
             });
         } finally {
+            stopBusyProgress();
             setSubmitting(false);
         }
     };
@@ -490,7 +496,7 @@ export default function LoanRegisterForm() {
                                         Cancelar
                                     </Button>
                                     <Button type="submit" variant="primary" size="md" disabled={submitting}>
-                                        {submitting ? "Enviando..." : "Crear y enviar firmas"}
+                                        {submitting ? (busyMessage || "Enviando...") : "Crear y enviar firmas"}
                                     </Button>
                                 </div>
                             </div>

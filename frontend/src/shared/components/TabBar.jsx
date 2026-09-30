@@ -2,6 +2,7 @@ import { Tab } from '@headlessui/react';
 import  TmHomePage  from "../../features/trademarks/pages/TmHomePage";
 import {AccessPage} from "@/features/access"
 import GroupManagement from "../../features/access/components/GroupManagement";
+import { ElevationInbox } from "@/features/elevations";
 import { ProfileEditPage } from "@/features/users";
 import { CategoryHomePage } from "@/features/categories";
 import { usePermissions } from "@/shared/hooks/usePermissions";
@@ -20,6 +21,9 @@ const BASE_TABS = [
     { id: "brands",   label: "Marcas",            panel: <TmHomePage />,        perm: ["view_brand"] },
     { id: "access",   label: "Roles y Permisos",  panel: <AccessPage />,        superOnly: true },
     { id: "groups",   label: "Grupos",            panel: <GroupManagement />,   superOnly: true },
+    // Solicitudes de elevación: temporalmente solo el Primigenio
+    // (el backend también restringe ver/decidir).
+    { id: "requests", label: "Solicitudes",       panel: <ElevationInbox />, primaryOnly: true },
 ];
 
 // Pestana adicional reservada a administradores / usuarios con permiso
@@ -31,8 +35,9 @@ const CATEGORY_TAB = {
 };
 
 // Construye la lista de tabs visibles segun permisos.
-function buildTabs({ isSuper, can }) {
+function buildTabs({ isSuper, isPrimaryAdmin, can }) {
     const visible = BASE_TABS.filter((tab) => {
+        if (tab.primaryOnly) return Boolean(isPrimaryAdmin);
         if (tab.superOnly) return isSuper;
         if (tab.perm?.length) return isSuper || tab.perm.some((c) => can(c));
         return true;
@@ -47,9 +52,9 @@ function buildTabs({ isSuper, can }) {
 }
 
 export default function TabBar() {
-    const { isSuper, can } = usePermissions();
+    const { isSuper, isPrimaryAdmin, can } = usePermissions();
 
-    const tabs = buildTabs({ isSuper, can });
+    const tabs = buildTabs({ isSuper, isPrimaryAdmin, can });
 
     // El grid se ajusta dinamicamente al numero de tabs visibles para que
     // el ancho se reparta de forma pareja (4 o 5 columnas).

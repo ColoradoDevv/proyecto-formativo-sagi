@@ -18,6 +18,16 @@ export async function login(email, password) {
 
     const data = await response.json();
 
+    // Fase 7: si el backend exige segundo factor, NO se guarda sesión.
+    // Se devuelve el estado MFA para que el formulario continúe el flujo.
+    if (data.mfa_required) {
+        return {
+            mfaRequired: true,
+            mfaToken: data.mfa_token,
+            enrollRequired: data.enroll_required,
+        };
+    }
+
     // Guardamos token + datos del usuario en la sesion
     setSession(data.token, data.user);
     // Avisar a otras pestañas: si eran del mismo usuario, se cierran solas.

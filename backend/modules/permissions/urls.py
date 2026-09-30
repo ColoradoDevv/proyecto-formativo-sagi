@@ -5,11 +5,13 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import PermissionViewSet, GroupViewSet, UserPermissionView, UserGroupView
+from .elevation import SolicitudViewSet
 
 # Router para ViewSets
 router = DefaultRouter()
 router.register(r"permissions", PermissionViewSet, basename="permission")
 router.register(r"groups", GroupViewSet, basename="group")
+router.register(r"roles/requests", SolicitudViewSet, basename="solicitud")
 
 # URLs para gestión de permisos de usuario (no es ViewSet porque es más simple)
 urlpatterns = [

@@ -260,3 +260,56 @@ class BlacklistedToken(models.Model):
 
     def __str__(self):
         return f"BlacklistedToken {self.token_hash[:16]}… expira {self.expires_at}"
+
+
+class MFADevice(models.Model):
+    """Dispositivo TOTP del usuario (Fase 7: segundo factor en login).
+
+    El secreto se guarda CIFRADO con Fernet (ver users/mfa.py); jamás en claro.
+    Un usuario tiene máximo un dispositivo: re-inscribir reemplaza el anterior.
+    """
+
+    user = models.OneToOneField(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="mfa_device",
+    )
+    secret_encrypted = models.TextField(
+        help_text="Secreto TOTP base32 cifrado con Fernet (MFA_ENCRYPTION_KEY).",
+    )
+    enabled = models.BooleanField(
+        default=False,
+        help_text="Solo confirmado con un código válido otorga sesiones.",
+    )
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "mfa_devices"
+        verbose_name = "Dispositivo MFA"
+        verbose_name_plural = "Dispositivos MFA"
+
+    def __str__(self):
+        return f"MFADevice user={self.user_id} enabled={self.enabled}"
+
+
+class RecoveryCode(models.Model):
+    """Códigos de recuperación de un solo uso (hash, como contraseñas)."""
+
+    user = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="recovery_codes",
+    )
+    code_hash = models.CharField(max_length=128)
+    used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "mfa_recovery_codes"
+        verbose_name = "Código de recuperación MFA"
+        verbose_name_plural = "Códigos de recuperación MFA"
+
+    def __str__(self):
+        return f"RecoveryCode user={self.user_id} used={self.used}"

@@ -247,6 +247,42 @@ class PermissionService:
 
         return Group.objects.filter(user_groups__user=user)
 
+    # Nivel por defecto: usuarios sin grupo están al fondo (ven lo mínimo).
+    BOTTOM_LEVEL = 900
+
+    @staticmethod
+    def effective_level(user):
+        """Nivel efectivo del usuario = el más poderoso (mínimo) de sus grupos.
+
+        El Primigenio y los superusuarios ven todo (None = sin límite).
+        Sin grupos → BOTTOM_LEVEL (900, fondo de la jerarquía).
+        """
+        if not user or not user.is_authenticated:
+            return PermissionService.BOTTOM_LEVEL
+        if getattr(user, "is_primary_admin", False) or getattr(user, "is_superuser", False):
+            return None
+        levels = list(
+            UserGroup.objects.filter(user=user).values_list("group__level", flat=True)
+        )
+        return min(levels) if levels else PermissionService.BOTTOM_LEVEL
+
+    @staticmethod
+    def visible_users_queryset(viewer, queryset):
+        """Filtra usuarios visibles: mismo nivel o inferior al del solicitante.
+
+        Fase 3 del sistema dinámico de roles (solo visibilidad; las acciones
+        se restringen en Fase 4). El primario ya viene excluido por el
+        queryset base. Sin grupos (min_level NULL) = fondo, visible para todos.
+        """
+        from django.db.models import Min, Q
+
+        viewer_level = PermissionService.effective_level(viewer)
+        if viewer_level is None:
+            return queryset
+        return queryset.annotate(
+            _min_level=Min("user_groups__group__level")
+        ).filter(Q(_min_level__gte=viewer_level) | Q(_min_level__isnull=True))
+
     @staticmethod
     def permission_exists(permission_codename):
         """
@@ -259,3 +295,18 @@ class PermissionService:
             bool
         """
         return Permission.objects.filter(codename=permission_codename).exists()
+
+    @staticmethod
+    def authority_for_group(group):
+        """Autoridad estimada de un grupo: suma de pesos de sus permisos.
+
+        Fase 1 del sistema dinámico de roles: es SOLO una métrica de
+        análisis y alertas. No decide jerarquía ni concede nada.
+        """
+        from django.db.models import Sum
+
+        from .models import GroupPermission
+
+        return GroupPermission.objects.filter(group=group).aggregate(
+            total=Sum("permission__weight")
+        )["total"] or 0

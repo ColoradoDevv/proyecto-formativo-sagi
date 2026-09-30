@@ -482,6 +482,63 @@ class FirstLoginPasswordChangeView(APIView):
         )
 
 
+def issue_full_session(user, request):
+    """Emite la sesión completa: audita LOGIN, registra jti y devuelve token+usuario.
+
+    Punto único de emisión (login directo, verify y confirm MFA).
+    """
+    # Auditar inicio de sesión exitoso
+    audit_log(
+        actor=user,
+        module=AuditLog.MODULE_AUTH,
+        action=AuditLog.ACTION_LOGIN,
+        target_id=user.pk,
+        target_repr=f"{user.first_name} {user.last_name} <{user.email}>",
+        request=request,
+    )
+
+    # El jti identifica esta sesión: al guardarlo como sesión activa,
+    # cualquier token anterior del mismo usuario queda invalidado
+    # (sesión única — el login nuevo cierra el viejo automáticamente).
+    session_jti = uuid.uuid4().hex
+    payload = {
+        "user_id": user.id,
+        "email": user.email,
+        "scope": "session",
+        "jti": session_jti,
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=8),
+        "iat": datetime.datetime.utcnow(),
+    }
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+
+    user.active_session_jti = session_jti
+    user.save(update_fields=["active_session_jti"])
+
+    # Obtener el primer grupo del usuario (si tiene)
+    user_groups = user.user_groups.exclude(group__name__iexact="SADMIN")
+    primary_group = user_groups.first().group.name if user_groups.exists() else None
+
+    return Response({
+        "token": token,
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "is_superuser": user.is_superuser,  # Para que el frontend pueda usar usePermissions()
+            "is_primary_admin": user.is_primary_admin,  # Protección del superadmin primigenio en UI
+            "must_change_password": user.must_change_password,
+            "data_consent": user.data_consent,
+            "role": primary_group,  # Devuelve el nombre del grupo principal
+            "groups": [g.group.name for g in user_groups],  # Lista todos los grupos
+            # Misma ruta que UserSerializer.get_profile_picture — sin esto,
+            # el avatar del Navbar no tiene foto hasta que se resuba una
+            # vez iniciada la sesión (updateStoredUser la agrega recién ahí).
+            "profile_picture": f"/media/{user.profile_picture}" if user.profile_picture else None,
+        },
+    })
+
+
 class LoginView(APIView):
     # El login debe ser PUBLICO: nadie tiene token todavia al iniciar sesion.
     authentication_classes = []
@@ -572,61 +629,20 @@ class LoginView(APIView):
         _reset_account("login_attempts", email)
         _reset_global_ip(request, "login_attempts")
 
-        # Auditar inicio de sesión exitoso
-        audit_log(
-            actor=user,
-            module=AuditLog.MODULE_AUTH,
-            action=AuditLog.ACTION_LOGIN,
-            target_id=user.pk,
-            target_repr=f"{user.first_name} {user.last_name} <{user.email}>",
-            request=request,
-        )
+        # 6b. Segundo factor (Fase 7): si aplica, NO se emite sesión todavía.
+        # Se devuelve un token temporal scope=mfa (5 min, sin acceso a la API).
+        from .mfa import issue_mfa_token, mfa_device_for, mfa_required_for
 
-        # 7. Construir el contenido del token (payload).
-        # El jti identifica esta sesión: al guardarlo como sesión activa,
-        # cualquier token anterior del mismo usuario queda invalidado
-        # (sesión única — el login nuevo cierra el viejo automáticamente).
-        session_jti = uuid.uuid4().hex
-        payload = {
-            "user_id": user.id,
-            "email": user.email,
-            "scope": "session",
-            "jti": session_jti,
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=8),
-            "iat": datetime.datetime.utcnow(),
-        }
+        if mfa_required_for(user):
+            device = mfa_device_for(user)
+            mfa_token = issue_mfa_token(user, enroll_required=device is None or not device.enabled)
+            return Response({
+                "mfa_required": True,
+                "mfa_token": mfa_token,
+                "enroll_required": device is None or not device.enabled,
+            })
 
-        # 8. Firmar el token con la clave secreta
-        token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
-
-        # 7b. Registrar esta como LA sesión activa (invalida la anterior).
-        user.active_session_jti = session_jti
-        user.save(update_fields=["active_session_jti"])
-
-        # 9. Devolver el token y algunos datos utiles para el frontend
-        # Obtener el primer grupo del usuario (si tiene)
-        user_groups = user.user_groups.exclude(group__name__iexact="SADMIN")
-        primary_group = user_groups.first().group.name if user_groups.exists() else None
-
-        return Response({
-            "token": token,
-            "user": {
-                "id": user.id,
-                "email": user.email,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "is_superuser": user.is_superuser,  # Para que el frontend pueda usar usePermissions()
-                "is_primary_admin": user.is_primary_admin,  # Protección del superadmin primigenio en UI
-                "must_change_password": user.must_change_password,
-                "data_consent": user.data_consent,
-                "role": primary_group,  # Devuelve el nombre del grupo principal
-                "groups": [g.group.name for g in user_groups],  # Lista todos los grupos
-                # Misma ruta que UserSerializer.get_profile_picture — sin esto,
-                # el avatar del Navbar no tiene foto hasta que se resuba una
-                # vez iniciada la sesión (updateStoredUser la agrega recién ahí).
-                "profile_picture": f"/media/{user.profile_picture}" if user.profile_picture else None,
-            },
-        })
+        return issue_full_session(user, request)
 
 class LogoutView(APIView):
     """
@@ -698,6 +714,198 @@ class LogoutView(APIView):
             {"message": "Sesión cerrada correctamente."},
             status=status.HTTP_200_OK,
         )
+
+
+class MFAEnrollView(APIView):
+    """Paso 1 de inscripción: genera (o reexpone) el secreto y devuelve QR.
+
+    Token temporal del login, o sesión completa + contraseña (gestión
+    post-login: quien ya tiene sesión demuestra con su clave).
+    """
+
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        from .mfa import (
+            MfaEnrollAuthentication, decrypt_secret, mfa_device_for,
+            new_totp_secret, provisioning_uri, qr_png_data_uri, encrypt_secret,
+        )
+        from .models import MFADevice
+
+        auth = MfaEnrollAuthentication().authenticate(request)
+        if auth is None:
+            return Response(
+                {"error": "Se requiere el token temporal del login o tu sesión."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        user, _ = auth
+        if not getattr(request, "mfa_temp", False):
+            password = request.data.get("password", "")
+            if not password or not check_password(password, user.password):
+                return Response(
+                    {"error": "Confirma tu contraseña actual."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        try:
+            device = user.mfa_device
+            if device.enabled:
+                return Response(
+                    {"error": "Ya tienes verificación en dos pasos activa."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            secret = decrypt_secret(device)
+        except MFADevice.DoesNotExist:
+            secret = new_totp_secret()
+            device = MFADevice.objects.create(
+                user=user, secret_encrypted=encrypt_secret(secret)
+            )
+        uri = provisioning_uri(secret, user.email)
+        return Response({"otpauth_uri": uri, "qr_png": qr_png_data_uri(uri)})
+
+
+class MFAConfirmView(APIView):
+    """Paso 2: confirma el código actual → activa, crea recovery codes y
+    emite la sesión completa (ya demostró posesión). Solo token temporal."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        from django.utils import timezone
+
+        from .mfa import (
+            MfaEnrollAuthentication, MfaTempAuthentication, decrypt_secret, generate_recovery_codes,
+            mfa_device_for, verify_totp_code,
+        )
+
+        # Token temporal del login, o sesión completa + contraseña (gestión).
+        auth = None
+        try:
+            auth = MfaEnrollAuthentication().authenticate(request)
+        except Exception:
+            auth = None
+        if auth is None:
+            return Response(
+                {"error": "Se requiere el token temporal o tu sesión."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        user, _ = auth
+        if not getattr(request, "mfa_temp", False):
+            password = request.data.get("password", "")
+            if not password or not check_password(password, user.password):
+                return Response(
+                    {"error": "Confirma tu contraseña actual."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        device = mfa_device_for(user)
+        if device is None:
+            return Response(
+                {"error": "Primero genera el código QR (enroll)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if device.enabled:
+            return Response(
+                {"error": "Ya tienes verificación en dos pasos activa."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        code = (request.data.get("code") or "").strip()
+        if not code or not verify_totp_code(user, code):
+            _record_failed_attempt(request, "mfa_attempts")
+            return Response(
+                {"error": "Código inválido. Revisa tu aplicación e intenta de nuevo."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        _reset_rate_limit(request, "mfa_attempts")
+        device.enabled = True
+        device.confirmed_at = timezone.now()
+        device.save(update_fields=["enabled", "confirmed_at"])
+        codes = generate_recovery_codes(user)
+        response = issue_full_session(user, request)
+        response.data["recovery_codes"] = codes
+        response.data["recovery_warning"] = (
+            "Guárdalos ahora: no se muestran de nuevo y cada uno sirve una sola vez."
+        )
+        return response
+
+
+class MFAVerifyView(APIView):
+    """Paso 2 del login: código TOTP o de recuperación → sesión completa."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        from .mfa import (
+            MfaTempAuthentication, consume_recovery_code, mfa_device_for,
+            verify_totp_code,
+        )
+
+        auth = MfaTempAuthentication().authenticate(request)
+        if auth is None:
+            return Response(
+                {"error": "Se requiere el token temporal del login."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        user, _ = auth
+        # Rate limit del segundo factor (10/min por IP, como el resto).
+        blocked = _check_rate_limit(request, "mfa_attempts")
+        if blocked:
+            return blocked
+
+        # Verificar exige dispositivo ACTIVO (si no, es flujo de inscripción).
+        from .mfa import mfa_device_for
+
+        device = mfa_device_for(user)
+        if device is None or not device.enabled:
+            return Response(
+                {"error": "Primero inscribe la verificación en dos pasos."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        code = (request.data.get("code") or "").strip()
+        recovery = (request.data.get("recovery_code") or "").strip()
+        ok = False
+        if code:
+            ok = verify_totp_code(user, code)
+        elif recovery:
+            ok = consume_recovery_code(user, recovery)
+        if not ok:
+            _record_failed_attempt(request, "mfa_attempts")
+            return Response(
+                {"error": "Código inválido."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        _reset_rate_limit(request, "mfa_attempts")
+        return issue_full_session(user, request)
+
+
+class MFADisableView(APIView):
+    """Desactivación deshabilitada: el 2FA es obligatorio para todos.
+
+    Se conserva la ruta para responder 403 explícito en vez de 404.
+    La única vía es el comando de consola mfa_reset (celular perdido).
+    """
+
+    def post(self, request):
+        return Response(
+            {"error": "La verificación en dos pasos es obligatoria y no se puede desactivar."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+
+class MFAStatusView(APIView):
+    """Estado MFA propio: habilitado, requerido y respaldos restantes."""
+
+    def get(self, request):
+        from .mfa import backup_codes_remaining, mfa_device_for, mfa_required_for
+
+        device = mfa_device_for(request.user)
+        return Response({
+            "enabled": bool(device and device.enabled),
+            "required": mfa_required_for(request.user),
+            "backup_remaining": backup_codes_remaining(request.user),
+        })
 
 
 class ForgetPasswordView(APIView):
@@ -971,14 +1179,27 @@ class UserListCreateView(AuditMixin, generics.ListCreateAPIView):
         # GET (list) — cualquier usuario autenticado puede listar
         return [HasPermission("view_user")]
 
+    def get_queryset(self):
+        # Fase 3: cada rol lista su mismo nivel o inferiores.
+        from modules.permissions.services import PermissionService
+
+        return PermissionService.visible_users_queryset(self.request.user, super().get_queryset())
+
 
 class UserDetailView(AuditMixin, generics.RetrieveUpdateDestroyAPIView):
     # Detalle: obtiene, actualiza y elimina un usuario.
     # Usa all_objects para que un administrador pueda acceder al registro
     # aunque esté marcado como eliminado (p.ej. para restaurarlo o auditarlo).
     # El primigenio queda excluido: no es visible ni siquiera por detalle directo.
+    # Fase 3: además solo se ve el mismo nivel o inferiores.
     queryset = User.all_objects.filter(is_primary_admin=False)
     serializer_class = UserSerializer
+
+    def get_queryset(self):
+        # Fase 3: detalle visible solo mismo nivel o inferior (si no, 404).
+        from modules.permissions.services import PermissionService
+
+        return PermissionService.visible_users_queryset(self.request.user, super().get_queryset())
 
     # Campos que no se pueden tocar en el admin primigenio bajo ninguna circunstancia.
     _PRIMARY_ADMIN_PROTECTED_FIELDS = {"is_active", "is_staff", "is_superuser", "is_primary_admin"}
@@ -994,6 +1215,14 @@ class UserDetailView(AuditMixin, generics.RetrieveUpdateDestroyAPIView):
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
+        from modules.permissions.ranking import can_manage_user
+
+        # Fase 4: mismo nivel o inferior (el Primigenio, exento).
+        if not can_manage_user(request.user, instance):
+            return Response(
+                {"error": "Solo puedes administrar usuarios de tu nivel o inferior."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         if is_primary_admin(instance):
             # Rechazar si el body intenta tocar algún campo protegido.
             blocked = self._PRIMARY_ADMIN_PROTECTED_FIELDS & set(request.data.keys())
@@ -1017,6 +1246,12 @@ class UserDetailView(AuditMixin, generics.RetrieveUpdateDestroyAPIView):
             raise PermissionDenied(
                 "No se puede eliminar al superadministrador primigenio del sistema."
             )
+        # Fase 4: mismo nivel o inferior (el Primigenio, exento).
+        from modules.permissions.ranking import can_manage_user
+        from rest_framework.exceptions import PermissionDenied as Denied
+
+        if not can_manage_user(self.request.user, instance):
+            raise Denied("Solo puedes administrar usuarios de tu nivel o inferior.")
         # En vez de instance.delete(), hacemos un borrado logico: marcamos is_deleted y fecha.
         instance.soft_delete()  # metodo definido en el modelo User
 
@@ -1035,6 +1270,12 @@ class UserTrashListView(generics.ListAPIView):
     queryset = User.all_objects.filter(is_deleted=True, is_primary_admin=False).order_by("-deleted_at")
     serializer_class = UserTrashSerializer
 
+    def get_queryset(self):
+        # Fase 3: papelera visible solo mismo nivel o inferior.
+        from modules.permissions.services import PermissionService
+
+        return PermissionService.visible_users_queryset(self.request.user, super().get_queryset())
+
     def get_permissions(self):
         return [HasPermission("view_user")]
 
@@ -1050,6 +1291,14 @@ class UserRestoreView(APIView):
             return Response(
                 {"error": "Usuario no encontrado en la papelera"},
                 status=status.HTTP_404_NOT_FOUND,
+            )
+        # Fase 4: mismo nivel o inferior (el Primigenio, exento).
+        from modules.permissions.ranking import can_manage_user
+
+        if not can_manage_user(request.user, user):
+            return Response(
+                {"error": "Solo puedes administrar usuarios de tu nivel o inferior."},
+                status=status.HTTP_403_FORBIDDEN,
             )
         user.restore()
         audit_log(
@@ -1080,6 +1329,15 @@ class ResendCredentialsView(APIView):
             return Response(
                 {"error": "Usuario no encontrado"},
                 status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Fase 4: mismo nivel o inferior (el Primigenio, exento).
+        from modules.permissions.ranking import can_manage_user
+
+        if not can_manage_user(request.user, user):
+            return Response(
+                {"error": "Solo puedes administrar usuarios de tu nivel o inferior."},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         new_password = generate_secure_password()

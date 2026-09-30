@@ -2,7 +2,9 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getDocumentTypes } from "../../services/selectServices";
 import useUserGroups from "../../hooks/useUserGroups";
-import { Button, Input, StatusLabel, DataConsentCheckbox, showAlert, cancelAlert, IconButton, usePermissions, AccordionItem, isFormDirty, useDirtyForm, useDirtyFormStatus } from "@/shared";
+import { Button, Input, StatusLabel, DataConsentCheckbox, showAlert, cancelAlert, IconButton, usePermissions,
+AccordionItem, isFormDirty, useDirtyForm, useDirtyFormStatus } from "@/shared";
+import { useBusyProgress } from "@/shared/hooks/useBusyProgress";
 import { userBaseSchema, userSchema } from "../../schemas/userSchema";
 import { createUser } from "../../services/userService";
 import { deriveRoleFlags } from "../../utils/userRoleUtils";
@@ -113,6 +115,7 @@ export default function UserRegisterForm() {
 
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
+    const { busyMessage, startBusyProgress, stopBusyProgress } = useBusyProgress();
     const [showAdditionalPhone, setShowAdditionalPhone] = useState(false);
     const [showEmailInst, setShowEmailInst] = useState(false);
     const { can, isSuper } = usePermissions();
@@ -313,6 +316,7 @@ export default function UserRegisterForm() {
         //     finally siempre lo resetee correctamente ---
         setErrors({});
         setSubmitting(true);
+        startBusyProgress(["Creando usuario…", "Enviando credenciales…", "Asignando grupo…"]);
 
         try {
             await createUser({
@@ -352,6 +356,7 @@ export default function UserRegisterForm() {
             // Los errores NO llevan timer: deben permanecer hasta que el usuario los lea y cierre.
             await showAlert({ icon: "error", iconColor: "var(--color-error)", title: "Error al crear usuario", text: error.message });
         } finally {
+            stopBusyProgress();
             setSubmitting(false);
         }
     }
@@ -568,7 +573,7 @@ export default function UserRegisterForm() {
                                             Cancelar
                                         </Button>
                                         <Button type="submit" variant="primary" size="md" disabled={submitting}>
-                                            {submitting ? "Creando..." : "Crear"}
+                                            {submitting ? (busyMessage || "Creando...") : "Crear"}
                                         </Button>
                                     </div>
                                 </div>

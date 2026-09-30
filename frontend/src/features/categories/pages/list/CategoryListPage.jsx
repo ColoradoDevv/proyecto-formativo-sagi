@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Button, SearchField, IconButton, ActiveSwitch, Notice, usePermissions } from "@/shared";
 import { Plus, ArrowLeft, ArrowRight, Pencil, CloudAlert, Tag, Layers } from "lucide-react";
-import { TailChase } from "ldrs/react";
 import useCategories from "../../hooks/useCategories";
 import { toggleCategoryActive } from "../../services/categoryService";
 import CategoryModal from "../../components/CategoryModal";
+import LoadingState from "@/shared/components/LoadingState";
 
 export default function CategoryListPage() {
     const { categories, setCategories, loading, error } = useCategories();
@@ -41,11 +41,7 @@ export default function CategoryListPage() {
     };
 
     if (loading)
-        return (
-            <div className="h-full flex items-center justify-center">
-                <TailChase size="40" speed="1.75" color="var(--semantic-text-primary)" />
-            </div>
-        );
+        return <LoadingState label="Cargando categorías…" />;
 
     if (error)
         return (
