@@ -72,6 +72,36 @@ class Group(models.Model):
         default=True,
         help_text="Indica si el grupo está activo. Los grupos inactivos no pueden recibir nuevos usuarios."
     )
+    # ── Fase 2 del sistema dinámico de roles ──────────────────────────
+    # level: posición jerárquica explícita. MENOR número = MÁS poder.
+    # Con huecos (100, 200, ...) para insertar roles intermedios después.
+    # Nunca se calcula a partir de los pesos.
+    level = models.PositiveIntegerField(
+        default=900,
+        help_text="Nivel jerárquico (menor = más poder). Roles nuevos nacen abajo (900)."
+    )
+    # is_system: roles del sistema (SADMIN/ADMIN/INST/INV). Inmutables por API (Fase 4).
+    is_system = models.BooleanField(
+        default=False,
+        help_text="Si es rol de sistema: inmutable por API. Reemplaza el nombre hardcodeado."
+    )
+    # template_role: solo referencia al rol usado como PLANTILLA al crear
+    # (copia de permisos, sin vínculo vivo). Solo informativo.
+    template_role = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="templated_roles",
+        help_text="Rol usado como plantilla al crear este (referencia, sin herencia viva)."
+    )
+    # authority_ceiling: techo de autoridad del nivel. Vacío = sin techo.
+    authority_ceiling = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Techo de autoridad estimada del nivel. Vacío = sin techo."
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
