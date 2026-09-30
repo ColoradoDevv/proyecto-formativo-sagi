@@ -96,6 +96,20 @@ class GroupViewSet(viewsets.ModelViewSet):
             return GroupListSerializer
         return GroupDetailSerializer
 
+    def destroy(self, request, *args, **kwargs):
+        # Fase 0 del sistema dinámico de roles: el DELETE duro borraba
+        # membresías en silencio por el CASCADE de UserGroup/GroupPermission.
+        # Bloqueado hasta el soft delete de la Fase 4: use is_active=false.
+        return Response(
+            {
+                "error": (
+                    "Eliminar grupos está deshabilitado. Desactive el grupo "
+                    "con is_active=false en su lugar."
+                )
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
     @action(detail=True, methods=["post"])
     def assign_permission(self, request, pk=None):
         """
