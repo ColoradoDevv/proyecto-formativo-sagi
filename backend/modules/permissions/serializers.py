@@ -96,8 +96,8 @@ class GroupListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Group
-        fields = ["id", "name", "description", "permission_count", "authority", "level", "is_system", "is_active", "created_at"]
-        read_only_fields = ["id", "authority", "level", "is_system", "created_at"]
+        fields = ["id", "name", "description", "permission_count", "authority", "authority_ceiling", "level", "is_system", "is_active", "created_at"]
+        read_only_fields = ["id", "authority", "authority_ceiling", "level", "is_system", "created_at"]
 
 
 class UserPermissionSerializer(serializers.ModelSerializer):

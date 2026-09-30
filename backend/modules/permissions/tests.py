@@ -250,6 +250,63 @@ class PermissionWeightTestCase(TestCase):
         self.assertEqual(PermissionService.authority_for_group(group), 0)
 
 
+class HierarchyVisibilityTestCase(TestCase):
+    """Fase 3: cada rol lista su mismo nivel o inferiores (nunca encima)."""
+
+    def setUp(self):
+        from rest_framework.test import APIClient
+
+        def make_user(email, group_name, **extra):
+            user = User.objects.create_user(
+                email=email, password="x-Segura-123",
+                first_name="Fase3", last_name="Test", **extra
+            )
+            if group_name:
+                PermissionService.add_user_to_group(user, group_name)
+            return user
+
+        self.sadmin = make_user("fase3_sadmin@x.co", "SADMIN")
+        self.admin = make_user("fase3_admin@x.co", "ADMIN")
+        self.inst = make_user("fase3_inst@x.co", "INST")
+        self.inv = make_user("fase3_inv@x.co", "INV")
+        self.client = APIClient()
+
+    def list_as(self, user):
+        self.client.force_authenticate(user=user)
+        response = self.client.get("/api/users/")
+        self.assertEqual(response.status_code, 200)
+        return {u["email"] for u in response.data["results"]} if isinstance(response.data, dict) else {u["email"] for u in response.data}
+
+    def test_admin_no_ve_sadmin(self):
+        seen = self.list_as(self.admin)
+        self.assertNotIn("fase3_sadmin@x.co", seen)
+        self.assertIn("fase3_admin@x.co", seen)
+        self.assertIn("fase3_inst@x.co", seen)
+        self.assertIn("fase3_inv@x.co", seen)
+
+    def test_inst_solo_su_nivel_e_inferior(self):
+        seen = self.list_as(self.inst)
+        self.assertEqual(seen, {"fase3_inst@x.co", "fase3_inv@x.co"})
+
+    def test_inv_solo_su_nivel(self):
+        seen = self.list_as(self.inv)
+        self.assertEqual(seen, {"fase3_inv@x.co"})
+
+    def test_sadmin_ve_todo_menos_primario(self):
+        seen = self.list_as(self.sadmin)
+        self.assertEqual(
+            seen,
+            {"fase3_sadmin@x.co", "fase3_admin@x.co", "fase3_inst@x.co", "fase3_inv@x.co"},
+        )
+
+    def test_detalle_superior_da_404(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get(f"/api/users/{self.sadmin.pk}/")
+        self.assertEqual(response.status_code, 404)
+        response = self.client.get(f"/api/users/{self.inst.pk}/")
+        self.assertEqual(response.status_code, 200)
+
+
 class GroupHierarchyFieldsTestCase(TestCase):
     """Fase 2: level/is_system/template/ceiling y migración de los 4 grupos."""
 

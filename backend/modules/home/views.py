@@ -62,8 +62,11 @@ class DashboardSummaryView(APIView):
         data = {}
 
         if codes & {"list_users", "view_user"}:
-            # Conteo real para todos: excluye al primigenio (invisible).
-            data["users"] = User.objects.filter(is_primary_admin=False).count()
+            # Conteo real para todos: excluye al primigenio (invisible)
+            # y solo mismo nivel o inferior (Fase 3).
+            data["users"] = PermissionService.visible_users_queryset(
+                request.user, User.objects.filter(is_primary_admin=False)
+            ).count()
         if codes & {"list_consumable_materials", "view_consumable_material", "view_consumable"}:
             data["consumables"] = ConsumableMaterial.objects.count()
         if codes & {"list_returnable_materials", "view_returnable_material", "view_returnable"}:
