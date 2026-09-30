@@ -32,11 +32,14 @@ import { logout } from "../services/authService";
 export default function SessionExpiredModal() {
     const [open, setOpen]   = useState(false);
     const [reason, setReason] = useState("");
+    // Causa del cierre: "inactivity" (1h sin interactuar) o "expired"
+    // (token muerto: 8h o sesión reemplazada). Define el texto real.
+    const [cause, setCause] = useState("expired");
     const handlingRef       = useRef(false); // evita doble apertura por peticiones paralelas
     const navigate          = useNavigate();
 
     useEffect(() => {
-        function handleExpired() {
+        function handleExpired(event) {
             // Si el modal ya está abierto o en proceso, ignoramos el evento
             if (handlingRef.current) return;
             // No mostramos el modal si ya estamos en login
@@ -46,6 +49,7 @@ export default function SessionExpiredModal() {
             // Motivo específico (ej. sesión reemplazada por otro login) o
             // texto genérico de expiración.
             setReason(getExpiredReason() ?? "");
+            setCause(event?.detail?.cause ?? "expired");
             setOpen(true);
         }
 
@@ -77,13 +81,13 @@ export default function SessionExpiredModal() {
 
     const handleConfirm = useCallback(async () => {
         setOpen(false);
-        clearExpiredReason();
-        // logout() intentará POST /logout pero la sesión ya está limpia en
+        clearExpiredReason();        // logout() intentará POST /logout pero la sesión ya está limpia en
         // sessionStorage (apiFetch la limpió al detectar el 401). El catch
         // en logout() ya maneja el fallo silenciosamente.
         await logout();
         handlingRef.current = false;
         setReason("");
+        setCause("expired");
         navigate("/iniciar-sesion", { replace: true });
     }, [navigate]);
 
@@ -115,7 +119,9 @@ export default function SessionExpiredModal() {
                     <p className="text-small text-text-secondary mt-1">
                         {reason
                             ? "Solo se permite una sesión activa por usuario: queda abierta la más reciente."
-                            : "Por seguridad, las sesiones cierran automáticamente después de 8 horas. Inicia sesión para continuar."}
+                            : cause === "inactivity"
+                                ? "Por seguridad, las sesiones cierran automáticamente después de 1 hora sin actividad. Inicia sesión para continuar."
+                                : "Por seguridad, las sesiones cierran automáticamente después de 8 horas. Inicia sesión para continuar."}
                     </p>
                 </div>
             </div>
