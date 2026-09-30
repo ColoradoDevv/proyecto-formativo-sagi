@@ -25,7 +25,7 @@ class GroupPermissionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GroupPermission
-        fields = ["id", "permission", "permission_codename", "permission_name", "assigned_at"]
+        fields = ["id", "permission", "permission_codename", "permission_name", "scope", "assigned_at"]
         read_only_fields = ["id", "assigned_at"]
 
 
@@ -123,6 +123,7 @@ class UserPermissionSerializer(serializers.ModelSerializer):
             "permission_codename",
             "permission_name",
             "reason",
+            "scope",
             "assigned_at",
         ]
         read_only_fields = ["id", "assigned_at"]
@@ -145,9 +146,11 @@ class AssignPermissionSerializer(serializers.Serializer):
 
     permission_codename = serializers.CharField(max_length=100)
     reason = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    # Fase 6: alcance (SELF/ALL). Default SELF (mínimo privilegio).
+    scope = serializers.ChoiceField(choices=["SELF", "ALL"], required=False, default="SELF")
 
     class Meta:
-        fields = ["permission_codename", "reason"]
+        fields = ["permission_codename", "reason", "scope"]
 
 
 class AssignGroupSerializer(serializers.Serializer):

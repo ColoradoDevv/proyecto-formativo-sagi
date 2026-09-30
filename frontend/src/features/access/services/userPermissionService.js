@@ -14,12 +14,14 @@ export async function getUserPermissions(userId) {
     return response.json();
 }
 
-// METODO POST (asignar un permiso directo a un usuario)
-export async function assignUserPermission(userId, permissionCodename) {
+// METODO POST (asignar un permiso directo a un usuario; scope opcional)
+export async function assignUserPermission(userId, permissionCodename, scope) {
+    const body = { permission_codename: permissionCodename };
+    if (scope) body.scope = scope;
     const response = await apiFetch(`/api/permissions/users/${userId}/permissions/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ permission_codename: permissionCodename }),
+        body: JSON.stringify(body),
     });
     if (!response.ok) await throwApiError(response);
     return response.json();

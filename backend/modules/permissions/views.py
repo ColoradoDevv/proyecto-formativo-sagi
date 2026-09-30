@@ -312,8 +312,16 @@ class GroupViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Agregar permiso al grupo
-        group.permissions.add(permission)
+        # Fase 6: upsert con alcance (default SELF = mínimo privilegio).
+        from .models import GroupPermission
+        from .ranking import normalize_scope
+
+        scope = normalize_scope(
+            permission.codename, serializer.validated_data.get("scope") or "SELF"
+        )
+        GroupPermission.objects.update_or_create(
+            group=group, permission=permission, defaults={"scope": scope}
+        )
 
         # Fase 5a: si el rol cambió, las PENDIENTEs sobre él se invalidan (anti A→A+).
         from .elevation import cancel_pending_for_group
@@ -482,7 +490,7 @@ class UserPermissionView(generics.GenericAPIView):
 
         # Fase 4: no amplificación (solo das lo que posees) + rango sobre
         # el usuario (mismo nivel o inferior). El Primigenio, exento.
-        from .ranking import can_grant_permission, can_manage_user
+        from .ranking import can_grant_permission, can_manage_user, normalize_scope
 
         if not can_manage_user(request.user, user):
             return Response(
@@ -516,11 +524,21 @@ class UserPermissionView(generics.GenericAPIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+        scope = normalize_scope(
+            permission.codename, serializer.validated_data.get("scope") or "SELF"
+        )
         user_perm, created = UserPermission.objects.get_or_create(
             user=user,
             permission=permission,
-            defaults={"reason": serializer.validated_data.get("reason", "")},
+            defaults={
+                "reason": serializer.validated_data.get("reason", ""),
+                "scope": scope,
+            },
         )
+        # Re-asignar actualiza el alcance (upsert).
+        if not created and user_perm.scope != scope:
+            user_perm.scope = scope
+            user_perm.save(update_fields=["scope"])
 
         PermissionService.invalidate_user_cache(user.id)
 

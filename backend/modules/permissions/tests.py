@@ -437,6 +437,135 @@ class HardRulesTestCase(TestCase):
         self.assertEqual(response.status_code, 400)
 
 
+class PermissionScopeTestCase(TestCase):
+    """Fase 6: alcance SELF/ALL en asignaciones y su aplicación."""
+
+    def setUp(self):
+        from rest_framework.test import APIClient
+
+        def make_user(email, group_name=None, **extra):
+            user = User.objects.create_user(
+                email=email, password="x-Segura-123",
+                first_name="Fase6", last_name="Test", **extra
+            )
+            if group_name:
+                PermissionService.add_user_to_group(user, group_name)
+            return user
+
+        self.sadmin = make_user("fase6_sadmin@x.co", "SADMIN")
+        self.admin = make_user("fase6_admin@x.co", "ADMIN")
+        self.inst = make_user("fase6_inst@x.co", "INST")
+        self.inv = make_user("fase6_inv@x.co", "INV")
+        self.client = APIClient()
+
+    def scope_of_group(self, group_name, codename):
+        from modules.permissions.models import GroupPermission
+
+        return GroupPermission.objects.get(
+            group__name=group_name, permission__codename=codename
+        ).scope
+
+    def test_backfill_scope(self):
+        """Migración 0024: SADMIN/ADMIN → ALL; INST/INV → SELF en objeto."""
+        self.assertEqual(self.scope_of_group("SADMIN", "view_loan"), "ALL")
+        self.assertEqual(self.scope_of_group("ADMIN", "view_loan"), "ALL")
+        self.assertEqual(self.scope_of_group("INST", "view_loan"), "SELF")
+        self.assertEqual(self.scope_of_group("INV", "view_loan"), "SELF")
+        self.assertEqual(self.scope_of_group("INST", "view_brand"), "ALL")
+
+    def test_effective_scope(self):
+        from modules.permissions.ranking import effective_scope
+
+        boss = User.objects.create_superuser(
+            email="fase6_boss@x.co", password="x-Segura-123",
+            first_name="F", last_name="T",
+        )
+        self.assertEqual(effective_scope(boss, "view_loan"), "ALL")
+        self.assertEqual(effective_scope(self.inst, "view_brand"), "ALL")
+        self.assertEqual(effective_scope(self.inst, "view_loan"), "SELF")
+        self.assertEqual(effective_scope(self.admin, "view_loan"), "ALL")
+
+    def test_all_wins(self):
+        """Con una asignación ALL entre varias SELF, gana ALL."""
+        from modules.permissions.models import Group, GroupPermission, Permission
+        from modules.permissions.ranking import effective_scope
+
+        group = Group.objects.create(name="Fase6Mixto", level=500)
+        perm = Permission.objects.get(codename="view_loan")
+        GroupPermission.objects.create(group=group, permission=perm, scope="ALL")
+        PermissionService.add_user_to_group(self.inv, "Fase6Mixto")
+        self.assertEqual(effective_scope(self.inv, "view_loan"), "ALL")
+
+    def test_loans_scoping_preserved(self):
+        """ADMIN ve todos; INST solo los propios (comportamiento anterior)."""
+        from modules.loans.models import Loans
+        from modules.products.models import Brand, Category, ConsumableMaterial
+
+        brand = Brand.objects.create(name="Fase6Marca")
+        category = Category.objects.create(name="Fase6Cat")
+        material = ConsumableMaterial.objects.create(
+            brand=brand, category=category, name="Fase6Mat",
+            quantity=10, unit_price=100, total_price=1000, state="Disponible",
+            description="d", purchase_date="2026-01-01",
+        )
+        Loans.objects.create(
+            id_responsable_user=self.admin, id_receptor_user=self.sadmin,
+            id_material=material, amount_lent=1,
+            apprentice_group="123", justification_use="Prueba de alcance.",
+        )
+        Loans.objects.create(
+            id_responsable_user=self.admin, id_receptor_user=self.inst,
+            id_material=material, amount_lent=1,
+            apprentice_group="123", justification_use="Prueba de alcance.",
+        )
+        self.client.force_authenticate(user=self.admin)
+        res = self.client.get("/api/loans/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(res.data["results"] if isinstance(res.data, dict) else res.data), 2)
+        self.client.force_authenticate(user=self.inst)
+        res = self.client.get("/api/loans/")
+        self.assertEqual(res.status_code, 200)
+        data = res.data["results"] if isinstance(res.data, dict) else res.data
+        self.assertEqual(len(data), 1)
+
+    def test_task_assignment_scoping(self):
+        """Con SELF, lo ajeno es invisible (lista y detalle 404)."""
+        import datetime
+        from modules.tasks.models import TaskAssignment, TaskDefinition
+
+        group = Group.objects.create(name="Fase6Tasks", level=500)
+        perm_codes = ["view_task_assignment"]
+        from modules.permissions.models import Permission as Perm
+
+        for code in perm_codes:
+            group.permissions.add(Perm.objects.get(codename=code))
+        viewer = User.objects.create_user(
+            email="fase6_viewer@x.co", password="x-Segura-123",
+            first_name="F", last_name="T",
+        )
+        PermissionService.add_user_to_group(viewer, "Fase6Tasks")
+        other = User.objects.create_user(
+            email="fase6_other@x.co", password="x-Segura-123",
+            first_name="F", last_name="T",
+        )
+        definition = TaskDefinition.objects.create(name="Fase6Tarea", description="d")
+        mine = TaskAssignment.objects.create(
+            task=definition, scope="user", user=viewer, state="Pendiente",
+            start_date=datetime.date(2026, 1, 1), end_date=datetime.date(2026, 12, 31),
+        )
+        alien = TaskAssignment.objects.create(
+            task=definition, scope="user", user=other, state="Pendiente",
+            start_date=datetime.date(2026, 1, 1), end_date=datetime.date(2026, 12, 31),
+        )
+        self.client.force_authenticate(user=viewer)
+        res = self.client.get("/api/tasks/assignments/")
+        self.assertEqual(res.status_code, 200)
+        data = res.data["results"] if isinstance(res.data, dict) else res.data
+        self.assertEqual([a["id"] for a in data], [mine.id])
+        res = self.client.get(f"/api/tasks/assignments/{alien.id}/")
+        self.assertEqual(res.status_code, 404)
+
+
 class ElevationWorkflowTestCase(TestCase):
     """Fase 5a: borrador → pendiente → aprobada/rechazada → activa."""
 

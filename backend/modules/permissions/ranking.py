@@ -14,6 +14,58 @@ from modules.permissions.services import PermissionService
 from django.db.models import Min
 
 
+# Permisos con objeto (alcance SELF/ALL) — Fase 6. Préstamos (responsable o
+# receptor) y asignaciones de tareas (asignado directo o por grupo). El resto
+# de permisos son globales y el scope se ignora (= todo).
+SCOPED_PERMISSIONS = frozenset({
+    "view_loan",
+    "list_loans",
+    "edit_loan",
+    "delete_loan",
+    "return_material",
+    "register_surplus",
+    "validate_loan_return",
+    "view_task_assignment",
+    "edit_task_assignment",
+    "delete_task_assignment",
+})
+
+
+def effective_scope(user, codename):
+    """Alcance efectivo: ALL si alguna asignación lo otorga; si no, SELF.
+
+    Primigenio/superusuario → ALL. Permisos sin objeto → ALL siempre.
+    Se llama solo cuando has_permission ya es True.
+    """
+    if codename not in SCOPED_PERMISSIONS:
+        return "ALL"
+    if not user or not user.is_authenticated:
+        return "SELF"
+    if getattr(user, "is_primary_admin", False) or getattr(user, "is_superuser", False):
+        return "ALL"
+    from modules.permissions.models import UserGroup, UserPermission
+
+    scopes = set(
+        UserPermission.objects.filter(
+            user=user, permission__codename=codename
+        ).values_list("scope", flat=True)
+    )
+    scopes.update(
+        UserGroup.objects.filter(
+            user=user, group__group_permissions__permission__codename=codename
+        ).values_list("group__group_permissions__scope", flat=True)
+    )
+    return "ALL" if "ALL" in scopes else "SELF"
+
+
+def normalize_scope(codename, scope):
+    """Normaliza el alcance a guardar: permisos sin objeto siempre ALL;
+    el resto respeta lo pedido (SELF por defecto)."""
+    if codename not in SCOPED_PERMISSIONS:
+        return "ALL"
+    return "ALL" if scope == "ALL" else "SELF"
+
+
 def action_level(user):
     """Nivel para ACCIONES. Solo el Primigenio está exento (None = cima).
 

@@ -115,7 +115,11 @@ class TaskAssignmentViewSet(AuditMixin, viewsets.ModelViewSet):
             assignment = self._get_target_object()
         except Exception:
             return False
-        user = self.request.user
+        return self._is_own_assignment_of(self.request.user, assignment)
+
+    @staticmethod
+    def _is_own_assignment_of(user, assignment):
+        """True si user es destinatario (directo o por grupo)."""
         if not user or not user.is_authenticated:
             return False
         if assignment.scope == TaskAssignment.SCOPE_USER:
@@ -124,6 +128,18 @@ class TaskAssignmentViewSet(AuditMixin, viewsets.ModelViewSet):
             from modules.permissions.models import UserGroup
             return UserGroup.objects.filter(user=user, group_id=assignment.group_id).exists()
         return False
+
+    def get_object(self):
+        # Fase 6: sin alcance global, lo ajeno es invisible (404).
+        from rest_framework.exceptions import NotFound
+
+        obj = super().get_object()
+        if not self._is_own_assignment_of(self.request.user, obj):
+            from modules.permissions.ranking import effective_scope
+
+            if effective_scope(self.request.user, "view_task_assignment") != "ALL":
+                raise NotFound("Asignación no encontrada.")
+        return obj
 
     def _is_own_finish_request(self):
         """True si es el asignado marcando su tarea como terminada."""
@@ -164,6 +180,12 @@ class TaskAssignmentViewSet(AuditMixin, viewsets.ModelViewSet):
             # "Mis tareas": directas + las de mis grupos (ya autorizado
             # en get_permissions por _is_own_scope_request).
             queryset = queryset.filter(self._own_assignments_filter())
+        elif self.action == "list" and not self._is_own_scope_request():
+            # Fase 6: listado ajeno con alcance propio → solo lo propio.
+            from modules.permissions.ranking import effective_scope
+
+            if effective_scope(self.request.user, "view_task_assignment") != "ALL":
+                queryset = queryset.filter(self._own_assignments_filter())
         return queryset.select_related('task', 'user', 'group').prefetch_related('evidences')
 
     def perform_create(self, serializer):
