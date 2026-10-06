@@ -200,7 +200,9 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 REST_FRAMEWORK={
-        'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
+        # Shim tolerante (sia_api/schema.py): django-filter ya no trae
+        # get_schema_fields y el AutoSchema de coreapi lo exige en /docs/.
+        'DEFAULT_SCHEMA_CLASS': 'sia_api.schema.TolerantAutoSchema',
 
         # Quien valida el token en cada peticion 
         'DEFAULT_AUTHENTICATION_CLASSES': [
