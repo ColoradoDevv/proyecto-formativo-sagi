@@ -34,7 +34,7 @@ poetry run python manage.py check
 poetry run python manage.py makemigrations --check --dry-run
 
 # Frontend (desde frontend/)
-npx eslint <archivos tocados>
+npx eslint <archivos tocados>   # o npm run lint (eslint .)
 ```
 
 - Actualiza tu rama con `dev` (`git merge origin/dev`) y resuelve conflictos localmente.
@@ -49,7 +49,7 @@ npx eslint <archivos tocados>
 ## 5. Secretos y datos
 
 - Jamás commitear `.env`, contraseñas ni `DB_PASSWORD`: se comparten por canal privado.
-- Cada persona genera su propia `SECRET_KEY` (ver [instalación local](docs/instalacion-local.md)).
+- Cada persona genera su propia `SECRET_KEY` **y `MFA_ENCRYPTION_KEY`** (ver [instalación local](docs/instalacion-local.md §3.2)).
 - Los seeds son idempotentes, pero **no** se corren contra la base compartida sin avisar al equipo.
 
 ## 6. Convenciones del código

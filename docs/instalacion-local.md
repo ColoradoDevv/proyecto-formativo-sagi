@@ -14,7 +14,7 @@ Al final tendrás el **backend en `http://localhost:8000`** y el **frontend en `
 | Node.js | 18 o superior | `node --version` |
 | Git | cualquiera | `git --version` |
 
-> El backend exige **Python 3.12** (`requires-python = ">=3.12,<3.13"` en `backend/pyproject.toml`).
+> El backend exige **Python 3.12–3.14** (`requires-python = ">=3.12,<3.15"` en `backend/pyproject.toml`).
 > Si usas `pyenv` o el instalador oficial, selecciona la 3.12 antes de continuar.
 
 ---
@@ -23,7 +23,7 @@ Al final tendrás el **backend en `http://localhost:8000`** y el **frontend en `
 
 ```bash
 git clone https://github.com/ColoradoDevv/proyecto-formativo-sagi.git
-cd proyecto-formativo-sia
+cd proyecto-formativo-sagi
 ```
 
 ---
@@ -47,9 +47,13 @@ cp .env.example .env   # Windows (cmd): copy .env.example .env
 
 Abre `backend/.env` y configura:
 
-1. **`SECRET_KEY`** — genera una propia (no reuses la de otro):
+1. **`SECRET_KEY`** — genera una propia, una por entorno (no reuses la de otro):
    ```bash
    poetry run python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+   ```
+   **`MFA_ENCRYPTION_KEY`** — llave Fernet para MFA TOTP, también una por entorno (NO es la `SECRET_KEY`; si cambia, los MFA inscritos se invalidan):
+   ```bash
+   poetry run python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
    ```
 2. **Base de datos** — por defecto SQLite local (ya viene en `.env.example`, no tocar).
    Para staging/prod ver [entornos](entornos.md): cada entorno usa su propio
@@ -94,8 +98,9 @@ poetry run python manage.py runserver
 ```
 
 - API: `http://localhost:8000`
-- Documentación de endpoints: `http://localhost:8000/docs/`
+- Documentación de endpoints: `http://localhost:8000/docs/` (título `SGI API`)
 - Admin de Django: `http://localhost:8000/admin/`
+- Salud: `http://localhost:8000/healthz/` (200/503, para smoke tests)
 
 ---
 
@@ -127,11 +132,12 @@ Aplicación: `http://localhost:5173`
 
 | Comando | Dónde | Para qué |
 |---------|-------|----------|
-| `poetry run python manage.py check` | `backend/` | Validar configuración Django |
+| `poetry run python manage.py check` | `backend/` | Validar configuración Django (prueba también `DJANGO_ENV=prod … check`: debe fallar sin secretos prod) |
 | `poetry run python manage.py showmigrations` | `backend/` | Ver migraciones aplicadas/pendientes |
+| `poetry run python manage.py makemigrations --check --dry-run` | `backend/` | Verificar que no faltan migraciones (exigido en PRs) |
 | `poetry run python manage.py createsuperuser` | `backend/` | Crear administrador |
 | `npm run dev` / `npm run build` / `npm run preview` | `frontend/` | Desarrollo / compilar / previsualizar |
-| `npm run lint` | `frontend/` | Verificar código con ESLint |
+| `npm run lint` | `frontend/` | Verificar código con ESLint (`eslint .`) |
 
 ---
 
@@ -148,4 +154,4 @@ Aplicación: `http://localhost:5173`
 
 ---
 
-← [Volver al README](../README.md)
+← [Volver al README](../README.md) · [Arquitectura](arquitectura.md) · [Referencia API](endpoints.md) · [Matriz de pruebas](matriz-pruebas.md)
