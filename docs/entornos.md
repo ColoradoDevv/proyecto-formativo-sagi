@@ -44,7 +44,7 @@ DJANGO_ENV=prod poetry run python manage.py check  # debe fallar sin secretos pr
 ## Qué cambió respecto a antes
 
 * Antes: `.env.example` apuntaba a un único Supabase compartido (`Todos los contribuidores apuntan al MISMO proyecto`). Eso se elimina: cada entorno tiene su proyecto.
-* `SECRET_KEY` es una por entorno (generar con `get_random_secret_key`).
+* `SECRET_KEY` **y `MFA_ENCRYPTION_KEY`** son una por entorno (ver comandos en [instalación local](instalacion-local.md §3.2)).
 * `media/` deja de versionarse (ya hay 16 archivos en git por error: no agregar más; des-versionar con `git rm --cached -r backend/media` cuando el equipo lo apruebe, tras respaldar).
 
 ## Rotación de secretos
